@@ -1,0 +1,50 @@
+{% load i18n %}
+<div id="people-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <section class="card">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">{% translate "Name" %}</th>
+                    <th scope="col">{% translate "Local accounts" %}</th>
+                    <th scope="col">{% translate "Limits template" %}</th>
+                    <th scope="col">{% translate "Updated" %}</th>
+                    <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in people %}
+                    <tr>
+                        <td class="fw-semibold">{{ item.name }}</td>
+                        <td>{{ item.account_count }}</td>
+                        <td>{{ item.limits_tpl|default:_('Not set') }}</td>
+                        <td>{{ item.updated|date:"Y-m-d H:i" }}</td>
+                        <td class="text-end">
+                            {% if item.limits_tpl_id and item.account_count %}
+                                <a class="btn btn-sm btn-outline-primary" id="person-propagate-{{ item.pk }}"
+                                   href="{% url 'core:people' %}?person={{ item.pk }}&amp;propagate=1"
+                                   hx-get="{% url 'core:people' %}?person={{ item.pk }}"
+                                   hx-target="#person-editor" hx-swap="innerHTML">
+                                    {% translate "Distribute template" %}
+                                </a>
+                            {% endif %}
+                            <a class="btn btn-sm btn-outline-secondary" id="person-edit-{{ item.pk }}"
+                               href="{% url 'core:people' %}?person={{ item.pk }}"
+                               hx-get="{% url 'core:people' %}?person={{ item.pk }}"
+                               hx-target="#person-editor" hx-swap="innerHTML">
+                                {% translate "Edit" %}
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td class="text-body-secondary text-center py-5" colspan="5">
+                            {% translate "No people have been added." %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

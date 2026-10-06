@@ -1,0 +1,53 @@
+{% load i18n %}
+<section class="card sanea-editor-card">
+    <div class="card-body p-4">
+        <h2 class="h5 fw-bold mb-1">{% translate "Configure account" %}</h2>
+        <p class="text-body-secondary mb-3">
+            {{ account.name|default:account.login }} · {{ account.computer.get_display_name }} · UID {{ account.uid }}
+        </p>
+        <form id="account-save" method="post" action="{% url 'core:accounts' %}"
+              hx-post="{% url 'core:accounts' %}" hx-target="#account-editor" hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="account" value="{{ account.pk }}">
+            {{ account_form }}
+            {% if not account.limits_id %}
+                <div class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <span>{% translate "Configure limits before enabling them for this account." %}</span>
+                    <button class="btn btn-sm btn-outline-secondary" type="submit"
+                            id="account-limits-customize-{{ account.pk }}" name="customize_limits" value="1"
+                            hx-post="{% url 'core:accounts' %}" hx-target="#account-editor" hx-swap="innerHTML">
+                        {% translate "Create empty limits set" %}
+                    </button>
+                </div>
+            {% else %}
+                <div class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <span>
+                        {% blocktranslate with limits=account.limits %}Limits: {{ limits }}{% endblocktranslate %}
+                    </span>
+                    <span class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:session_rules' account.limits_id %}">
+                            {% translate "Session rules" %}
+                        </a>
+                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:ranges' account.limits_id %}">
+                            {% translate "Schedule" %}
+                        </a>
+                        <button class="btn btn-sm btn-outline-secondary" type="submit"
+                                id="account-limits-customize-{{ account.pk }}" name="customize_limits" value="1"
+                                hx-post="{% url 'core:accounts' %}" hx-target="#account-editor" hx-swap="innerHTML">
+                            {% translate "Customize separately" %}
+                        </button>
+                    </span>
+                </div>
+            {% endif %}
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit" name="__submit" value="account">
+                    {% translate "Save" %}
+                </button>
+                <a class="btn btn-outline-secondary" id="account-cancel" href="{% url 'core:accounts' %}"
+                   hx-get="{% url 'core:accounts' %}" hx-target="#account-editor" hx-swap="innerHTML">
+                    {% translate "Cancel" %}
+                </a>
+            </div>
+        </form>
+    </div>
+</section>

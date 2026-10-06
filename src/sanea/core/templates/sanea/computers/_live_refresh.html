@@ -1,0 +1,7 @@
+{% for item in computers %}
+    {% include "sanea/computers/_connection.html" with oob=True %}
+    {% include "sanea/computers/_config_status.html" with oob=True %}
+    {% include "sanea/computers/_last_contact.html" with oob=True %}
+    {% include "sanea/computers/_command_counts.html" with oob=True %}
+{% endfor %}
+{% include "sanea/computers/_command_table.html" with oob=True %}

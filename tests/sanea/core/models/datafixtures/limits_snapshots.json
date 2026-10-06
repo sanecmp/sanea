@@ -1,0 +1,97 @@
+{
+  "computer": {
+    "hostname": "study-pc"
+  },
+  "person": {
+    "name": "Alex"
+  },
+  "limits": {
+    "name": "School days"
+  },
+  "account": {
+    "uid": 1001,
+    "login": "alex",
+    "name": "Alex",
+    "collect": true,
+    "apply": false
+  },
+  "session_rule": {
+    "ident": 10,
+    "name": "After school",
+    "max_sessions": 2,
+    "max_duration": 3600,
+    "break_duration": 1200
+  },
+  "app_rule": {
+    "ident": 20,
+    "name": "Browser",
+    "max_time": 1800,
+    "prc_name": "browser",
+    "prc_name_match": "exact"
+  },
+  "range": {
+    "ident": 30,
+    "weekday": 0,
+    "since": 900,
+    "till": 1200
+  },
+  "expected_config": {
+    "ident": 1842,
+    "timezone": "UTC",
+    "sync_interval": 300,
+    "discovery_interval": 30,
+    "walk_interval": 1,
+    "save_interval": 5,
+    "min_prc_duration": 5,
+    "ignored_prcs": [
+      "gnome-control-c",
+      "gnome-software",
+      "gnome-system-mo",
+      "gnome-tweaks",
+      "nautilus"
+    ],
+    "accounts": [
+      {
+        "uid": 1001,
+        "collect": true,
+        "apply": false,
+        "limits": {
+          "ranges": [
+            {
+              "ident": 30,
+              "apply": true,
+              "weekday": 0,
+              "since": 900,
+              "till": 1200,
+              "session_rule_ident": 10
+            }
+          ],
+          "session_rules": [
+            {
+              "ident": 10,
+              "apply": true,
+              "max_sessions": 2,
+              "max_duration": 3600,
+              "break_duration": 1200,
+              "app_rules": [
+                {
+                  "ident": 20,
+                  "name": "Browser",
+                  "apply": true,
+                  "max_launches": null,
+                  "max_time": 1800,
+                  "prc_name": "browser",
+                  "prc_name_match": "exact",
+                  "exe": null,
+                  "exe_match": null,
+                  "wnd_title": null,
+                  "wnd_title_match": null
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

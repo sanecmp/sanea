@@ -1,0 +1,27 @@
+{% load i18n %}
+{% if propagation_form %}
+    {% include "sanea/people/_propagate.html" %}
+{% else %}
+    <section class="card sanea-editor-card">
+        <div class="card-body p-4">
+            <h2 class="h5 fw-bold mb-3">
+                {% if person %}{% translate "Edit person" %}{% else %}{% translate "Add person" %}{% endif %}
+            </h2>
+            <form id="person-save" method="post" action="{% url 'core:people' %}"
+                  hx-post="{% url 'core:people' %}" hx-target="#person-editor" hx-swap="innerHTML">
+                {% csrf_token %}
+                <input type="hidden" name="person" value="{% if person %}{{ person.pk }}{% else %}new{% endif %}">
+                {{ person_form }}
+                <div class="d-flex gap-2">
+                    <button class="btn btn-primary" type="submit" name="__submit" value="person">
+                        {% translate "Save" %}
+                    </button>
+                    <a class="btn btn-outline-secondary" id="person-cancel" href="{% url 'core:people' %}"
+                       hx-get="{% url 'core:people' %}" hx-target="#person-editor" hx-swap="innerHTML">
+                        {% translate "Cancel" %}
+                    </a>
+                </div>
+            </form>
+        </div>
+    </section>
+{% endif %}

@@ -1,0 +1,24 @@
+{% load i18n %}
+{% if signin_form.flow_enabled %}
+    <form method="post" novalidate>
+        {% csrf_token %}
+        {% for hidden in signin_form.hidden_fields %}{{ hidden }}{% endfor %}
+        {% if signin_form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in signin_form.non_field_errors %}<div>{{ error }}</div>{% endfor %}
+            </div>
+        {% endif %}
+        {% for field in signin_form.visible_fields %}
+            <div class="mb-3">
+                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% for error in field.errors %}
+                    <div class="invalid-feedback d-block">{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+        <button class="btn btn-primary w-100 mt-2" type="submit">{% translate "Sign in" %}</button>
+    </form>
+{% else %}
+    <div class="alert alert-warning mb-0" role="alert">{{ signin_form.flow_disabled_text }}</div>
+{% endif %}

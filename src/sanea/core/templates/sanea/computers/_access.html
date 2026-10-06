@@ -1,0 +1,5 @@
+<span id="computer-access-{{ item.pk }}"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <span class="badge {% if item.status == 'allowed' %}text-bg-success{% elif item.status == 'blocked' %}text-bg-danger{% else %}text-bg-warning{% endif %}">
+        {{ item.get_status_display }}
+    </span>
+</span>

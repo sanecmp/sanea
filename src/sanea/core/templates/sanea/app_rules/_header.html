@@ -1,0 +1,15 @@
+{% load i18n %}
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+        <a class="link-secondary text-decoration-none"
+           href="{% url 'core:session_rules' limits.pk %}">← {% translate "Session rules" %}</a>
+        <h1 class="display-6 fw-bold mb-1 mt-2">{% translate "Application rules" %}</h1>
+        <p class="text-body-secondary mb-0">
+            {% blocktranslate with rule=session_rule %}Session rule: {{ rule }}{% endblocktranslate %}
+        </p>
+    </div>
+    <a class="btn btn-primary" id="app-rule-add" href="{{ app_rules_url }}?app_rule=new"
+       hx-get="{{ app_rules_url }}?app_rule=new" hx-target="#app-rule-editor" hx-swap="innerHTML">
+        {% translate "Add application rule" %}
+    </a>
+</div>

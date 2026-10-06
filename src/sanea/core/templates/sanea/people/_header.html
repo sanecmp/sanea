@@ -1,0 +1,13 @@
+{% load i18n %}
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="display-6 fw-bold mb-1">{% translate "People" %}</h1>
+        <p class="text-body-secondary mb-0">
+            {% translate "A person groups local accounts belonging to the same individual on different computers." %}
+        </p>
+    </div>
+    <a class="btn btn-primary" id="person-add" href="{{ people_url }}?person=new"
+       hx-get="{{ people_url }}?person=new" hx-target="#person-editor" hx-swap="innerHTML">
+        {% translate "Add person" %}
+    </a>
+</div>

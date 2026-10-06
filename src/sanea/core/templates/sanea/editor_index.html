@@ -1,0 +1,14 @@
+{% extends "sanea/base.html" %}
+{% load etc_misc %}
+
+{% block content %}
+{% include_ "sanea/{{ section }}/_header.html" %}
+
+<div id="{{ editor_id }}" class="mb-4">
+    {% if editor_form %}
+        {% include_ "sanea/{{ section }}/_editor.html" %}
+    {% endif %}
+</div>
+
+{% include_ "sanea/{{ section }}/_list.html" %}
+{% endblock %}

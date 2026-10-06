@@ -1,0 +1,48 @@
+{% load i18n %}
+<div id="ranges-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <section class="card">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">{% translate "Weekday" %}</th>
+                    <th scope="col">{% translate "Time" %}</th>
+                    <th scope="col">{% translate "Session rule" %}</th>
+                    <th scope="col">{% translate "Status" %}</th>
+                    <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in ranges %}
+                    <tr>
+                        <td class="fw-semibold">{{ item.weekday_label }}</td>
+                        <td>{{ item.since_label }}–{{ item.till_label }}</td>
+                        <td>{{ item.session_rule }}</td>
+                        <td>
+                            {% if item.apply %}
+                                <span class="badge text-bg-success">{% translate "Included" %}</span>
+                            {% else %}
+                                <span class="badge text-bg-secondary">{% translate "Excluded" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" id="range-edit-{{ item.pk }}"
+                               href="{% url 'core:ranges' limits.pk %}?range={{ item.pk }}"
+                               hx-get="{% url 'core:ranges' limits.pk %}?range={{ item.pk }}"
+                               hx-target="#range-editor" hx-swap="innerHTML">
+                                {% translate "Edit" %}
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td class="text-body-secondary text-center py-5" colspan="5">
+                            {% translate "No schedule ranges have been added." %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

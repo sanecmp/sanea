@@ -1,0 +1,59 @@
+{% load i18n %}
+<div id="ignored-processes-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <section class="card">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">{% translate "Process name" %}</th>
+                    <th scope="col">{% translate "Status" %}</th>
+                    <th scope="col">{% translate "Updated" %}</th>
+                    <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for exclusion in ignored_processes %}
+                    <tr>
+                        <td><code>{{ exclusion.prc_name }}</code></td>
+                        <td>
+                            {% if exclusion.apply %}
+                                <span class="badge text-bg-success">{% translate "Ignored" %}</span>
+                            {% else %}
+                                <span class="badge text-bg-secondary">{% translate "Not ignored" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ exclusion.updated|date:"Y-m-d H:i" }}</td>
+                        <td class="text-end">
+                            <form class="d-inline" method="post" action="{% url 'core:ignored_processes' %}"
+                                  hx-post="{% url 'core:ignored_processes' %}"
+                                  hx-target="#ignored-process-editor" hx-swap="innerHTML">
+                                {% csrf_token %}
+                                <input type="hidden" name="exclusion" value="{{ exclusion.pk }}">
+                                {% if exclusion.apply %}
+                                    <button class="btn btn-sm btn-outline-danger"
+                                            id="ignored-process-delete-{{ exclusion.pk }}"
+                                            type="submit" name="delete" value="1">
+                                        {% translate "Remove" %}
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-sm btn-outline-primary"
+                                            id="ignored-process-restore-{{ exclusion.pk }}"
+                                            type="submit" name="restore" value="1">
+                                        {% translate "Restore" %}
+                                    </button>
+                                {% endif %}
+                            </form>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td class="text-body-secondary text-center py-5" colspan="4">
+                            {% translate "No process names are ignored." %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

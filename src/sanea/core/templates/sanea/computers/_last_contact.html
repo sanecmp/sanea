@@ -1,0 +1,4 @@
+{% load i18n %}
+<span id="computer-last-contact-{{ item.pk }}"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+    {{ item.last_seen|date:"SHORT_DATETIME_FORMAT"|default:_('Never') }}
+</span>

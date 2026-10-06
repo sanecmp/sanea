@@ -1,0 +1,30 @@
+{% load i18n static sitegate %}
+{% get_current_language as LANGUAGE_CODE %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title }} · sanea</title>
+    <link rel="icon" href="{% static 'sanea/favicon.svg' %}" type="image/svg+xml">
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'sanea/css/app.css' %}">
+</head>
+<body class="sanea-auth-page">
+<main class="container d-flex align-items-center justify-content-center min-vh-100 py-4">
+    <section class="card sanea-auth-card w-100" aria-labelledby="signInTitle">
+        <div class="card-body p-4 p-sm-5">
+            <a class="sanea-wordmark d-inline-block text-decoration-none mb-4"
+               href="{% url 'core:sign_in' %}" aria-label="Sanea">
+                <span>sane</span><span class="sanea-wordmark-accent">a</span>
+            </a>
+            <h1 class="h3 fw-bold mb-2" id="signInTitle">{% translate "Sign in" %}</h1>
+            <p class="text-body-secondary mb-4">
+                {% translate "Use your parent account to continue." %}
+            </p>
+            {% sitegate_signin_form %}
+        </div>
+    </section>
+</main>
+</body>
+</html>

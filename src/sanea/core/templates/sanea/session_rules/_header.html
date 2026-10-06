@@ -1,0 +1,14 @@
+{% load i18n %}
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+        <a class="link-secondary text-decoration-none" href="{% url 'core:limits' %}">← {% translate "Limits" %}</a>
+        <h1 class="display-6 fw-bold mb-1 mt-2">{% translate "Session rules" %}</h1>
+        <p class="text-body-secondary mb-0">
+            {% blocktranslate with limits=limits %}Limits set: {{ limits }}{% endblocktranslate %}
+        </p>
+    </div>
+    <a class="btn btn-primary" id="session-rule-add" href="{{ session_rules_url }}?rule=new"
+       hx-get="{{ session_rules_url }}?rule=new" hx-target="#session-rule-editor" hx-swap="innerHTML">
+        {% translate "Add session rule" %}
+    </a>
+</div>

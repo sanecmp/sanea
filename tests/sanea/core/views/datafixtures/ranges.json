@@ -1,0 +1,19 @@
+{
+  "existing": {
+    "ident": 31,
+    "apply": true,
+    "weekday": 4,
+    "since": 900,
+    "till": 1200
+  },
+  "created": {
+    "weekday": 5,
+    "since": "20:00",
+    "till": "24:00"
+  },
+  "updated": {
+    "weekday": 4,
+    "since": "14:00",
+    "till": "19:00"
+  }
+}

@@ -1,0 +1,54 @@
+{% load i18n %}
+<div id="limits-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <section class="card">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">{% translate "Name" %}</th>
+                    <th scope="col">{% translate "People" %}</th>
+                    <th scope="col">{% translate "Accounts using latest version" %}</th>
+                    <th scope="col">{% translate "Session rules" %}</th>
+                    <th scope="col">{% translate "Schedule ranges" %}</th>
+                    <th scope="col">{% translate "Updated" %}</th>
+                    <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in limits_sets %}
+                    <tr>
+                        <td class="fw-semibold">{{ item.name }}</td>
+                        <td>{{ item.person_count }}</td>
+                        <td>{{ item.account_count }}</td>
+                        <td>
+                            <a href="{% url 'core:session_rules' item.current_limits_id %}">
+                                {% blocktranslate count count=item.rule_count %}{{ count }} rule{% plural %}{{ count }} rules{% endblocktranslate %}
+                            </a>
+                        </td>
+                        <td>
+                            <a href="{% url 'core:ranges' item.current_limits_id %}">
+                                {% blocktranslate count count=item.range_count %}{{ count }} range{% plural %}{{ count }} ranges{% endblocktranslate %}
+                            </a>
+                        </td>
+                        <td>{{ item.updated|date:"Y-m-d H:i" }}</td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" id="limits-edit-{{ item.pk }}"
+                               href="{% url 'core:limits' %}?limits={{ item.pk }}"
+                               hx-get="{% url 'core:limits' %}?limits={{ item.pk }}"
+                               hx-target="#limits-editor" hx-swap="innerHTML">
+                                {% translate "Rename" %}
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td class="text-body-secondary text-center py-5" colspan="7">
+                            {% translate "No limits templates have been created." %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

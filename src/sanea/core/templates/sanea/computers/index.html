@@ -1,0 +1,32 @@
+{% extends "sanea/base.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="mb-4">
+    <h1 class="display-6 fw-bold mb-1">{% translate "Computers" %}</h1>
+    <p class="text-body-secondary mb-0">
+        {% translate "Computers appear here after sanex completes registration." %}
+        {% translate "A computer is online for two synchronization intervals, overdue through five intervals, and offline after that." %}
+    </p>
+</div>
+
+<section class="card mb-4" id="registration-window">
+    {% include "sanea/computers/_registration.html" %}
+</section>
+
+<section class="card mb-4" id="sanex-updates">
+    {% include "sanea/computers/_updates.html" %}
+</section>
+
+{% include "sanea/computers/_command_history.html" %}
+
+{% include "sanea/computers/_list.html" %}
+
+<div id="computer-live-refresh" class="d-none" aria-hidden="true"
+     hx-get="{{ computers_url }}" hx-trigger="every 10s" hx-include="#command-filter, #computer-filter, #command-current-page" hx-swap="none"></div>
+{% endblock %}
+
+{% block extra_body %}
+{{ block.super }}
+<script src="{% static 'sanea/js/registration-window.js' %}"></script>
+{% endblock %}

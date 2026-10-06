@@ -1,0 +1,43 @@
+{% extends "sanea/base.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="display-6 fw-bold mb-1">{% translate "Dashboard" %}</h1>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    {% for card in summary_cards %}
+        <div class="col-12 col-md-4">
+            <section class="card sanea-summary-card h-100">
+                <div class="card-body d-flex align-items-center gap-3 p-4">
+                    <span class="sanea-summary-icon sanea-summary-icon-{{ card.icon }}">
+                        <svg aria-hidden="true"><use href="#icon-{{ card.icon }}"></use></svg>
+                    </span>
+                    <div>
+                        <h2 class="h6 mb-1">{{ card.label }}</h2>
+                        <p class="display-6 fw-semibold lh-1 mb-0">{{ card.value }}</p>
+                    </div>
+                    {% if card.url %}
+                        <a class="stretched-link" href="{{ card.url }}">
+                            <span class="visually-hidden">{% translate "Open" %} {{ card.label }}</span>
+                        </a>
+                    {% endif %}
+                </div>
+            </section>
+        </div>
+    {% endfor %}
+</div>
+
+{% include "sanea/dashboard/_system_status.html" %}
+
+{% include "sanea/dashboard/_activity.html" %}
+{% endblock %}
+
+{% block extra_body %}
+{{ block.super }}
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+<script src="{% static 'sanea/js/activity-chart.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,23 @@
+{
+  "computer": {
+    "hostname": "child-laptop",
+    "status": "pending",
+    "certificate_fingerprint": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "public_key_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "request": {
+    "version": "0.2.0",
+    "accounts": [
+      {
+        "uid": 1001,
+        "login": "child",
+        "name": "Alex"
+      },
+      {
+        "uid": 1002,
+        "login": "guest",
+        "name": "Guest"
+      }
+    ]
+  }
+}

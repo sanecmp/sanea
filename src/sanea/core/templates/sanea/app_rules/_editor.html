@@ -1,0 +1,28 @@
+{% load i18n %}
+<section class="card sanea-editor-card">
+    <div class="card-body p-4">
+        <h2 class="h5 fw-bold mb-3">
+            {% if app_rule %}{% translate "Edit application rule" %}{% else %}{% translate "Add application rule" %}{% endif %}
+        </h2>
+        <form id="app-rule-save" method="post"
+              action="{% url 'core:app_rules' limits.pk session_rule.pk %}"
+              hx-post="{% url 'core:app_rules' limits.pk session_rule.pk %}"
+              hx-target="#app-rule-editor" hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="app_rule"
+                   value="{% if app_rule %}{{ app_rule.pk }}{% else %}new{% endif %}">
+            {{ app_rule_form }}
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit" name="__submit" value="app_rule">
+                    {% translate "Save" %}
+                </button>
+                <a class="btn btn-outline-secondary" id="app-rule-cancel"
+                   href="{% url 'core:app_rules' limits.pk session_rule.pk %}"
+                   hx-get="{% url 'core:app_rules' limits.pk session_rule.pk %}"
+                   hx-target="#app-rule-editor" hx-swap="innerHTML">
+                    {% translate "Cancel" %}
+                </a>
+            </div>
+        </form>
+    </div>
+</section>

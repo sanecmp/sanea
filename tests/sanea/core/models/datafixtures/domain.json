@@ -1,0 +1,51 @@
+{
+  "computer": {
+    "hostname": "child-laptop",
+    "version": "0.1.0",
+    "status": "allowed",
+    "certificate_fingerprint": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "public_key_fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "timezone": "Asia/Novosibirsk"
+  },
+  "person": {
+    "name": "Иван"
+  },
+  "template": {
+    "name": "Школьная неделя"
+  },
+  "limits": {
+    "name": "Иван на child-laptop"
+  },
+  "account": {
+    "uid": 1001,
+    "login": "child",
+    "name": "Иван",
+    "present": true,
+    "collect": true,
+    "apply": true
+  },
+  "session_rule": {
+    "ident": 601,
+    "name": "После школы",
+    "apply": true,
+    "max_sessions": 3,
+    "max_duration": 7200,
+    "break_duration": 7200
+  },
+  "range": {
+    "ident": 501,
+    "apply": true,
+    "weekday": 4,
+    "since": 900,
+    "till": 1200
+  },
+  "app_rule": {
+    "ident": 701,
+    "name": "Browser",
+    "apply": true,
+    "max_launches": 5,
+    "max_time": 3600,
+    "prc_name": "browser",
+    "prc_name_match": "exact"
+  }
+}

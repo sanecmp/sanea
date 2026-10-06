@@ -1,0 +1,20 @@
+{
+  "existing": {
+    "ident": 11,
+    "name": "Study session",
+    "apply": true,
+    "max_sessions": 3,
+    "max_duration": 7200,
+    "break_duration": 7200
+  },
+  "created": {
+    "name": "Free time",
+    "apply": true,
+    "max_sessions": 2,
+    "max_duration": 3600,
+    "break_duration": 1800
+  },
+  "renamed": {
+    "name": "Homework"
+  }
+}

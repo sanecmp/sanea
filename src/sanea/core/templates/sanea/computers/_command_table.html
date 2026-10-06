@@ -1,0 +1,88 @@
+{% load i18n %}
+<div id="command-history-results"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <input id="command-current-page" type="hidden" name="command_page" value="{{ command_page.number }}">
+    {% if command_rows %}
+        <div class="list-group list-group-flush border-top">
+            {% for command in command_rows %}
+                <details class="list-group-item px-4 py-3" id="command-{{ command.pk }}">
+                    <summary class="sanea-command-summary">
+                        <span class="fw-semibold text-break">{{ command.computer.get_display_name }}</span>
+                        <code class="text-break">{{ command.type }}</code>
+                        <span class="text-body-secondary text-nowrap">
+                            {{ command.created|date:"SHORT_DATETIME_FORMAT" }}
+                        </span>
+                        <span>
+                            {% if command.status == "done" %}
+                                <span class="badge text-bg-success">{{ command.get_status_display }}</span>
+                            {% elif command.status == "failed" %}
+                                <span class="badge text-bg-danger">{{ command.get_status_display }}</span>
+                            {% else %}
+                                <span class="badge text-bg-warning">{% translate "Pending" %}</span>
+                            {% endif %}
+                        </span>
+                    </summary>
+                    <div class="border-top mt-3 pt-3">
+                        <dl class="row g-2 mb-3 small">
+                            <dt class="col-sm-3">{% translate "Command ID" %}</dt>
+                            <dd class="col-sm-9 mb-0"><code>#{{ command.pk }}</code></dd>
+                            <dt class="col-sm-3">{% translate "Queued" %}</dt>
+                            <dd class="col-sm-9 mb-0">{{ command.created|date:"SHORT_DATETIME_FORMAT" }}</dd>
+                            <dt class="col-sm-3">{% translate "Completed" %}</dt>
+                            <dd class="col-sm-9 mb-0">{{ command.completed|date:"SHORT_DATETIME_FORMAT"|default:"—" }}</dd>
+                            <dt class="col-sm-3">{% translate "Last updated" %}</dt>
+                            <dd class="col-sm-9 mb-0">{{ command.updated|date:"SHORT_DATETIME_FORMAT" }}</dd>
+                            <dt class="col-sm-3">{% translate "Result" %}</dt>
+                            <dd class="col-sm-9 mb-0">{{ command.get_status_display|default:_('Pending') }}</dd>
+                            <dt class="col-sm-3">{% translate "Error" %}</dt>
+                            <dd class="col-sm-9 mb-0 text-danger text-break">{{ command.error|default:"—" }}</dd>
+                        </dl>
+                        <div class="small fw-semibold mb-2">{% translate "Payload" %}</div>
+                        <pre class="sanea-command-payload mb-0">{{ command.format_payload_details }}</pre>
+                        {% if command.status == "failed" %}
+                            <form class="mt-3" method="post" action="{{ computers_url }}"
+                                  hx-post="{{ computers_url }}" hx-target="#command-history" hx-swap="outerHTML"
+                                  hx-include="#command-filter, #computer-filter, #command-current-page">
+                                {% csrf_token %}
+                                <input type="hidden" name="command" value="{{ command.pk }}">
+                                <button class="btn btn-outline-primary btn-sm" id="command-repeat-{{ command.pk }}"
+                                        type="submit" name="__submit" value="command_repeat">
+                                    {% translate "Repeat command" %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </details>
+            {% endfor %}
+        </div>
+        {% if command_page.paginator.num_pages > 1 %}
+            <nav class="card-body border-top d-flex align-items-center justify-content-between gap-3"
+                 aria-label="{% translate 'Command history pages' %}">
+                <div class="small text-body-secondary">
+                    {% blocktranslate with current=command_page.number total=command_page.paginator.num_pages %}Page {{ current }} of {{ total }}{% endblocktranslate %}
+                </div>
+                <div class="btn-group" role="group">
+                    {% if command_page.has_previous %}
+                        <a class="btn btn-outline-secondary btn-sm" id="command-page-previous"
+                           href="{{ computers_url }}?{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.previous_page_number }}#command-history"
+                           hx-get="{{ computers_url }}?{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.previous_page_number }}"
+                           hx-target="#command-history" hx-swap="outerHTML" hx-push-url="true">
+                            {% translate "Previous" %}
+                        </a>
+                    {% endif %}
+                    {% if command_page.has_next %}
+                        <a class="btn btn-outline-secondary btn-sm" id="command-page-next"
+                           href="{{ computers_url }}?{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.next_page_number }}#command-history"
+                           hx-get="{{ computers_url }}?{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.next_page_number }}"
+                           hx-target="#command-history" hx-swap="outerHTML" hx-push-url="true">
+                            {% translate "Next" %}
+                        </a>
+                    {% endif %}
+                </div>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="card-body border-top text-body-secondary">
+            {% translate "No commands match the selected filters." %}
+        </div>
+    {% endif %}
+</div>

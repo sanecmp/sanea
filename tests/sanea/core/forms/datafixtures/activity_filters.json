@@ -1,0 +1,24 @@
+{
+  "computer": {
+    "hostname": "study-pc",
+    "status": "allowed",
+    "timezone": "Asia/Novosibirsk"
+  },
+  "other_computer": {
+    "hostname": "spare-pc",
+    "status": "allowed",
+    "timezone": "Asia/Novosibirsk"
+  },
+  "person": {
+    "name": "Alex"
+  },
+  "other_person": {
+    "name": "Maya"
+  },
+  "account": {
+    "uid": 1001,
+    "login": "alex",
+    "name": "Alex",
+    "collect": true
+  }
+}

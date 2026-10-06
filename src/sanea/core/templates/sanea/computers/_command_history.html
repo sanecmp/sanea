@@ -1,0 +1,21 @@
+{% load i18n %}
+<section class="card mb-4" id="command-history">
+    <div class="card-body p-4">
+        <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="h5 fw-bold mb-1">{% translate "Command history" %}</h2>
+                <p class="text-body-secondary mb-0">{% translate "Commands sent to sanex, newest first." %}</p>
+            </div>
+        </div>
+        {% if message %}
+            <div class="mb-3">{% include "sanea/_message.html" %}</div>
+        {% endif %}
+        <form id="command-filter" class="sanea-command-filter" method="get" action="{{ computers_url }}"
+              hx-get="{{ computers_url }}" hx-target="#command-history" hx-swap="outerHTML"
+              hx-include="#computer-filter" hx-push-url="true" hx-trigger="change delay:150ms">
+            {{ command_filter }}
+            <button class="btn btn-primary align-self-end" type="submit">{% translate "Apply" %}</button>
+        </form>
+    </div>
+    {% include "sanea/computers/_command_table.html" %}
+</section>

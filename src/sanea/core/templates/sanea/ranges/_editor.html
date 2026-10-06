@@ -1,0 +1,26 @@
+{% load i18n %}
+<section class="card sanea-editor-card">
+    <div class="card-body p-4">
+        <h2 class="h5 fw-bold mb-3">
+            {% if range %}{% translate "Edit range" %}{% else %}{% translate "Add range" %}{% endif %}
+        </h2>
+        <form id="range-save" method="post" action="{% url 'core:ranges' limits.pk %}"
+              hx-post="{% url 'core:ranges' limits.pk %}"
+              hx-target="#range-editor" hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="range" value="{% if range %}{{ range.pk }}{% else %}new{% endif %}">
+            {{ range_form }}
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit" name="__submit" value="range">
+                    {% translate "Save" %}
+                </button>
+                <a class="btn btn-outline-secondary" id="range-cancel"
+                   href="{% url 'core:ranges' limits.pk %}"
+                   hx-get="{% url 'core:ranges' limits.pk %}"
+                   hx-target="#range-editor" hx-swap="innerHTML">
+                    {% translate "Cancel" %}
+                </a>
+            </div>
+        </form>
+    </div>
+</section>

@@ -1,0 +1,372 @@
+:root {
+    --sanea-terracotta: #bd4a22;
+    --sanea-terracotta-dark: #9d3717;
+    --sanea-sage: #71886b;
+    --sanea-ivory: #fbf8f3;
+    --sanea-sidebar: #faf5ed;
+    --sanea-border: #e7e0d8;
+    --sanea-ink: #20242a;
+    --sanea-muted: #68717d;
+    --sanea-sidebar-width: 264px;
+}
+
+html,
+body {
+    min-height: 100%;
+}
+
+body {
+    background: var(--sanea-ivory);
+    color: var(--sanea-ink);
+}
+
+.sanea-shell {
+    min-height: 100vh;
+}
+
+.sanea-sidebar {
+    background: var(--sanea-sidebar);
+    border-right: 1px solid var(--sanea-border);
+    bottom: 0;
+    padding: 1.5rem 1rem;
+    position: fixed;
+    top: 0;
+    width: var(--sanea-sidebar-width);
+    z-index: 1030;
+}
+
+.sanea-content {
+    min-height: 100vh;
+}
+
+.sanea-wordmark {
+    align-items: center;
+    color: var(--sanea-terracotta);
+    display: inline-flex;
+    font-size: 2rem;
+    font-weight: 750;
+    gap: 0.55rem;
+    letter-spacing: -0.06em;
+    line-height: 1;
+}
+
+.sanea-wordmark-accent {
+    color: var(--sanea-sage);
+}
+
+.sanea-sidebar .nav-link,
+.sanea-offcanvas .nav-link {
+    border-radius: 0.65rem;
+    color: #40464e;
+    font-weight: 500;
+    padding: 0.75rem 1rem;
+}
+
+.sanea-sidebar .nav-link:hover,
+.sanea-offcanvas .nav-link:hover {
+    background: #f4e9df;
+    color: var(--sanea-terracotta-dark);
+}
+
+.sanea-sidebar .nav-link.active,
+.sanea-offcanvas .nav-link.active {
+    background: #f7dfd2;
+    color: var(--sanea-terracotta-dark);
+}
+
+.sanea-nav-icon,
+.sanea-menu-icon {
+    fill: none;
+    height: 1.35rem;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+    width: 1.35rem;
+}
+
+.sanea-sidebar .nav-link.active .sanea-nav-icon {
+    fill: currentColor;
+    stroke-width: 0;
+}
+
+
+.sanea-topbar {
+    background: rgb(255 255 255 / 72%);
+    border-bottom: 1px solid var(--sanea-border);
+    height: 64px;
+}
+
+.sanea-user-link {
+    align-items: center;
+    color: var(--sanea-ink);
+    display: flex;
+    gap: 0.65rem;
+    margin-left: auto;
+}
+
+.sanea-avatar {
+    align-items: center;
+    background: var(--sanea-sage);
+    border-radius: 50%;
+    color: #fff;
+    display: inline-flex;
+    font-size: 0.85rem;
+    font-weight: 700;
+    height: 2.25rem;
+    justify-content: center;
+    width: 2.25rem;
+}
+
+.sanea-main {
+    max-width: 1480px;
+}
+
+.card {
+    --bs-card-border-color: var(--sanea-border);
+    --bs-card-border-radius: 0.75rem;
+    box-shadow: 0 0.25rem 1.25rem rgb(83 65 45 / 4%);
+}
+
+.sanea-summary-icon {
+    align-items: center;
+    background: #fae1d4;
+    border-radius: 50%;
+    color: var(--sanea-terracotta);
+    display: inline-flex;
+    flex: 0 0 auto;
+    height: 4.25rem;
+    justify-content: center;
+    width: 4.25rem;
+}
+
+.sanea-summary-icon-computers {
+    background: #e4ebe0;
+    color: #40583d;
+}
+
+.sanea-summary-icon svg {
+    fill: none;
+    height: 2rem;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+    width: 2rem;
+}
+
+.sanea-empty-state {
+    align-items: center;
+    border: 1px dashed #d7cec4;
+    border-radius: 0.6rem;
+    display: flex;
+    justify-content: center;
+    min-height: 15rem;
+    padding: 2rem;
+    text-align: center;
+}
+
+.sanea-offcanvas {
+    --bs-offcanvas-bg: var(--sanea-sidebar);
+    --bs-offcanvas-width: min(86vw, 20rem);
+}
+
+@media (min-width: 992px) {
+    .sanea-content {
+        margin-left: var(--sanea-sidebar-width);
+    }
+
+    .sanea-topbar {
+        justify-content: flex-end !important;
+    }
+}
+
+.sanea-auth-page {
+    background:
+        radial-gradient(circle at 20% 20%, rgb(189 74 34 / 10%), transparent 32rem),
+        radial-gradient(circle at 80% 80%, rgb(113 136 107 / 12%), transparent 32rem),
+        var(--sanea-ivory);
+}
+
+.sanea-auth-card {
+    max-width: 28rem;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--sanea-terracotta);
+    --bs-btn-border-color: var(--sanea-terracotta);
+    --bs-btn-hover-bg: var(--sanea-terracotta-dark);
+    --bs-btn-hover-border-color: var(--sanea-terracotta-dark);
+    --bs-btn-active-bg: var(--sanea-terracotta-dark);
+    --bs-btn-active-border-color: var(--sanea-terracotta-dark);
+}
+
+.sanea-auth-card .form-control:focus {
+    border-color: var(--sanea-terracotta);
+    box-shadow: 0 0 0 0.25rem rgb(189 74 34 / 15%);
+}
+
+.sanea-editor-card {
+    max-width: 42rem;
+}
+
+.sanea-summary-card:has(.stretched-link):hover {
+    border-color: #d5c5b7;
+}
+
+.sanea-sidebar-footer {
+    color: var(--sanea-muted);
+    font-size: 0.8rem;
+}
+
+.sanea-registration-code,
+.sanea-registration-countdown {
+    font-variant-numeric: tabular-nums;
+    font-weight: 750;
+    letter-spacing: 0.08em;
+}
+
+.sanea-registration-code {
+    color: var(--sanea-terracotta-dark);
+    font-family: var(--bs-font-monospace);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.sanea-registration-countdown {
+    font-size: clamp(2rem, 5vw, 3.25rem);
+}
+
+.sanea-registration-progress {
+    background-color: var(--sanea-terracotta);
+    transition: width 0.1s linear;
+}
+
+.sanea-activity-filter,
+.sanea-command-filter,
+.sanea-computer-filter,
+.sanea-issue-filter,
+.sanea-update-form {
+    align-items: end;
+    display: grid;
+    gap: 1rem;
+}
+
+.sanea-activity-filter {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) auto;
+}
+
+.sanea-command-filter,
+.sanea-computer-filter {
+    grid-template-columns: repeat(3, minmax(10rem, 1fr)) auto;
+}
+
+.sanea-activity-filter > div,
+.sanea-command-filter > div,
+.sanea-computer-filter > div,
+.sanea-issue-filter > div,
+.sanea-update-form > div {
+    margin-bottom: 0 !important;
+}
+
+.sanea-chart-container {
+    height: 20rem;
+    position: relative;
+}
+
+.sanea-recent-activity {
+    max-height: 20rem;
+    overflow-y: auto;
+}
+
+.min-width-0 {
+    min-width: 0;
+}
+
+@media (max-width: 991.98px) {
+    .sanea-activity-filter,
+    .sanea-command-filter,
+    .sanea-computer-filter {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 575.98px) {
+    .sanea-activity-filter,
+    .sanea-command-filter,
+    .sanea-computer-filter,
+    .sanea-issue-filter {
+        grid-template-columns: 1fr;
+    }
+}
+
+.sanea-issue-filter {
+    grid-template-columns: minmax(12rem, 2fr) minmax(10rem, 1fr) auto;
+}
+
+.sanea-issue-meta,
+.sanea-diagnostic-log {
+    background: #282c34;
+    border-radius: 0.5rem;
+    color: #eef1f5;
+    font-size: 0.8rem;
+    max-height: 28rem;
+    overflow: auto;
+    padding: 1rem;
+    white-space: pre-wrap;
+}
+
+.sanea-issue-meta {
+    max-height: 10rem;
+}
+
+.sanea-log-summary {
+    cursor: pointer;
+}
+
+
+.sanea-update-form {
+    grid-template-columns: minmax(10rem, 1fr) minmax(18rem, 2fr) auto;
+}
+
+@media (max-width: 767.98px) {
+    .sanea-update-form {
+        grid-template-columns: 1fr;
+    }
+}
+
+.sanea-command-summary {
+    align-items: center;
+    cursor: pointer;
+    display: grid;
+    gap: 0.75rem 1.25rem;
+    grid-template-columns: minmax(10rem, 2fr) minmax(8rem, 1fr) minmax(9rem, 1fr) auto;
+}
+
+.sanea-command-payload {
+    background: #282c34;
+    border-radius: 0.5rem;
+    color: #eef1f5;
+    font-size: 0.8rem;
+    max-height: 20rem;
+    overflow: auto;
+    padding: 1rem;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 767.98px) {
+    .sanea-command-summary {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+}
+
+.sanea-brand-logo {
+    border-radius: 0.45rem;
+    flex: 0 0 auto;
+    height: 2.25rem;
+    width: 2.25rem;
+}
+
+
+.sanea-wordmark-text {
+    display: inline-flex;
+}

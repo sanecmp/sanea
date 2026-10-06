@@ -1,0 +1,23 @@
+{% load i18n %}
+<section class="card sanea-editor-card">
+    <div class="card-body p-4">
+        <h2 class="h5 fw-bold mb-3">
+            {% if limits %}{% translate "Rename limits set" %}{% else %}{% translate "Add limits template" %}{% endif %}
+        </h2>
+        <form id="limits-save" method="post" action="{% url 'core:limits' %}"
+              hx-post="{% url 'core:limits' %}" hx-target="#limits-editor" hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="limits" value="{% if limits %}{{ limits.pk }}{% else %}new{% endif %}">
+            {{ limits_form }}
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit" name="__submit" value="limits">
+                    {% translate "Save" %}
+                </button>
+                <a class="btn btn-outline-secondary" id="limits-cancel" href="{% url 'core:limits' %}"
+                   hx-get="{% url 'core:limits' %}" hx-target="#limits-editor" hx-swap="innerHTML">
+                    {% translate "Cancel" %}
+                </a>
+            </div>
+        </form>
+    </div>
+</section>

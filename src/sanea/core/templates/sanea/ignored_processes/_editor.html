@@ -1,0 +1,26 @@
+{% load i18n %}
+<section class="card sanea-editor-card">
+    <div class="card-body p-4">
+        <h2 class="h5 fw-bold mb-2">{% translate "Add ignored process" %}</h2>
+        <p class="text-body-secondary">
+            {% translate "Enter the exact case-sensitive process name shown by the operating system. The maximum length is 15 characters." %}
+        </p>
+        <form id="ignored-process-save" method="post" action="{% url 'core:ignored_processes' %}"
+              hx-post="{% url 'core:ignored_processes' %}"
+              hx-target="#ignored-process-editor" hx-swap="innerHTML">
+            {% csrf_token %}
+            {{ exclusion_form }}
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit" name="__submit" value="exclusion">
+                    {% translate "Add" %}
+                </button>
+                <a class="btn btn-outline-secondary" id="ignored-process-cancel"
+                   href="{% url 'core:ignored_processes' %}"
+                   hx-get="{% url 'core:ignored_processes' %}"
+                   hx-target="#ignored-process-editor" hx-swap="innerHTML">
+                    {% translate "Cancel" %}
+                </a>
+            </div>
+        </form>
+    </div>
+</section>

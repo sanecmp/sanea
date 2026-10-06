@@ -1,0 +1,26 @@
+{% load i18n %}
+<section class="card sanea-editor-card">
+    <div class="card-body p-4">
+        <h2 class="h5 fw-bold mb-3">
+            {% if rule %}{% translate "Edit session rule" %}{% else %}{% translate "Add session rule" %}{% endif %}
+        </h2>
+        <form id="session-rule-save" method="post" action="{% url 'core:session_rules' limits.pk %}"
+              hx-post="{% url 'core:session_rules' limits.pk %}"
+              hx-target="#session-rule-editor" hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="rule" value="{% if rule %}{{ rule.pk }}{% else %}new{% endif %}">
+            {{ rule_form }}
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit" name="__submit" value="rule">
+                    {% translate "Save" %}
+                </button>
+                <a class="btn btn-outline-secondary" id="session-rule-cancel"
+                   href="{% url 'core:session_rules' limits.pk %}"
+                   hx-get="{% url 'core:session_rules' limits.pk %}"
+                   hx-target="#session-rule-editor" hx-swap="innerHTML">
+                    {% translate "Cancel" %}
+                </a>
+            </div>
+        </form>
+    </div>
+</section>

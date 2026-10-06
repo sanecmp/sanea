@@ -1,0 +1,8 @@
+{% load i18n %}
+<span id="computer-config-status-{{ item.pk }}"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+    {% with delivery=item.get_config_delivery_status %}
+        <span class="badge {% if delivery == 'applied' %}text-bg-success{% else %}text-bg-warning{% endif %}">
+            {{ delivery.label }}
+        </span>
+    {% endwith %}
+</span>

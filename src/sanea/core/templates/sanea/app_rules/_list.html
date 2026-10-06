@@ -1,0 +1,72 @@
+{% load i18n %}
+<div id="app-rules-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <section class="card">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">{% translate "Name" %}</th>
+                    <th scope="col">{% translate "Status" %}</th>
+                    <th scope="col">{% translate "Maximum launches" %}</th>
+                    <th scope="col">{% translate "Maximum time" %}</th>
+                    <th scope="col">{% translate "Recognition conditions" %}</th>
+                    <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in app_rules %}
+                    <tr>
+                        <td class="fw-semibold">{{ item.name }}</td>
+                        <td>
+                            {% if item.apply %}
+                                <span class="badge text-bg-success">{% translate "Applied" %}</span>
+                            {% else %}
+                                <span class="badge text-bg-secondary">{% translate "Disabled" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.max_launches|default_if_none:_('Unlimited') }}</td>
+                        <td>
+                            {% if item.max_time is None %}
+                                {% translate "Unlimited" %}
+                            {% else %}
+                                {% blocktranslate count seconds=item.max_time %}{{ seconds }} second{% plural %}{{ seconds }} seconds{% endblocktranslate %}
+                            {% endif %}
+                        </td>
+                        <td class="small">
+                            {% if item.prc_name %}
+                                <span class="d-block">
+                                    {% translate "Process name" %}: {{ item.prc_name }} ({{ item.get_prc_name_match_display }})
+                                </span>
+                            {% endif %}
+                            {% if item.exe %}
+                                <span class="d-block">
+                                    {% translate "Executable" %}: {{ item.exe }} ({{ item.get_exe_match_display }})
+                                </span>
+                            {% endif %}
+                            {% if item.wnd_title %}
+                                <span class="d-block">
+                                    {% translate "Window title" %}: {{ item.wnd_title }} ({{ item.get_wnd_title_match_display }})
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" id="app-rule-edit-{{ item.pk }}"
+                               href="{% url 'core:app_rules' limits.pk session_rule.pk %}?app_rule={{ item.pk }}"
+                               hx-get="{% url 'core:app_rules' limits.pk session_rule.pk %}?app_rule={{ item.pk }}"
+                               hx-target="#app-rule-editor" hx-swap="innerHTML">
+                                {% translate "Edit" %}
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td class="text-body-secondary text-center py-5" colspan="6">
+                            {% translate "No application rules have been added." %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

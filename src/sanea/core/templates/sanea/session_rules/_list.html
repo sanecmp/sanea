@@ -1,0 +1,62 @@
+{% load i18n %}
+<div id="session-rules-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <section class="card">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">{% translate "Name" %}</th>
+                    <th scope="col">{% translate "Status" %}</th>
+                    <th scope="col">{% translate "Maximum sessions" %}</th>
+                    <th scope="col">{% translate "Maximum duration" %}</th>
+                    <th scope="col">{% translate "Break duration" %}</th>
+                    <th scope="col">{% translate "Application rules" %}</th>
+                    <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in rules %}
+                    <tr>
+                        <td class="fw-semibold">{{ item.name }}</td>
+                        <td>
+                            {% if item.apply %}
+                                <span class="badge text-bg-success">{% translate "Applied" %}</span>
+                            {% else %}
+                                <span class="badge text-bg-secondary">{% translate "Disabled" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ item.max_sessions|default_if_none:_('Unlimited') }}</td>
+                        <td>
+                            {% if item.max_duration is None %}
+                                {% translate "Unlimited" %}
+                            {% else %}
+                                {% blocktranslate count seconds=item.max_duration %}{{ seconds }} second{% plural %}{{ seconds }} seconds{% endblocktranslate %}
+                            {% endif %}
+                        </td>
+                        <td>{% blocktranslate count seconds=item.break_duration %}{{ seconds }} second{% plural %}{{ seconds }} seconds{% endblocktranslate %}</td>
+                        <td>
+                            <a href="{% url 'core:app_rules' limits.pk item.pk %}">
+                                {% blocktranslate count count=item.app_rule_count %}{{ count }} application rule{% plural %}{{ count }} application rules{% endblocktranslate %}
+                            </a>
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" id="session-rule-edit-{{ item.pk }}"
+                               href="{% url 'core:session_rules' limits.pk %}?rule={{ item.pk }}"
+                               hx-get="{% url 'core:session_rules' limits.pk %}?rule={{ item.pk }}"
+                               hx-target="#session-rule-editor" hx-swap="innerHTML">
+                                {% translate "Edit" %}
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td class="text-body-secondary text-center py-5" colspan="7">
+                            {% translate "No session rules have been added." %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

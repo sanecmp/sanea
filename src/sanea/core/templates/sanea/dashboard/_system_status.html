@@ -1,0 +1,51 @@
+{% load i18n %}
+<section class="card mb-4" id="system-status" aria-live="polite"
+         hx-get="{{ dashboard_url }}" hx-trigger="every 10s" hx-target="this" hx-swap="outerHTML">
+    <div class="card-body p-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <h2 class="h5 fw-bold mb-0">{% translate "System status" %}</h2>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ computers_url }}">{% translate "Manage computers" %}</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ issues_url }}">{% translate "View issues" %}</a>
+            </div>
+        </div>
+        <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3">
+            <div class="col">
+                <a class="d-block border rounded p-3 h-100 text-decoration-none text-body" href="{{ computers_url }}">
+                    <div class="small text-body-secondary mb-1">{% translate "Online" %}</div>
+                    <div class="h3 fw-semibold text-success mb-0" id="system-online-count">{{ connection_counts.online }}</div>
+                </a>
+            </div>
+            <div class="col">
+                <a class="d-block border rounded p-3 h-100 text-decoration-none text-body" href="{{ computers_url }}">
+                    <div class="small text-body-secondary mb-1">{% translate "Overdue" %}</div>
+                    <div class="h3 fw-semibold text-warning mb-0" id="system-overdue-count">{{ connection_counts.overdue }}</div>
+                </a>
+            </div>
+            <div class="col">
+                <a class="d-block border rounded p-3 h-100 text-decoration-none text-body" href="{{ computers_url }}">
+                    <div class="small text-body-secondary mb-1">{% translate "Offline" %}</div>
+                    <div class="h3 fw-semibold text-secondary mb-0" id="system-offline-count">{{ connection_counts.offline }}</div>
+                </a>
+            </div>
+            <div class="col">
+                <a class="d-block border rounded p-3 h-100 text-decoration-none text-body" href="{{ waiting_configs_url }}">
+                    <div class="small text-body-secondary mb-1">{% translate "Waiting for configuration" %}</div>
+                    <div class="h3 fw-semibold text-warning mb-0" id="system-waiting-config-count">{{ waiting_config_count }}</div>
+                </a>
+            </div>
+            <div class="col">
+                <a class="d-block border rounded p-3 h-100 text-decoration-none text-body" href="{{ pending_commands_url }}">
+                    <div class="small text-body-secondary mb-1">{% translate "Pending commands" %}</div>
+                    <div class="h3 fw-semibold mb-0" id="system-pending-command-count">{{ command_counts.pending }}</div>
+                </a>
+            </div>
+            <div class="col">
+                <a class="d-block border rounded p-3 h-100 text-decoration-none text-body" href="{{ failed_commands_url }}">
+                    <div class="small text-body-secondary mb-1">{% translate "Failed commands" %}</div>
+                    <div class="h3 fw-semibold text-danger mb-0" id="system-failed-command-count">{{ command_counts.failed }}</div>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>

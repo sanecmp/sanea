@@ -1,0 +1,8 @@
+{
+  "environment": "testing",
+  "state_dir": "/tmp/sanea-tests",
+  "database_path": ":memory:",
+  "allowed_hosts": ["localhost", "127.0.0.1", "testserver"],
+  "debug": false,
+  "session_cookie_secure": false
+}

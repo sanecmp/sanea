@@ -1,0 +1,20 @@
+{% load i18n %}
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+        <a class="link-secondary text-decoration-none" href="{% url 'core:limits' %}">← {% translate "Limits" %}</a>
+        <h1 class="display-6 fw-bold mb-1 mt-2">{% translate "Schedule ranges" %}</h1>
+        <p class="text-body-secondary mb-0">
+            {% blocktranslate with limits=limits %}Limits set: {{ limits }}{% endblocktranslate %}
+        </p>
+    </div>
+    {% if has_session_rules %}
+        <a class="btn btn-primary" id="range-add" href="{{ ranges_url }}?range=new"
+           hx-get="{{ ranges_url }}?range=new" hx-target="#range-editor" hx-swap="innerHTML">
+            {% translate "Add range" %}
+        </a>
+    {% else %}
+        <a class="btn btn-outline-secondary" href="{% url 'core:session_rules' limits.pk %}">
+            {% translate "Add a session rule first" %}
+        </a>
+    {% endif %}
+</div>

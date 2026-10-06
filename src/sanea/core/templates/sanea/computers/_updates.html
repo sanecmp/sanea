@@ -1,0 +1,53 @@
+{% load i18n %}
+<div class="card-body p-4">
+    <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-3">
+        <div>
+            <h2 class="h5 fw-bold mb-1">{% translate "Update sanex" %}</h2>
+            <p class="text-body-secondary mb-0">
+                {% translate "Keep offering one version to every allowed computer until you cancel or replace it." %}
+            </p>
+        </div>
+    </div>
+
+    {% if update_result %}
+        {% if update_result.cancelled is not None %}
+            <div class="alert alert-secondary py-2" role="status">
+                {% translate "The update was cancelled. Computers will stop retrying after their next synchronization." %}
+            </div>
+        {% else %}
+            {% if not update_result.created %}
+                <div class="alert alert-warning py-2" role="status">
+                    {% translate "The update is active. There are no allowed computers yet; newly allowed computers will receive it." %}
+                </div>
+            {% else %}
+                <div class="alert alert-success py-2" role="status">
+                    {% blocktranslate count created=update_result.created %}Update queued for {{ created }} computer.{% plural %}Update queued for {{ created }} computers.{% endblocktranslate %}
+                </div>
+            {% endif %}
+        {% endif %}
+    {% endif %}
+
+    {% if active_update %}
+        <div class="alert alert-info d-flex flex-wrap align-items-center justify-content-between gap-3 py-2" role="status">
+            <span>
+                {% blocktranslate with version=active_update.version index_url=active_update.index_url %}Active update: sanex {{ version }} from {{ index_url }}.{% endblocktranslate %}
+            </span>
+            <form method="post" action="{{ computers_url }}"
+                  hx-post="{{ computers_url }}" hx-target="#sanex-updates" hx-swap="innerHTML">
+                {% csrf_token %}
+                <button class="btn btn-sm btn-outline-danger" id="update-cancel" type="submit"
+                        name="__submit" value="update_cancel">{% translate "Cancel update" %}</button>
+            </form>
+        </div>
+    {% endif %}
+
+    <form id="sanex-update-form" class="sanea-update-form" method="post" action="{{ computers_url }}"
+          hx-post="{{ computers_url }}" hx-target="#sanex-updates" hx-swap="innerHTML">
+        {% csrf_token %}
+        {{ update_form }}
+        <button class="btn btn-primary align-self-end" id="update-save" type="submit"
+                name="__submit" value="update">
+            {% if active_update %}{% translate "Replace update" %}{% else %}{% translate "Start update" %}{% endif %}
+        </button>
+    </form>
+</div>

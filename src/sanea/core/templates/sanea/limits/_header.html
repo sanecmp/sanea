@@ -1,0 +1,13 @@
+{% load i18n %}
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="display-6 fw-bold mb-1">{% translate "Limits" %}</h1>
+        <p class="text-body-secondary mb-0">
+            {% translate "Create reusable limits for people. After changing a template, use Distribute template to update existing accounts." %}
+        </p>
+    </div>
+    <a class="btn btn-primary" id="limits-add" href="{{ limits_url }}?limits=new"
+       hx-get="{{ limits_url }}?limits=new" hx-target="#limits-editor" hx-swap="innerHTML">
+        {% translate "Add template" %}
+    </a>
+</div>

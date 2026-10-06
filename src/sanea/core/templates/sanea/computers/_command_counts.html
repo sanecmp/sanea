@@ -1,0 +1,29 @@
+{% load i18n %}
+<span class="d-inline-flex flex-wrap gap-2" id="computer-command-counts-{{ item.pk }}"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <span class="text-nowrap">
+        <span class="small text-body-secondary">{% translate "Pending" %}:</span>
+        {% if item.pending_command_count %}
+            <a class="text-decoration-none" id="computer-command-pending-{{ item.pk }}"
+               href="{{ computers_url }}?command_computer={{ item.pk }}&amp;command_status=pending#command-history"
+               hx-get="{{ computers_url }}?command_computer={{ item.pk }}&amp;command_status=pending"
+               hx-target="#command-history" hx-swap="outerHTML show:top"
+               hx-push-url="{{ computers_url }}?command_computer={{ item.pk }}&amp;command_status=pending#command-history"
+               aria-label="{% blocktranslate with computer_name=item.get_display_name %}View pending commands for {{ computer_name }}{% endblocktranslate %}">
+                <span class="badge text-bg-warning">{{ item.pending_command_count }}</span>
+            </a>
+        {% else %}0{% endif %}
+    </span>
+    <span class="text-nowrap">
+        <span class="small text-body-secondary">{% translate "Failed" %}:</span>
+        {% if item.failed_command_count %}
+            <a class="text-decoration-none" id="computer-command-failed-{{ item.pk }}"
+               href="{{ computers_url }}?command_computer={{ item.pk }}&amp;command_status=failed#command-history"
+               hx-get="{{ computers_url }}?command_computer={{ item.pk }}&amp;command_status=failed"
+               hx-target="#command-history" hx-swap="outerHTML show:top"
+               hx-push-url="{{ computers_url }}?command_computer={{ item.pk }}&amp;command_status=failed#command-history"
+               aria-label="{% blocktranslate with computer_name=item.get_display_name %}View failed commands for {{ computer_name }}{% endblocktranslate %}">
+                <span class="badge text-bg-danger">{{ item.failed_command_count }}</span>
+            </a>
+        {% else %}0{% endif %}
+    </span>
+</span>

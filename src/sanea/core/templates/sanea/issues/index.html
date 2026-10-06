@@ -1,0 +1,13 @@
+{% extends "sanea/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="mb-4">
+    <h1 class="display-6 fw-bold mb-1">{% translate "Issues" %}</h1>
+    <p class="text-body-secondary mb-0">
+        {% translate "Failures reported while applying limits and the latest diagnostic logs from sanex." %}
+    </p>
+</div>
+
+{% include "sanea/issues/_content.html" %}
+{% endblock %}

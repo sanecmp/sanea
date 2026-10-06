@@ -1,0 +1,109 @@
+{% load i18n static sitetree %}
+{% get_current_language as LANGUAGE_CODE %}
+<!doctype html>
+<html lang="{{ LANGUAGE_CODE }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ page_title }} · sanea{% endblock %}</title>
+    <link rel="icon" href="{% static 'sanea/favicon.svg' %}" type="image/svg+xml">
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'sanea/css/app.css' %}">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+<svg class="d-none" aria-hidden="true">
+    <symbol id="icon-dashboard" viewBox="0 0 24 24">
+        <path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>
+    </symbol>
+    <symbol id="icon-people" viewBox="0 0 24 24">
+        <circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/>
+        <path d="M3 20v-2a6 6 0 0 1 12 0v2M15 14a5 5 0 0 1 6 4.9V20"/>
+    </symbol>
+    <symbol id="icon-computers" viewBox="0 0 24 24">
+        <rect x="3" y="4" width="18" height="13" rx="1"/><path d="M8 21h8M12 17v4"/>
+    </symbol>
+    <symbol id="icon-accounts" viewBox="0 0 24 24">
+        <circle cx="12" cy="8" r="3"/><path d="M5 21v-2a7 7 0 0 1 14 0v2z"/>
+    </symbol>
+    <symbol id="icon-limits" viewBox="0 0 24 24">
+        <path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5"/>
+        <circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/>
+    </symbol>
+    <symbol id="icon-issues" viewBox="0 0 24 24">
+        <path d="M12 3 2.5 20h19z"/><path d="M12 9v5M12 17.5v.5"/>
+    </symbol>
+    <symbol id="icon-settings" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19 13.5v-3l-2.1-.7-.7-1.7 1-2-2.1-2.1-2 1-1.7-.7L10.5 2h-3l-.7 2.1-1.7.7-2-1L1 5.9l1 2-.7 1.7L0 10.5v3l2.1.7.7 1.7-1 2L3.9 20l2-1 1.7.7.9 2.3h3l.7-2.1 1.7-.7 2 1 2.1-2.1-1-2 .7-1.7z"/>
+    </symbol>
+    <symbol id="icon-menu" viewBox="0 0 24 24">
+        <path d="M4 7h16M4 12h16M4 17h16"/>
+    </symbol>
+</svg>
+
+<div class="sanea-shell">
+    <aside class="sanea-sidebar d-none d-lg-flex flex-column">
+        <a class="sanea-wordmark text-decoration-none" href="{% url 'core:dashboard' %}" aria-label="Sanea">
+            {% include "sanea/_brand.html" %}
+        </a>
+        <nav class="mt-4" aria-label="{% translate 'Main navigation' %}">
+            {% sitetree_menu from "main" include "trunk" template "sanea/_navigation.html" %}
+        </nav>
+        <div class="sanea-sidebar-footer mt-auto">sanea {{ application_version }}</div>
+    </aside>
+
+    <div class="sanea-content">
+        <header class="sanea-topbar d-flex align-items-center justify-content-between px-3 px-lg-4">
+            <button class="btn btn-link d-lg-none p-1 text-body" type="button"
+                    data-bs-toggle="offcanvas" data-bs-target="#saneaNavigation"
+                    aria-controls="saneaNavigation" aria-label="{% translate 'Open navigation' %}">
+                <svg class="sanea-menu-icon" aria-hidden="true"><use href="#icon-menu"></use></svg>
+            </button>
+            <a class="sanea-wordmark d-lg-none text-decoration-none" href="{% url 'core:dashboard' %}">
+                {% include "sanea/_brand.html" %}
+            </a>
+            <div class="dropdown ms-auto">
+                <button class="btn sanea-user-link border-0" type="button" data-bs-toggle="dropdown"
+                        aria-expanded="false">
+                    <span class="sanea-avatar" aria-hidden="true">{{ request.user.username|first|upper }}</span>
+                    <span class="d-none d-sm-inline">{{ request.user.get_full_name|default:request.user.username }}</span>
+                </button>
+                <div class="dropdown-menu dropdown-menu-end p-2">
+                    <form method="post" action="{% url 'core:sign_out' %}">
+                        {% csrf_token %}
+                        <button class="dropdown-item" type="submit">{% translate "Sign out" %}</button>
+                    </form>
+                </div>
+            </div>
+        </header>
+
+        <main class="container-fluid sanea-main px-3 px-lg-4 py-4 py-lg-5">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+</div>
+
+<div class="offcanvas offcanvas-start sanea-offcanvas" tabindex="-1" id="saneaNavigation"
+     aria-labelledby="saneaNavigationLabel">
+    <div class="offcanvas-header">
+        <h2 class="offcanvas-title sanea-wordmark" id="saneaNavigationLabel">
+            {% include "sanea/_brand.html" %}
+        </h2>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"
+                aria-label="{% translate 'Close' %}"></button>
+    </div>
+    <div class="offcanvas-body d-flex flex-column">
+        <nav aria-label="{% translate 'Main navigation' %}">
+            {% sitetree_menu from "main" include "trunk" template "sanea/_navigation.html" %}
+        </nav>
+        <div class="sanea-sidebar-footer mt-auto pt-4">sanea {{ application_version }}</div>
+    </div>
+</div>
+
+{% include "siteajax/cdn.html" %}
+<script>{% include "siteajax/init_csrf.js" %}</script>
+<script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+{% block extra_body %}{% endblock %}
+</body>
+</html>

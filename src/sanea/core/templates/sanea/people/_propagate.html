@@ -1,0 +1,25 @@
+{% load i18n %}
+<section class="card sanea-editor-card">
+    <div class="card-body p-4">
+        <h2 class="h5 fw-bold mb-1">{% translate "Distribute limits template" %}</h2>
+        <p class="text-body-secondary mb-3">
+            {% blocktranslate with template=person.limits_tpl person_name=person.name %}Replace limits for selected accounts of {{ person_name }} with the {{ template }} template.{% endblocktranslate %}
+        </p>
+        <form id="person-propagate-save" method="post" action="{% url 'core:people' %}"
+              hx-post="{% url 'core:people' %}" hx-target="#person-editor" hx-swap="innerHTML">
+            {% csrf_token %}
+            <input type="hidden" name="person" value="{{ person.pk }}">
+            <input type="hidden" name="propagate_template" value="1">
+            {{ propagation_form }}
+            <div class="d-flex gap-2">
+                <button class="btn btn-primary" type="submit" name="__submit" value="propagation">
+                    {% translate "Distribute" %}
+                </button>
+                <a class="btn btn-outline-secondary" id="person-propagate-cancel" href="{% url 'core:people' %}"
+                   hx-get="{% url 'core:people' %}" hx-target="#person-editor" hx-swap="innerHTML">
+                    {% translate "Cancel" %}
+                </a>
+            </div>
+        </form>
+    </div>
+</section>

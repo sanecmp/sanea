@@ -1,0 +1,15 @@
+{% load i18n %}
+<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+        <h1 class="display-6 fw-bold mb-1">{% translate "Ignored processes" %}</h1>
+        <p class="text-body-secondary mb-0">
+            {% translate "Processes on this list are not included in activity reports on any computer." %}
+        </p>
+    </div>
+    <a class="btn btn-primary" id="ignored-process-add"
+       href="{{ ignored_processes_url }}?exclusion=new"
+       hx-get="{{ ignored_processes_url }}?exclusion=new"
+       hx-target="#ignored-process-editor" hx-swap="innerHTML">
+        {% translate "Add process" %}
+    </a>
+</div>

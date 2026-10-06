@@ -1,0 +1,8 @@
+{% load i18n %}
+<span id="computer-connection-{{ item.pk }}"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
+    {% with connection=item.get_connection_status %}
+        <span class="badge {% if connection == 'online' %}text-bg-success{% elif connection == 'overdue' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">
+            {{ connection.label }}
+        </span>
+    {% endwith %}
+</span>

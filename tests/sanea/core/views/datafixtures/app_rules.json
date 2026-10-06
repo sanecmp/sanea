@@ -1,0 +1,24 @@
+{
+  "existing": {
+    "ident": 21,
+    "name": "Browser",
+    "apply": true,
+    "max_launches": 5,
+    "max_time": 3600,
+    "prc_name": "browser",
+    "prc_name_match": "exact"
+  },
+  "created": {
+    "name": "Video player",
+    "apply": true,
+    "max_launches": 3,
+    "max_time": 1800,
+    "exe": "/usr/bin/player",
+    "exe_match": "exact",
+    "wnd_title": "Lessons",
+    "wnd_title_match": "contains"
+  },
+  "renamed": {
+    "name": "Web browser"
+  }
+}

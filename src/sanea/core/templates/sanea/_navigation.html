@@ -1,0 +1,15 @@
+{% load sitetree %}
+<ul class="nav nav-pills flex-column gap-2">
+    {% for item in sitetree_items %}
+        <li class="nav-item">
+            <a class="nav-link d-flex align-items-center gap-3{% if item.is_current or item.in_current_branch %} active{% endif %}"
+               href="{% sitetree_url for item %}"
+               {% if item.is_current %}aria-current="page"{% endif %}>
+                <svg class="sanea-nav-icon" aria-hidden="true">
+                    <use href="#icon-{{ item.alias }}"></use>
+                </svg>
+                <span>{{ item.title_resolved }}</span>
+            </a>
+        </li>
+    {% endfor %}
+</ul>

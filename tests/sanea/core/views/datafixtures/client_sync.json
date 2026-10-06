@@ -1,0 +1,20 @@
+{
+  "request": {
+    "hostname": "child-laptop",
+    "version": "0.2.0",
+    "config_ident": null,
+    "accounts": [
+      {
+        "uid": 1001,
+        "login": "child",
+        "name": "Alex"
+      },
+      {
+        "uid": 1002,
+        "login": "guest",
+        "name": "Guest"
+      }
+    ],
+    "command_results": []
+  }
+}

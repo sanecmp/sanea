@@ -1,0 +1,69 @@
+{% load i18n %}
+<div id="accounts-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <section class="card">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead>
+                <tr>
+                    <th scope="col">{% translate "Account" %}</th>
+                    <th scope="col">{% translate "Computer" %}</th>
+                    <th scope="col">{% translate "Person" %}</th>
+                    <th scope="col">{% translate "Monitoring" %}</th>
+                    <th scope="col">{% translate "Limits" %}</th>
+                    <th scope="col">{% translate "Presence" %}</th>
+                    <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for item in accounts %}
+                    <tr>
+                        <td>
+                            <span class="fw-semibold">{{ item.name|default:item.login }}</span>
+                            <span class="d-block text-body-secondary">{{ item.login }} · UID {{ item.uid }}</span>
+                        </td>
+                        <td>{{ item.computer.get_display_name }}</td>
+                        <td>{{ item.person|default:_('Not assigned') }}</td>
+                        <td>
+                            {% if item.collect %}
+                                <span class="badge text-bg-success">{% translate "Collecting" %}</span>
+                            {% else %}
+                                <span class="badge text-bg-secondary">{% translate "Disabled" %}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.apply %}
+                                <span class="badge text-bg-warning">{% translate "Applied" %}</span>
+                            {% elif item.limits_id %}
+                                <span class="badge text-bg-secondary">{% translate "Not applied" %}</span>
+                            {% else %}
+                                {% translate "Not configured" %}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.present %}
+                                {% translate "Present" %}
+                            {% else %}
+                                <span class="text-body-secondary">{% translate "Not reported" %}</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-secondary" id="account-edit-{{ item.pk }}"
+                               href="{% url 'core:accounts' %}?account={{ item.pk }}"
+                               hx-get="{% url 'core:accounts' %}?account={{ item.pk }}"
+                               hx-target="#account-editor" hx-swap="innerHTML">
+                                {% translate "Configure" %}
+                            </a>
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td class="text-body-secondary text-center py-5" colspan="7">
+                            {% translate "No local accounts have been reported." %}
+                        </td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>

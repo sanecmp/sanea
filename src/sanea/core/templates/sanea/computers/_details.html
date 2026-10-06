@@ -1,0 +1,73 @@
+{% load i18n %}
+<section class="sanea-computer-details border-top p-4" aria-label="{% translate 'Computer details' %}">
+    <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+        <h2 class="h5 fw-bold mb-0">{{ computer.get_display_name }}</h2>
+        <div class="d-flex align-items-center gap-2">
+            <a class="btn btn-sm btn-outline-secondary" id="computer-configure-{{ computer.pk }}"
+               href="{{ computers_url }}?computer={{ computer.pk }}&edit=1"
+               hx-get="{{ computers_url }}?computer={{ computer.pk }}&edit=1"
+               hx-target="#computer-details-{{ computer.pk }}" hx-swap="innerHTML">
+                {% translate "Configure" %}
+            </a>
+            <a class="btn-close" id="computer-close-{{ computer.pk }}" href="{% url 'core:computers' %}"
+               hx-get="{% url 'core:computers' %}" hx-target="#computer-details-{{ computer.pk }}"
+               hx-swap="innerHTML" aria-label="{% translate 'Close' %}"></a>
+        </div>
+    </div>
+    {% if message %}<div class="alert alert-success" role="status">{{ message }}</div>{% endif %}
+    <dl class="row mb-0">
+        <dt class="col-sm-4 col-lg-3">{% translate "Hostname" %}</dt>
+        <dd class="col-sm-8 col-lg-9">{{ computer.hostname }}</dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Connection" %}</dt>
+        <dd class="col-sm-8 col-lg-9">
+            {% with connection=computer.get_connection_status %}
+                <span class="badge {% if connection == 'online' %}text-bg-success{% elif connection == 'overdue' %}text-bg-warning{% else %}text-bg-secondary{% endif %}">{{ connection.label }}</span>
+            {% endwith %}
+        </dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Configuration" %}</dt>
+        <dd class="col-sm-8 col-lg-9">
+            {% include "sanea/computers/_config_status.html" with item=computer %}
+            <span class="small text-body-secondary ms-2">
+                {% blocktranslate with offered=computer.current_config_id|default:_('None') confirmed=computer.applied_config_id|default:_('None') %}offered: {{ offered }}, confirmed: {{ confirmed }}{% endblocktranslate %}
+            </span>
+        </dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Pending commands" %}</dt>
+        <dd class="col-sm-8 col-lg-9">{{ computer.pending_command_count }}</dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Last IP address" %}</dt>
+        <dd class="col-sm-8 col-lg-9">{{ computer.last_ip|default:_('Unknown') }}</dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Timezone" %}</dt>
+        <dd class="col-sm-8 col-lg-9">{{ computer.timezone }}</dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Synchronization interval" %}</dt>
+        <dd class="col-sm-8 col-lg-9">{% blocktranslate count seconds=computer.sync_interval %}{{ seconds }} second{% plural %}{{ seconds }} seconds{% endblocktranslate %}</dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Discovery interval" %}</dt>
+        <dd class="col-sm-8 col-lg-9">{% blocktranslate count seconds=computer.discovery_interval %}{{ seconds }} second{% plural %}{{ seconds }} seconds{% endblocktranslate %}</dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Walk interval" %}</dt>
+        <dd class="col-sm-8 col-lg-9">{% blocktranslate count seconds=computer.walk_interval %}{{ seconds }} second{% plural %}{{ seconds }} seconds{% endblocktranslate %}</dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Save interval" %}</dt>
+        <dd class="col-sm-8 col-lg-9">{% blocktranslate count seconds=computer.save_interval %}{{ seconds }} second{% plural %}{{ seconds }} seconds{% endblocktranslate %}</dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Minimum process duration" %}</dt>
+        <dd class="col-sm-8 col-lg-9">{% blocktranslate count seconds=computer.min_prc_duration %}{{ seconds }} second{% plural %}{{ seconds }} seconds{% endblocktranslate %}</dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Client certificate fingerprint" %}</dt>
+        <dd class="col-sm-8 col-lg-9"><code class="text-break">{{ computer.certificate_fingerprint|default:_('Not issued') }}</code></dd>
+
+        <dt class="col-sm-4 col-lg-3">{% translate "Public key fingerprint" %}</dt>
+        <dd class="col-sm-8 col-lg-9 mb-0"><code class="text-break">{{ computer.public_key_fingerprint|default:_('Not reported') }}</code></dd>
+    </dl>
+</section>
+
+{% if list_oob %}
+    {% include "sanea/computers/_access.html" with item=computer oob=True %}
+    {% include "sanea/computers/_connection.html" with item=computer oob=True %}
+    {% include "sanea/computers/_config_status.html" with item=computer oob=True %}
+{% endif %}
