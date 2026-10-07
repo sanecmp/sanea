@@ -91,6 +91,14 @@ is in `/opt/sanea/state` and configuration in `/etc/sanea/sanea.env`.
 Management commands use the root-owned wrapper `sudo sanea` to load that
 configuration and execute as the dedicated service user.
 
+### Updating sanea
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sanecmp/sanea/main/install.sh \
+    -o install-sanea.sh &&
+sudo sh install-sanea.sh
+```
+
 ### Home-network access
 
 Edit `/etc/sanea/sanea.env` as root. Add the actual LAN IP to

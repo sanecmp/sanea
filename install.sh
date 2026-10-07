@@ -144,8 +144,12 @@ config_dir=/etc/sanea
 config_path=$config_dir/sanea.env
 unit_target=/etc/systemd/system/sanea.service
 wrapper_target=/usr/local/sbin/sanea
+was_active=0
 
 cleanup() {
+    if [ "$was_active" -eq 1 ]; then
+        systemctl start sanea.service || true
+    fi
     if [ -n "$asset_tmp_dir" ]; then
         rm -rf "$asset_tmp_dir"
     fi
@@ -162,6 +166,11 @@ fi
 install -d -o root -g root -m 0755 "$app_dir" "$bundle_dir" "$bin_dir"
 install -d -o sanea -g sanea -m 0700 "$state_dir"
 install -d -o root -g sanea -m 0750 "$config_dir"
+
+if systemctl is-active --quiet sanea.service; then
+    was_active=1
+    systemctl stop sanea.service
+fi
 
 for variable in $(env | sed -n 's/^\(UV_[A-Za-z0-9_]*\)=.*/\1/p'); do
     unset "$variable"
@@ -223,6 +232,7 @@ systemctl daemon-reload
 "$wrapper_target" migrate --noinput
 "$wrapper_target" collectstatic --noinput
 systemctl enable --now sanea.service
+was_active=0
 
 trap - EXIT
 cleanup
