@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "sanea"
+name = "sanecmp-sanea"
 version = "0.1.0"
 description = "Parent application for child computer digital wellbeing"
 license = "BSD-3-Clause"
@@ -20,11 +20,15 @@ dependencies = [
     "Django>=6.1,<6.2",
     "envbox>=2.0.1,<3",
     "pydantic>=2.13,<3",
-    "sanelib>=0.1,<0.2",
+    "sanecmp-sanelib>=0.1,<0.2",
 ]
 
+[project.urls]
+Repository = "https://github.com/sanecmp/sanea"
+Issues = "https://github.com/sanecmp/sanea/issues"
+
 [tool.uv.sources]
-sanelib = { path = "../sanelib", editable = true }
+sanecmp-sanelib = { path = "../sanelib", editable = true }
 
 [project.scripts]
 sanea = "sanea.cli:main"

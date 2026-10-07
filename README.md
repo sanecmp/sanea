@@ -2,6 +2,9 @@
 
 sanea is the parent-facing web application.
 
+Its Python distribution is `sanecmp-sanea`; the import package and installed
+command remain `sanea`. It depends on `sanecmp-sanelib`.
+
 ## Local development
 
 Run these commands from the `sanea/` package directory:
@@ -53,3 +56,64 @@ regenerate the migration.
 
 Build release wheel and sdist files with `uv build`. Production installation
 continues to use the existing uv-based installer, not makeapp.
+
+## System installation
+
+The installer requires curl, a system Python 3.12+ and a system uv. Python, uv
+and their containing directories must be owned by root and not writable by
+unprivileged users. uv's user-local installation is not sufficient. By default,
+the installer uses `/usr/bin/python3` and searches the system PATH for uv;
+`--python` and `--uv` select other protected absolute paths.
+
+Download the complete installer before running it as root:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sanecmp/sanea/main/install.sh \
+    -o install-sanea.sh &&
+sudo sh install-sanea.sh 'sanecmp-sanea==0.1.0'
+sudo sanea createsuperuser
+```
+
+The installer creates the dedicated `sanea` OS user, database, random secret,
+configuration and systemd service. It runs migrations and starts the service.
+Use the administrator's credentials to sign in at <http://127.0.0.1:8000/> on
+the computer running sanea. That HTTP address is for local access, not remote
+login over the network.
+
+Application code lives in `/opt/sanea/bundle/sanecmp-sanea`; persistent state
+is in `/opt/sanea/state` and configuration in `/etc/sanea/sanea.env`.
+Management commands use the root-owned wrapper `sudo sanea` to load that
+configuration and execute as the dedicated service user.
+
+### Home-network access
+
+Edit `/etc/sanea/sanea.env` as root. Add the actual LAN IP to
+`SANEA_ALLOWED_HOSTS` so sanex can use the address returned by discovery.
+For browser HTTPS access from another computer, make the DNS name `sanea`
+resolve to that IP through your home DNS or the browsing computer's hosts file,
+and also allow that name. For example, with the server at `192.168.1.10`:
+
+```bash
+SANEA_ALLOWED_HOSTS='["localhost","127.0.0.1","sanea","192.168.1.10"]'
+```
+
+Replace the example IP with your server's address; preserve any other names you
+use. Apply the configuration change:
+
+```bash
+sudo systemctl restart sanea.service
+```
+
+Allow inbound TCP 8443 and UDP 62117 from your home network. UDP discovery
+requires the devices to share a reachable local broadcast network; guest-network
+isolation can prevent registration. Do not expose these listeners to the internet.
+
+For browser access, trust the public CA certificate
+`/opt/sanea/state/pki/ca.crt` in the browser and open <https://sanea:8443/>.
+The generated server certificate currently covers `sanea` and `localhost`,
+not arbitrary IP addresses or machine names. Trusting the CA alone does not
+make a different hostname valid. Never copy the private `.key` files.
+
+In **Computers**, open registration and run the displayed command on the
+child's computer within 30 seconds. Monitoring and limits stay disabled until
+you enable them for the intended local accounts.

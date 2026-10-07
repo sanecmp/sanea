@@ -22,6 +22,7 @@ def test_installer_has_valid_shell_syntax_and_help() -> None:
     assert "--uv PATH" in result.stdout
     assert "--python PATH" in result.stdout
     assert "--index-url URL" in result.stdout
+    assert "PACKAGE defaults to \"sanecmp-sanea\"" in result.stdout
     content = INSTALLER.read_text()
     assert "raw.githubusercontent.com/sanecmp/sanea/main" in content
     assert "systemctl enable --now sanea.service" in content

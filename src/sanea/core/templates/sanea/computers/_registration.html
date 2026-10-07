@@ -11,7 +11,7 @@
                 {{ registration.code }}
             </div>
             <p class="mb-1">{% translate "On the computer being registered, run as root:" %}</p>
-            <code class="d-block text-break">sudo sanex register {{ registration.code }}</code>
+            <code class="d-block text-break">sudo /opt/sanex/bin/sanex register {{ registration.code }}</code>
         </div>
         <div class="col-lg-5 text-lg-end">
             <div class="text-body-secondary mb-1">{% translate "Registration closes in" %}</div>

@@ -146,7 +146,7 @@ def test_staff_user_opens_registration_with_visible_countdown(
     assert response.status_code == 200
     assert "Registration is open" in content
     assert code in content
-    assert f"sudo sanex register {code}" in content
+    assert f"sudo /opt/sanex/bin/sanex register {code}" in content
     assert "data-registration-countdown=\"30000\"" in content
     assert "00:30" in content
     assert "registration-window.js" not in content
