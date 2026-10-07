@@ -65,17 +65,16 @@ unprivileged users. uv's user-local installation is not sufficient. By default,
 the installer uses `/usr/bin/python3` and searches the system PATH for uv;
 `--python` and `--uv` select other protected absolute paths.
 
-Download the complete installer before running it as root:
+Run the installer as root:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sanecmp/sanea/main/install.sh \
-    -o install-sanea.sh &&
-sudo sh install-sanea.sh 'sanecmp-sanea==0.1.0'
+    | sudo sh -s -- 'sanecmp-sanea==0.1.0'
 sudo sanea createsuperuser
 ```
 
 PyPI is the default source. To install from GitHub instead, pass `--from-github`
-to the same installer; this mode requires system Git and installs both sanea
+after `sudo sh -s --`; this mode requires system Git and installs both sanea
 and sanelib from the `main` branches of their official repositories.
 Do not supply `PACKAGE` together with `--from-github`. Third-party dependencies
 still come from PyPI, or the HTTPS index selected with `--index-url`.
@@ -95,8 +94,7 @@ configuration and execute as the dedicated service user.
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sanecmp/sanea/main/install.sh \
-    -o install-sanea.sh &&
-sudo sh install-sanea.sh
+    | sudo sh
 ```
 
 ### Home-network access
