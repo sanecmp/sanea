@@ -74,6 +74,12 @@ sudo sh install-sanea.sh 'sanecmp-sanea==0.1.0'
 sudo sanea createsuperuser
 ```
 
+PyPI is the default source. To install from GitHub instead, pass `--from-github`
+to the same installer; this mode requires system Git and installs both sanea
+and sanelib from the `main` branches of their official repositories.
+Do not supply `PACKAGE` together with `--from-github`. Third-party dependencies
+still come from PyPI, or the HTTPS index selected with `--index-url`.
+
 The installer creates the dedicated `sanea` OS user, database, random secret,
 configuration and systemd service. It runs migrations and starts the service.
 Use the administrator's credentials to sign in at <http://127.0.0.1:8000/> on

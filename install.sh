@@ -7,9 +7,12 @@ export PATH
 usage() {
     cat <<'USAGE'
 Usage: install.sh [--uv PATH] [--python PATH] [--index-url URL] [PACKAGE]
+                  [--from-github]
 
 Install sanea as a system service. PACKAGE defaults to "sanecmp-sanea" and may be an
 exact requirement or a local wheel path.
+--from-github installs sanea and sanelib from the main branches of their GitHub
+repositories and requires git. PACKAGE cannot be combined with this mode.
 USAGE
 }
 
@@ -52,6 +55,7 @@ python_command=/usr/bin/python3
 index_url=https://pypi.org/simple
 package=sanecmp-sanea
 package_set=0
+from_github=0
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -70,6 +74,10 @@ while [ "$#" -gt 0 ]; do
             index_url=$2
             shift 2
             ;;
+        --from-github)
+            from_github=1
+            shift
+            ;;
         --help|-h)
             usage
             exit 0
@@ -85,6 +93,15 @@ while [ "$#" -gt 0 ]; do
             ;;
     esac
 done
+
+if [ "$from_github" -eq 1 ]; then
+    [ "$package_set" -eq 0 ] || fail "PACKAGE cannot be combined with --from-github"
+    command -v git >/dev/null 2>&1 || fail "git is required for --from-github"
+    package="sanecmp-sanea @ git+https://github.com/sanecmp/sanea.git@main"
+    set -- --with "sanecmp-sanelib @ git+https://github.com/sanecmp/sanelib.git@main"
+else
+    set --
+fi
 
 [ "$(id -u)" -eq 0 ] || fail "must run as root"
 case "$index_url" in
@@ -164,6 +181,7 @@ UV_TOOL_BIN_DIR=$bin_dir \
     --index-strategy first-index \
     --default-index "$index_url" \
     --python "$python_path" \
+    "$@" \
     "$package"
 
 [ -x "$bin_dir/sanea" ] || fail "uv did not install the sanea entry point"

@@ -22,11 +22,21 @@ def test_installer_has_valid_shell_syntax_and_help() -> None:
     assert "--uv PATH" in result.stdout
     assert "--python PATH" in result.stdout
     assert "--index-url URL" in result.stdout
+    assert "--from-github" in result.stdout
     assert "PACKAGE defaults to \"sanecmp-sanea\"" in result.stdout
     content = INSTALLER.read_text()
     assert "raw.githubusercontent.com/sanecmp/sanea/main" in content
     assert "systemctl enable --now sanea.service" in content
     assert "sanea createsuperuser" in content
+
+
+def test_installer_rejects_package_with_github_mode() -> None:
+    result = subprocess.run(
+        [f"{INSTALLER}", "--from-github", "sanecmp-sanea==0.1.0"], capture_output=True, text=True,
+    )
+
+    assert result.returncode == 1
+    assert "PACKAGE cannot be combined with --from-github" in result.stderr
 
 
 def test_systemd_unit_runs_sanea_as_dedicated_user() -> None:
