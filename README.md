@@ -101,18 +101,17 @@ sudo sh install-sanea.sh
 
 ### Home-network access
 
-Edit `/etc/sanea/sanea.env` as root. Add the actual LAN IP to
-`SANEA_ALLOWED_HOSTS` so sanex can use the address returned by discovery.
+On first installation, the installer fills `SANEA_ALLOWED_HOSTS` with loopback
+addresses, `sanea`, the OS hostname and local IPv4/IPv6 addresses. It reads the
+addresses from local interfaces with `hostname -I`, without an external lookup
+or a wildcard. Existing configuration is preserved during updates.
+
+If sanea's IP address changes or you need another DNS name, edit
+`/etc/sanea/sanea.env` as root and update `SANEA_ALLOWED_HOSTS`.
 For browser HTTPS access from another computer, make the DNS name `sanea`
-resolve to that IP through your home DNS or the browsing computer's hosts file,
-and also allow that name. For example, with the server at `192.168.1.10`:
+resolve to sanea's IP through your home DNS or the browsing computer's hosts file.
 
-```bash
-SANEA_ALLOWED_HOSTS='["localhost","127.0.0.1","sanea","192.168.1.10"]'
-```
-
-Replace the example IP with your server's address; preserve any other names you
-use. Apply the configuration change:
+After changing the configuration:
 
 ```bash
 sudo systemctl restart sanea.service

@@ -198,13 +198,36 @@ UV_TOOL_BIN_DIR=$bin_dir \
 if [ ! -f "$config_path" ]; then
     secret=$("$python_path" -c 'import secrets; print(secrets.token_urlsafe(48))')
     host_name=$(hostname 2>/dev/null || printf localhost)
+    local_addresses=$(hostname -I) || fail "unable to list local IP addresses"
+    allowed_hosts=$("$python_path" - "$host_name" "$local_addresses" <<'PY'
+import ipaddress
+import json
+import sys
+
+hosts = ["localhost", "127.0.0.1", "[::1]", "sanea", sys.argv[1]]
+
+for value in sys.argv[2].split():
+    try:
+        address = ipaddress.ip_address(value)
+
+    except ValueError:
+        raise SystemExit("Invalid local IP address reported by hostname") from None
+
+    if address.is_unspecified or address.is_multicast or address.is_link_local:
+        continue
+
+    hosts.append(f"[{address}]" if address.version == 6 else f"{address}")
+
+print(json.dumps(list(dict.fromkeys(hosts))))
+PY
+    ) || fail "unable to prepare allowed hosts"
     config_tmp=$(mktemp "$config_dir/.sanea.env.XXXXXX")
     cat > "$config_tmp" <<CONFIG
 PYTHON_ENV=production
 SANEA_SECRET_KEY=$secret
 SANEA_STATE_DIR=$state_dir
 SANEA_DATABASE_PATH=$state_dir/sanea.sqlite3
-SANEA_ALLOWED_HOSTS='["localhost","127.0.0.1","[::1]","$host_name"]'
+SANEA_ALLOWED_HOSTS='$allowed_hosts'
 SANEA_SERVER_HOST=0.0.0.0
 SANEA_HTTP_PORT=8000
 SANEA_HTTPS_PORT=8443
