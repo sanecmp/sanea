@@ -81,6 +81,8 @@ still come from PyPI, or the HTTPS index selected with `--index-url`.
 
 The installer creates the dedicated `sanea` OS user, database, random secret,
 configuration and systemd service. It runs migrations and starts the service.
+It also collects static assets, which the embedded server serves through
+WhiteNoise without a separate web server.
 Use the administrator's credentials to sign in at <http://127.0.0.1:8000/> on
 the computer running sanea. That HTTP address is for local access, not remote
 login over the network.

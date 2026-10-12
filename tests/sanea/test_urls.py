@@ -1,13 +1,84 @@
 """Tests for the initial browser interface routes."""
 
 from collections.abc import Callable
+from pathlib import Path
 
 import pytest
+from django.contrib.staticfiles import finders
+from django.templatetags.static import static
 from django.urls import resolve, reverse
 from django.test import Client
 from pytest_djangoapp.fixtures.settings import SettingsProxy
 
 from sanea import urls
+
+
+@pytest.mark.parametrize("secure", [False, True], ids=["http", "https"])
+@pytest.mark.parametrize(
+    ("asset", "content_type"),
+    [
+        ("sanea/css/app.css", "text/css"),
+        ("sanea/js/registration-window.js", "text/javascript"),
+        ("vendor/bootstrap/bootstrap.min.css", "text/css"),
+        ("vendor/htmx/htmx.min.js", "text/javascript"),
+        ("sanea/favicon.svg", "image/svg+xml"),
+        ("admin/css/base.css", "text/css"),
+    ],
+)
+def test_collected_static_is_available_without_debug(
+    request_client: Callable[..., Client],
+    collected_static: Path,
+    asset: str,
+    content_type: str,
+    secure: bool,
+) -> None:
+    response = request_client().get(static(asset), secure=secure)
+
+    try:
+        assert response.status_code == 200
+        assert response.headers["Content-Type"].split(";")[0] == content_type
+        assert response.headers["X-Content-Type-Options"] == "nosniff"
+        assert b"".join(response.streaming_content) == (collected_static / asset).read_bytes()
+
+    finally:
+        response.close()
+
+
+@pytest.mark.parametrize("asset", ["missing.css", "../sanea.env", "%2e%2e/sanea.env"])
+def test_static_does_not_expose_files_outside_collection(
+    request_client: Callable[..., Client],
+    collected_static: Path,
+    asset: str,
+) -> None:
+    secret = "private-test-secret"
+    (collected_static.parent / "sanea.env").write_text(secret, encoding="utf-8")
+
+    response = request_client().get(f"{static("")}{asset}")
+
+    assert response.status_code == 404
+    assert secret.encode() not in response.content
+
+
+def test_development_serves_static_without_collection(
+    request_client: Callable[..., Client],
+    settings: SettingsProxy,
+    tmp_path: Path,
+) -> None:
+    settings.DEBUG = True
+    settings.STATIC_ROOT = tmp_path / "not-collected"
+    asset = "sanea/css/app.css"
+    source = finders.find(asset)
+    assert source is not None
+
+    response = request_client().get(static(asset))
+
+    try:
+        assert response.status_code == 200
+        assert b"".join(response.streaming_content) == Path(source).read_bytes()
+        assert not settings.STATIC_ROOT.exists()
+
+    finally:
+        response.close()
 
 
 def test_admin_login_is_available(request_client: Callable[..., Client], settings: SettingsProxy) -> None:

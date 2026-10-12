@@ -21,6 +21,7 @@ dependencies = [
     "envbox>=2.0.1,<3",
     "pydantic>=2.13,<3",
     "sanecmp-sanelib>=0.1,<0.2",
+    "whitenoise>=6.12,<7",
 ]
 
 [project.urls]
