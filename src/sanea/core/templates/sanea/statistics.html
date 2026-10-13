@@ -1,0 +1,16 @@
+{% extends "sanea/base.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="mb-4">
+    <h1 class="display-6 fw-bold mb-1">{% translate "Statistics" %}</h1>
+</div>
+
+{% include "sanea/statistics/_activity.html" %}
+{% endblock %}
+
+{% block extra_body %}
+{{ block.super }}
+<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
+<script src="{% static 'sanea/js/activity-chart.js' %}"></script>
+{% endblock %}

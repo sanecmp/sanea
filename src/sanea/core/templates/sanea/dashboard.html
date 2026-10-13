@@ -6,6 +6,7 @@
     <div>
         <h1 class="display-6 fw-bold mb-1">{% translate "Dashboard" %}</h1>
     </div>
+    <a class="btn btn-outline-primary" href="{% url 'core:statistics' %}">{% translate "Statistics" %}</a>
 </div>
 
 <div class="row g-3 mb-4">
@@ -33,11 +34,4 @@
 
 {% include "sanea/dashboard/_system_status.html" %}
 
-{% include "sanea/dashboard/_activity.html" %}
-{% endblock %}
-
-{% block extra_body %}
-{{ block.super }}
-<script src="{% static 'vendor/chartjs/chart.umd.min.js' %}"></script>
-<script src="{% static 'sanea/js/activity-chart.js' %}"></script>
 {% endblock %}

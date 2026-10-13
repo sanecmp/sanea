@@ -12,6 +12,7 @@ from .limits import limits
 from .people import people
 from .ranges import ranges
 from .session_rules import session_rules
+from .statistics import statistics
 
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "session_rules",
     "sign_in",
     "sign_out",
+    "statistics",
 ]

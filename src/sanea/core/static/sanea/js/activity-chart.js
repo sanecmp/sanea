@@ -69,5 +69,7 @@
     };
 
     document.addEventListener("DOMContentLoaded", renderChart);
-    document.body.addEventListener("htmx:afterSwap", renderChart);
+    // HTMX restores canvas attributes during settling, which clears earlier drawings.
+    document.body.addEventListener("htmx:afterSettle", renderChart);
+    document.body.addEventListener("htmx:historyRestore", renderChart);
 })();

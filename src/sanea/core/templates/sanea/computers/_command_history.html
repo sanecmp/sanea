@@ -12,7 +12,8 @@
         {% endif %}
         <form id="command-filter" class="sanea-command-filter" method="get" action="{{ computers_url }}"
               hx-get="{{ computers_url }}" hx-target="#command-history" hx-swap="outerHTML"
-              hx-include="#computer-filter" hx-push-url="true" hx-trigger="change delay:150ms">
+              hx-include="#computer-filter select" hx-push-url="true" hx-trigger="change delay:150ms">
+            <input type="hidden" name="tab" value="commands">
             {{ command_filter }}
             <button class="btn btn-primary align-self-end" type="submit">{% translate "Apply" %}</button>
         </form>

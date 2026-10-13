@@ -20,6 +20,22 @@ and `ma tests` runs the configured Python 3.12 test matrix. Run installed manage
 commands directly as `sanea`; no separate environment activation is needed.
 CI continues to run pytest directly, without makeapp.
 
+Browser-script unit tests use Node.js 18+ without additional packages:
+
+```bash
+node --test tests/javascript/*.mjs
+```
+
+## Browser interface
+
+**Dashboard** shows domain totals and operational state. **Statistics**, the next
+navigation item, shows activity charts, recent activity and the top 10 applications
+by recorded usage time, with user, computer, account and period filters.
+
+**Computers** opens with the computer list. Command history, registration and sanex
+updates have separate tabs. While the browser page is visible, the table refreshes
+every five seconds without resetting filters or open computer settings.
+
 ## Development server
 
 ```bash

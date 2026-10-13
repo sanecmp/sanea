@@ -85,23 +85,78 @@ def test_computers_lists_registered_clients(
     assert "data-bs-toggle=\"dropdown\"" in content
     assert "data-bs-config='{\"popperConfig\":{\"strategy\":\"fixed\"}}'" in content
     assert f"id=\"computer-commands-{computer_record.pk}\"" in content
-    assert (
-        f"href=\"{reverse("core:computers")}?{command_query}#command-history\""
-        in content
-    )
+    assert f"href=\"{reverse("core:computers")}?tab=commands&amp;{command_query}#command-history\"" in content
     assert f"href=\"{reverse("core:issues")}?{issues_query}\"" in content
     assert "hx-swap=\"outerHTML show:top\"" in content
     assert "id=\"computer-details-" in content
     assert "id=\"computer-filter\" class=\"sanea-computer-filter\"" in content
     assert "id=\"command-filter\" class=\"sanea-command-filter\"" in content
     assert "id=\"computer-live-refresh\"" in content
-    assert "hx-trigger=\"every 10s\"" in content
+    assert "hx-trigger=\"every 5s [!document.hidden], computer-refresh[!document.hidden]\"" in content
     assert (
-        "hx-include=\"#command-filter, #computer-filter, #command-current-page\""
+        "hx-include=\"#command-filter select, #computer-filter select, #command-current-page\""
         in content
     )
-    assert "hx-swap=\"none\"" in content
+    assert "hx-target=\"#computer-table\" hx-swap=\"outerHTML\" hx-sync=\"#computers-page:abort\"" in content
+    assert "id=\"computers-page\" hx-sync=\"this:replace\"" in content
+    assert "src=\"/static/sanea/js/computers.js\"" in content
+    assert "class=\"tab-pane active\" id=\"computers-panel\"" in content
+    assert content.index("id=\"computer-list\"") < content.index("id=\"command-history\"")
+    assert content.index("id=\"computer-list\"") < content.index("id=\"registration-window\"")
+    assert content.count(f"id=\"computer-details-{computer_record.pk}\"") == 1
+    assert f"id=\"computer-details-open-{computer_record.pk}\"" in content
     assert "Add computer" not in content
+
+
+@pytest.mark.parametrize(
+    ("query", "active_tab"),
+    [
+        ({"tab": "commands"}, "commands"),
+        ({"tab": "registration"}, "registration"),
+        ({"tab": "updates"}, "updates"),
+        ({"tab": "unknown"}, "computers"),
+        ({"command_status": "pending"}, "commands"),
+        ({"command_page": "2"}, "commands"),
+        ({"tab": "computers", "command_status": "pending"}, "computers"),
+    ],
+)
+def test_computers_select_tab_for_direct_links(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    query: dict[str, str],
+    active_tab: str,
+) -> None:
+    staff_user = user_create(attributes={"is_staff": True})
+
+    response = request_client(user=staff_user).get(reverse("core:computers"), query)
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert f"class=\"tab-pane active\" id=\"{active_tab}-panel\"" in content
+    assert content.count("class=\"tab-pane active\"") == 1
+    assert content.count("data-bs-toggle=\"tab\"") == 4
+    assert content.count("role=\"tabpanel\"") == 4
+    assert content.count("aria-selected=\"true\"") == 1
+
+
+def test_computers_tab_links_preserve_list_and_command_filters(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+) -> None:
+    staff_user = user_create(attributes={"is_staff": True})
+    query = {"access": "allowed", "command_status": "pending", "command_page": "2"}
+
+    response = request_client(user=staff_user).get(reverse("core:computers"), query)
+    content = response.content.decode()
+    filter_query = escape(urlencode(query))
+
+    assert response.status_code == 200
+
+    for tab in ("computers", "commands", "registration", "updates"):
+        assert f"href=\"{reverse("core:computers")}?tab={tab}&amp;{filter_query}\"" in content
+
+    assert "hx-include=\"#command-filter select\"" in content
+    assert "hx-include=\"#computer-filter select\"" in content
 
 
 def test_computer_details_are_loaded_through_siteajax(
@@ -302,11 +357,99 @@ def test_computers_refresh_live_state_through_siteajax(
     assert f"id=\"computer-command-counts-{computer_record.pk}\"" in content
     assert f"id=\"computer-config-status-{computer_record.pk}\"" in content
     assert "id=\"command-history-results\"" in content
-    assert content.count("hx-swap-oob=\"outerHTML\"") == 5
+    assert "id=\"computer-table\"" in content
+    assert f"id=\"computer-details-{computer_record.pk}\" hx-preserve" in content
+    assert f"id=\"computer-menu-{computer_record.pk}\" hx-preserve" in content
+    assert "id=\"computer-filter\"" not in content
+    assert "id=\"command-filter\"" not in content
+    assert content.count("hx-swap-oob=\"outerHTML\"") == 1
     assert "Online" in content
     assert updates_payload["valid"]["version"] in content
     assert command.get_status_display() in content
     assert "sanea-shell" not in content
+
+
+def test_computers_live_refresh_adds_new_rows_and_applies_current_filters(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    computer_record: Computer,
+    time_machine: TimeMachineFixture,
+) -> None:
+    staff_user = user_create(attributes={"is_staff": True})
+    client = request_client(user=staff_user)
+    computer_record.last_seen = timezone.now()
+    computer_record.save(update_fields=("last_seen", "updated"))
+    query = {"access": "allowed", "connection": "online", "config_delivery": "waiting"}
+    initial_response = client.get(reverse("core:computers"), query)
+    computer_record.status = "blocked"
+    computer_record.save(update_fields=("status", "updated"))
+    new_computer = Computer.objects.create(
+        hostname="newly-registered-pc",
+        status="allowed",
+        version="0.2.0",
+        last_seen=timezone.now(),
+    )
+    request_options = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "computer-live-refresh"}
+
+    refreshed = client.get(reverse("core:computers"), query, **request_options)
+    content = refreshed.content.decode()
+
+    assert initial_response.status_code == 200
+    assert new_computer.hostname not in initial_response.content.decode()
+    assert refreshed.status_code == 200
+    assert new_computer.hostname in content
+    assert new_computer.version in content
+    assert computer_record.hostname not in content
+
+    time_machine.shift(new_computer.sync_interval * 2 + 1)
+    overdue = client.get(reverse("core:computers"), query, **request_options)
+
+    assert overdue.status_code == 200
+    assert new_computer.hostname not in overdue.content.decode()
+    assert "No computers have been registered." in overdue.content.decode()
+
+
+@pytest.mark.parametrize("is_staff", [False, True], ids=["regular", "staff"])
+def test_computers_live_refresh_checks_management_access(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    is_staff: bool,
+) -> None:
+    user = user_create(attributes={"is_staff": is_staff})
+
+    response = request_client(user=user).get(
+        reverse("core:computers"),
+        HTTP_HX_REQUEST="true",
+        HTTP_HX_TRIGGER="computer-live-refresh",
+    )
+
+    assert response.status_code == (200 if is_staff else 403)
+
+
+def test_computers_non_javascript_actions_keep_the_relevant_tab(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    registration_window_state: tuple[RegistrationWindow, list[float]],
+    updates_payload: dict[str, Any],
+) -> None:
+    staff_user = user_create(attributes={"is_staff": True})
+    client = request_client(user=staff_user)
+
+    registration_response = client.post(reverse("core:computers"), {"__submit": "registration"}, follow=True)
+    invalid_update = client.post(
+        reverse("core:computers"),
+        {"__submit": "update", **updates_payload["invalid"]},
+    )
+    cancelled_update = client.post(reverse("core:computers"), {"__submit": "update_cancel"}, follow=True)
+
+    assert registration_response.status_code == 200
+    assert "class=\"tab-pane active\" id=\"registration-panel\"" in registration_response.content.decode()
+    assert "Registration is open" in registration_response.content.decode()
+    assert invalid_update.status_code == 200
+    assert "class=\"tab-pane active\" id=\"updates-panel\"" in invalid_update.content.decode()
+    assert "version conforming to PEP 440" in invalid_update.content.decode()
+    assert cancelled_update.status_code == 200
+    assert "class=\"tab-pane active\" id=\"updates-panel\"" in cancelled_update.content.decode()
 
 
 def test_computers_filter_all_command_types_by_status(

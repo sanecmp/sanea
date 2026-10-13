@@ -19,6 +19,8 @@ from sanea import urls
     [
         ("sanea/css/app.css", "text/css"),
         ("sanea/js/registration-window.js", "text/javascript"),
+        ("sanea/js/computers.js", "text/javascript"),
+        ("sanea/js/activity-chart.js", "text/javascript"),
         ("vendor/bootstrap/bootstrap.min.css", "text/css"),
         ("vendor/htmx/htmx.min.js", "text/javascript"),
         ("sanea/favicon.svg", "image/svg+xml"),
@@ -97,6 +99,7 @@ def test_sitetree_uses_dynamic_trees_only(settings: SettingsProxy) -> None:
     ("view_name", "kwargs", "expected"),
     [
         ("core:dashboard", {}, "/"),
+        ("core:statistics", {}, "/statistics/"),
         ("core:people", {}, "/people/"),
         ("core:computers", {}, "/computers/"),
         ("core:accounts", {}, "/accounts/"),

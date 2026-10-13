@@ -20,6 +20,7 @@ from .views import (
     session_rules,
     sign_in,
     sign_out,
+    statistics,
 )
 
 
@@ -36,6 +37,7 @@ urlpatterns = [
         path("sync", client_sync, name="client_sync"),
     ])),
     path("", dashboard, name="dashboard"),
+    path("statistics/", statistics, name="statistics"),
     path("people/", people, name="people"),
     path("computers/", computers, name="computers"),
     path("accounts/", accounts, name="accounts"),

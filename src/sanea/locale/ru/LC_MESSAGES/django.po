@@ -786,6 +786,9 @@ msgstr "Отпечаток должен содержать 64 шестнадца
 msgid "Dashboard"
 msgstr "Обзор"
 
+msgid "Statistics"
+msgstr "Статистика"
+
 msgid "Issues"
 msgstr "Проблемы"
 
@@ -908,6 +911,21 @@ msgstr "Посмотреть неудачные команды для %(computer
 
 msgid "Command history"
 msgstr "История команд"
+
+msgid "Computer list"
+msgstr "Список компьютеров"
+
+msgid "Registration"
+msgstr "Регистрация"
+
+msgid "Updates"
+msgstr "Обновления"
+
+msgid "Connection status"
+msgstr "Как определяется состояние связи"
+
+msgid "Refreshes every 5 seconds while this page is visible."
+msgstr "Обновляется каждые 5 секунд, пока страница видима."
 
 msgid "Commands sent to sanex, newest first."
 msgstr "Команды, отправленные sanex, сначала новые."

@@ -15,6 +15,12 @@ sitetrees = (
                 access_loggedin=True,
             ),
             item(
+                _("Statistics"),
+                "core:statistics",
+                alias="statistics",
+                access_loggedin=True,
+            ),
+            item(
                 _("People"),
                 "core:people",
                 alias="people",

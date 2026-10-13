@@ -20,6 +20,12 @@ from ..models.global_update import UpdateActivationResult
 
 
 COMMAND_PAGE_SIZE = 100
+COMPUTER_TABS = (
+    ("computers", _("Computer list")),
+    ("commands", _("Command history")),
+    ("registration", _("Registration")),
+    ("updates", _("Updates")),
+)
 
 
 class ComputersView(ManagedView):
@@ -63,12 +69,12 @@ class ComputersView(ManagedView):
             elif submit == "update_cancel":
                 self.cancel_active_update()
                 url = reverse("core:computers")
-                return redirect(f"{url}#sanex-updates")
+                return redirect(f"{url}?tab=updates#sanex-updates")
 
             elif submit == "command_repeat":
                 self.repeat_requested_command(request)
                 url = reverse("core:computers")
-                return redirect(f"{url}#command-history")
+                return redirect(f"{url}?tab=commands#command-history")
 
             elif submit == "computer":
                 computer, computer_form = self.build_computer_form(request)
@@ -80,7 +86,8 @@ class ComputersView(ManagedView):
 
             else:
                 registration_window.open()
-                return redirect("core:computers")
+                url = reverse("core:computers")
+                return redirect(f"{url}?tab=registration#registration-window")
 
         elif request.GET.get("computer"):
             computer = self.get_requested_computer(request)
@@ -90,6 +97,7 @@ class ComputersView(ManagedView):
 
         context = {
             "page_title": _("Computers"),
+            **self.build_tab_context(request),
             **self.build_computer_list_context(request),
             "computer": computer,
             "computer_form": computer_form,
@@ -98,6 +106,34 @@ class ComputersView(ManagedView):
             **self.build_command_history_context(request),
         }
         return render(request, "sanea/computers/index.html", context)
+
+    def build_tab_context(self, request: HttpRequest) -> dict[str, object]:
+        """Keep direct links and non-JavaScript actions on the relevant tab."""
+        data = request.POST if request.method == "POST" else request.GET
+        active_tab = data.get("tab")
+        submit = data.get("__submit")
+
+        if submit == "update":
+            active_tab = "updates"
+
+        elif submit == "computer":
+            active_tab = "computers"
+
+        if active_tab not in dict(COMPUTER_TABS):
+            command_fields = (*CommandFilterForm.base_fields, "command_page")
+            active_tab = "commands" if any(data.get(field) for field in command_fields) else "computers"
+
+        query = self.build_command_filter_query(data)
+
+        if command_page := data.get("command_page"):
+            page_query = urlencode({"command_page": command_page})
+            query = f"{query}&{page_query}" if query else page_query
+
+        return {
+            "active_tab": active_tab,
+            "computer_tabs": COMPUTER_TABS,
+            "tab_filter_query": query,
+        }
 
     def get_computers(self, **filters: str | None) -> QuerySet[Computer]:
         """Return computers with all overview counters and configurations."""
@@ -379,10 +415,11 @@ class ComputersView(ManagedView):
         return render(request, "sanea/computers/_command_history.html", context)
 
     def render_live_refresh(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Render live-refresh fragments for computers and commands."""
+        """Refresh all computer rows without replacing filters or open editors."""
         context = {
             **self.build_computer_list_context(request),
             **self.build_command_history_context(request),
+            "preserve_details": True,
         }
         return render(request, "sanea/computers/_live_refresh.html", context)
 
