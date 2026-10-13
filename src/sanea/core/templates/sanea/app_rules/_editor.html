@@ -11,7 +11,19 @@
             {% csrf_token %}
             <input type="hidden" name="app_rule"
                    value="{% if app_rule %}{{ app_rule.pk }}{% else %}new{% endif %}">
+            {% if app_rule_form.suggestions %}
+                <p class="text-secondary small">
+                    {% translate "Process names and executable paths offer suggestions from recorded activity. You can also enter a value manually." %}
+                </p>
+            {% endif %}
             {{ app_rule_form }}
+            {% for datalist_id, values in app_rule_form.suggestions.items %}
+                <datalist id="{{ datalist_id }}">
+                    {% for value in values %}
+                        <option value="{{ value }}"></option>
+                    {% endfor %}
+                </datalist>
+            {% endfor %}
             <div class="d-flex gap-2">
                 <button class="btn btn-primary" type="submit" name="__submit" value="app_rule">
                     {% translate "Save" %}

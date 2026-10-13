@@ -1,7 +1,7 @@
 {% load i18n %}
 <div id="accounts-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
     <section class="card">
-        <div class="table-responsive">
+        <div class="table-responsive sanea-mobile-table">
             <table class="table align-middle mb-0">
                 <thead>
                 <tr>
@@ -10,43 +10,50 @@
                     <th scope="col">{% translate "Person" %}</th>
                     <th scope="col">{% translate "Monitoring" %}</th>
                     <th scope="col">{% translate "Limits" %}</th>
-                    <th scope="col">{% translate "Presence" %}</th>
+                    <th scope="col">{% translate "On computer" %}</th>
                     <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for item in accounts %}
-                    <tr>
+                    <tr class="sanea-table-item">
                         <td>
                             <span class="fw-semibold">{{ item.name|default:item.login }}</span>
                             <span class="d-block text-body-secondary">{{ item.login }} · UID {{ item.uid }}</span>
                         </td>
-                        <td>{{ item.computer.get_display_name }}</td>
-                        <td>{{ item.person|default:_('Not assigned') }}</td>
-                        <td>
+                        <td data-label="{% translate 'Computer' %}">{{ item.computer.get_display_name }}</td>
+                        <td data-label="{% translate 'Person' %}">{{ item.person|default:_('Not assigned') }}</td>
+                        <td data-label="{% translate 'Monitoring' %}">
                             {% if item.collect %}
-                                <span class="badge text-bg-success">{% translate "Collecting" %}</span>
+                                <span class="badge text-bg-success">{% translate "Enabled" %}</span>
                             {% else %}
                                 <span class="badge text-bg-secondary">{% translate "Disabled" %}</span>
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="{% translate 'Limits' %}">
                             {% if item.apply %}
-                                <span class="badge text-bg-warning">{% translate "Applied" %}</span>
+                                {% if item.computer.get_config_delivery_status == 'applied' %}
+                                    <span class="badge text-bg-success" title="{% translate 'Confirmed means the computer accepted the settings, not that every restriction succeeded.' %}">{% translate "Settings confirmed" %}</span>
+                                {% else %}
+                                    <span class="badge text-bg-warning" title="{% translate 'Unconfirmed means sanex on this computer has not acknowledged the latest settings.' %}">{% translate "Waiting for confirmation" %}</span>
+                                {% endif %}
                             {% elif item.limits_id %}
                                 <span class="badge text-bg-secondary">{% translate "Not applied" %}</span>
                             {% else %}
                                 {% translate "Not configured" %}
                             {% endif %}
                         </td>
-                        <td>
+                        <td data-label="{% translate 'On computer' %}" title="{% translate 'Account presence reflects the last list received from the computer, not an active session.' %}">
                             {% if item.present %}
-                                {% translate "Present" %}
+                                {% translate "Exists" %}
                             {% else %}
-                                <span class="text-body-secondary">{% translate "Not reported" %}</span>
+                                <span class="text-body-secondary">{% translate "Missing" %}</span>
                             {% endif %}
                         </td>
-                        <td class="text-end">
+                        <td class="text-end sanea-table-actions">
+                            <a class="btn btn-sm btn-outline-primary" href="{% url 'core:account_limits' item.pk %}">
+                                {% translate "Limits" %}
+                            </a>
                             <a class="btn btn-sm btn-outline-secondary" id="account-edit-{{ item.pk }}"
                                href="{% url 'core:accounts' %}?account={{ item.pk }}"
                                hx-get="{% url 'core:accounts' %}?account={{ item.pk }}"

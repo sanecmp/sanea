@@ -12,6 +12,14 @@ from ..models import Account, Computer, Person
 from .base import SaneaForm
 
 
+class ActivityAccountChoiceField(forms.ModelChoiceField):
+    """Identify a local account by its familiar name and computer."""
+
+    def label_from_instance(self, account: Account) -> str:
+        """Avoid exposing internal identifiers in account selections."""
+        return f"{account.name or account.login} · {account.computer.get_display_name()}"
+
+
 class ActivityFilterForm(SaneaForm):
     """Select the monitored accounts and local-date reporting period."""
 
@@ -31,7 +39,7 @@ class ActivityFilterForm(SaneaForm):
         required=False,
         empty_label=_("All computers"),
     )
-    account = forms.ModelChoiceField(
+    account = ActivityAccountChoiceField(
         label=_("Account"),
         queryset=Account.objects.none(),
         required=False,

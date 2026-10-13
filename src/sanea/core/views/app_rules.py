@@ -2,14 +2,15 @@
 
 from dataclasses import dataclass
 
-from django.db.models import QuerySet
+from django.db.models import Q, QuerySet
 from django.http import HttpRequest
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
 from ..forms import AppRuleForm
-from ..models import AppRule, Limits, SessionRule
+from ..forms.app_rule import get_app_suggestions
+from ..models import ActivityEvent, AppRule, Limits, SessionRule
 from .editor import ModelEditorView
 
 
@@ -64,12 +65,18 @@ class AppRulesView(ModelEditorView[AppRuleScope, AppRule, AppRuleForm]):
                 pk=reference,
             )
 
+        events = ActivityEvent.objects.filter(
+            Q(account__limits=scope.limits)
+            | Q(account__person__limits_tpl__current_limits=scope.limits),
+            type="prc_start",
+        )
         form = AppRuleForm(
             request=request,
             src="POST",
             prefix="app_rule",
             instance=selected,
             render_form_tag=False,
+            suggestions=get_app_suggestions(events),
         )
         return selected, form
 

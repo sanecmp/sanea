@@ -10,6 +10,11 @@
             {% csrf_token %}
             <input type="hidden" name="account" value="{{ account.pk }}">
             {{ account_form }}
+            <p>
+                <a class="btn btn-outline-primary" href="{% url 'core:account_limits' account.pk %}">
+                    {% translate "Schedule, sessions and applications" %}
+                </a>
+            </p>
             {% if not account.limits_id %}
                 <div class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <span>{% translate "Configure limits before enabling them for this account." %}</span>
@@ -20,17 +25,21 @@
                     </button>
                 </div>
             {% else %}
+                {% with scope=account.limits.get_editing_scope %}
+                {% include "sanea/limits/_scope.html" %}
                 <div class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
                     <span>
                         {% blocktranslate with limits=account.limits %}Limits: {{ limits }}{% endblocktranslate %}
                     </span>
                     <span class="d-flex flex-wrap gap-2">
+                        {% if scope.template or not scope.shared %}
                         <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:session_rules' account.limits_id %}">
-                            {% translate "Session rules" %}
+                            {% if scope.template %}{% translate "Template session rules" %}{% else %}{% translate "Session rules" %}{% endif %}
                         </a>
                         <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:ranges' account.limits_id %}">
-                            {% translate "Schedule" %}
+                            {% if scope.template %}{% translate "Template schedule" %}{% else %}{% translate "Schedule" %}{% endif %}
                         </a>
+                        {% endif %}
                         <button class="btn btn-sm btn-outline-secondary" type="submit"
                                 id="account-limits-customize-{{ account.pk }}" name="customize_limits" value="1"
                                 hx-post="{% url 'core:accounts' %}" hx-target="#account-editor" hx-swap="innerHTML">
@@ -38,6 +47,7 @@
                         </button>
                     </span>
                 </div>
+                {% endwith %}
             {% endif %}
             <div class="d-flex gap-2">
                 <button class="btn btn-primary" type="submit" name="__submit" value="account">

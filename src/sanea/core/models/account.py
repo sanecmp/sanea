@@ -9,15 +9,20 @@ from sanelib.protocol import Account as ClientAccount, ParsedEventPacket
 
 from ...exceptions import ClientAccessError, EventSequenceConflictError
 from .activity_event import ActivityEvent
+from .app_rule import AppRule
 from .base import TimestampedModel
 from .event_packet import EventPacket
+from .identifier_sequence import IdentifierSequence
 from .limits import Limits
 from .limits_template import LimitsTemplate
 from .person import Person
+from .range import Range
+from .session_rule import SessionRule
 from .validation import NON_NEGATIVE
 
 if TYPE_CHECKING:
     from ..forms import AccountForm
+    from ..forms.account_limits import AccountLimitsForm
 
 class Account(TimestampedModel):
     """A local account identified by UID on one computer."""
@@ -164,25 +169,121 @@ class Account(TimestampedModel):
     @classmethod
     @transaction.atomic
     def save_form(cls, form: "AccountForm") -> Self:
-        """Save settings and assign a newly selected person's snapshot."""
-        previous_person_id = (
-            cls.objects.select_for_update()
-            .only("person_id")
-            .get(pk=form.instance.pk)
-            .person_id
-        )
+        """Save the validated assignment and materialize its client config."""
+        cls.objects.select_for_update().get(pk=form.instance.pk)
         account = form.save()
-        person_id = account.person_id
+        account.computer.materialize_config()
+        return account
 
-        if person_id != previous_person_id and person_id:
-            person = Person.objects.select_related("limits_tpl__current_limits").get(
-                pk=person_id
+    @classmethod
+    @transaction.atomic
+    def save_limits_form(cls, form: "AccountLimitsForm") -> Self:
+        """Save the complete card as one independently scoped configuration."""
+        account = cls.objects.select_for_update().select_related("computer", "limits").get(pk=form.account.pk)
+
+        if account.limits_id != form.account.limits_id:
+            raise ValidationError(_("The rules changed. Reload the card before saving."))
+
+        graph_changed = form.has_graph_changes()
+
+        if graph_changed or (form.cleaned_data["apply"] and account.limits_id is None):
+            target = Limits.objects.create(name=f"{account.login} @ {account.computer.hostname}"[:160])
+            session_rows = {}
+
+            for index, session_form in enumerate(form.sessions.forms):
+                values = session_form.cleaned_data
+
+                if not values or values.get("DELETE"):
+                    continue
+
+                rule = SessionRule(
+                    limits=target,
+                    ident=session_form.instance.ident if session_form.instance.pk else IdentifierSequence.allocate(SessionRule),
+                    **{name: values[name] for name in session_form._meta.fields},
+                )
+                rule.full_clean()
+                rule.save()
+                session_rows[f"{index}"] = rule
+
+            for formset, model, parent_name in (
+                (form.apps, AppRule, "session_rule"),
+                (form.ranges, Range, "limits"),
+            ):
+
+                for child_form in formset.forms:
+                    values = child_form.cleaned_data
+
+                    if not values or values.get("DELETE"):
+                        continue
+
+                    parents = {"session_rule": session_rows[values["rule"]]}
+
+                    if parent_name == "limits":
+                        parents["limits"] = target
+
+                    item = model(
+                        **parents,
+                        ident=child_form.instance.ident if child_form.instance.pk else IdentifierSequence.allocate(model),
+                        **{name: values[name] for name in child_form._meta.fields},
+                    )
+                    item.full_clean()
+                    item.save()
+
+            account.limits = target
+
+        account.collect = form.cleaned_data["collect"]
+        account.apply = form.cleaned_data["apply"]
+        account.full_clean(exclude=("computer", "uid", "login", "name", "present", "person"))
+        account.save(update_fields=("limits", "collect", "apply", "updated"))
+        account.computer.materialize_config()
+        return account
+
+    def get_limits_rules(self, kind: str) -> models.QuerySet[SessionRule | Range | AppRule]:
+        """Scope one supported rule kind to this account's assigned snapshot."""
+        rules = {
+            "sessions": SessionRule.objects.filter(limits_id=self.limits_id),
+            "ranges": Range.objects.filter(limits_id=self.limits_id),
+            "apps": AppRule.objects.filter(session_rule__limits_id=self.limits_id),
+        }
+        return rules[kind]
+
+    def should_confirm_rule_removal(self, rule: SessionRule | Range | AppRule) -> bool:
+        """Require confirmation only when removal newly empties an active schedule."""
+
+        if not self.apply or isinstance(rule, AppRule):
+            return False
+
+        ranges = Range.objects.filter(limits_id=self.limits_id, apply=True)
+        removed = {"session_rule_id": rule.pk} if isinstance(rule, SessionRule) else {"pk": rule.pk}
+        return ranges.filter(**removed).exists() and not ranges.exclude(**removed).exists()
+
+    @transaction.atomic
+    def remove_limits_rule(
+        self, kind: str, rule_pk: int, *, limits_version: int, confirm_empty_schedule: bool = False,
+    ) -> Self:
+        """Immediately remove one saved rule without saving any card drafts."""
+        account = type(self).objects.select_for_update().select_related("computer").get(pk=self.pk)
+
+        if account.limits_id != limits_version:
+            raise ValidationError(
+                _("The rules changed. Reload the card before removing a rule."), code="stale_limits",
             )
 
-            if person.limits_tpl_id:
-                account.limits = person.limits_tpl.current_limits
-                account.save(update_fields=("limits", "updated"))
+        source = Limits.objects.select_for_update().get(pk=account.limits_id)
+        rule = account.get_limits_rules(kind).select_for_update().get(pk=rule_pk)
 
+        if account.should_confirm_rule_removal(rule) and not confirm_empty_schedule:
+            raise ValidationError(_("Explicitly confirm blocking all sessions before removing the last allowed interval."))
+
+        target = source.clone(name=f"{account.login} @ {account.computer.hostname}"[:160])
+        account.limits = target
+        target_rule = account.get_limits_rules(kind).get(ident=rule.ident)
+
+        if isinstance(target_rule, SessionRule):
+            target_rule.ranges.all().delete()
+
+        target_rule.delete()
+        account.save(update_fields=("limits", "updated"))
         account.computer.materialize_config()
         return account
 
@@ -268,7 +369,7 @@ class Account(TimestampedModel):
             errors["apply"] = _("Applying limits requires event collection.")
 
         if apply_limits and not self.limits_id:
-            errors["limits"] = _("Applying limits requires a limits set.")
+            errors["apply"] = _("Configure a limits set before enabling restrictions.")
 
         if errors:
             raise ValidationError(errors)

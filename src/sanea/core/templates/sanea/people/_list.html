@@ -20,6 +20,13 @@
                         <td>{{ item.limits_tpl|default:_('Not set') }}</td>
                         <td>{{ item.updated|date:"Y-m-d H:i" }}</td>
                         <td class="text-end">
+                            {% with child_account=item.accounts.all.0 %}
+                                {% if child_account %}
+                                    <a class="btn btn-sm btn-outline-primary" href="{% url 'core:account_limits' child_account.pk %}">
+                                        {% translate "Limits" %}
+                                    </a>
+                                {% endif %}
+                            {% endwith %}
                             {% if item.limits_tpl_id and item.account_count %}
                                 <a class="btn btn-sm btn-outline-primary" id="person-propagate-{{ item.pk }}"
                                    href="{% url 'core:people' %}?person={{ item.pk }}&amp;propagate=1"

@@ -72,7 +72,7 @@ def test_computers_lists_registered_clients(
     assert computer_record.name in content
     assert computer_record.hostname in content
     assert computer_record.version in content
-    assert "Allowed" in content
+    assert "Synchronization allowed" in content
     assert "Online" in content
     assert "Commands" in content
     assert "<span class=\"badge text-bg-warning\">1</span>" in content
@@ -81,7 +81,14 @@ def test_computers_lists_registered_clients(
         f"command_computer={computer_record.pk}&amp;command_status=pending" in content
     )
     assert "collecting: 1" in content
-    assert f"id=\"computer-actions-{computer_record.pk}\"" in content
+    assert "class=\"table-responsive sanea-mobile-table position-relative\"" in content
+    assert content.count("class=\"sanea-table-item\"") == 1
+    assert "class=\"text-end text-nowrap sanea-table-actions\"" in content
+    assert content.count(f"id=\"computer-actions-{computer_record.pk}\"") == 1
+
+    for column in ("Synchronization", "Connection", "Configuration", "Version", "Last contact", "Commands", "Local accounts"):
+        assert f"data-label=\"{column}\"" in content
+
     assert "data-bs-toggle=\"dropdown\"" in content
     assert "data-bs-config='{\"popperConfig\":{\"strategy\":\"fixed\"}}'" in content
     assert f"id=\"computer-commands-{computer_record.pk}\"" in content
@@ -583,7 +590,7 @@ def test_computers_ajax_edits_access_and_runtime_intervals(
     assert computer_record.applied_config_id == initial_config.ident
     assert "Computer settings saved." in content
     assert "id=\"computer-access-" in content
-    assert "Blocked" in content
+    assert "Synchronization blocked" in content
     assert "Waiting for sync" in content
     assert content.count("hx-swap-oob=\"outerHTML\"") == 3
 

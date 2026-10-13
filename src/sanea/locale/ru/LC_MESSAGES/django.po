@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: sanea 0.1.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-04 12:19+0000\n"
+"POT-Creation-Date: 2026-10-13 10:36+0000\n"
 "PO-Revision-Date: 2026-10-02 21:55+0700\n"
 "Last-Translator: Sanea maintainers\n"
 "Language-Team: Russian\n"
@@ -15,10 +15,118 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || (n%100>=11 && n%100<=14)? 2 : 3);\n"
+"Plural-Forms: nplurals=4; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || "
+"(n%100>=11 && n%100<=14)? 2 : 3);\n"
 
 msgid "Sanea"
 msgstr "Sanea"
+
+msgid "I understand that an empty schedule blocks all sessions."
+msgstr "Я понимаю, что пустое расписание запрещает все сеансы."
+
+msgid "Apply the schedule and quotas. This also enables event collection."
+msgstr "Применять расписание и квоты. При этом также включается сбор событий."
+
+msgid ""
+"Add allowed times to the schedule or explicitly confirm blocking all "
+"sessions."
+msgstr ""
+"Добавьте разрешённые интервалы в расписание или подтвердите запрет всех "
+"сеансов."
+
+msgid "Session, min"
+msgstr "Сеанс, мин"
+
+msgid "Duration of one session. Empty means unlimited."
+msgstr "Один сеанс. Пусто — без лимита."
+
+msgid "Break, min"
+msgstr "Перерыв, мин"
+
+msgid "Zero means no break."
+msgstr "Ноль — без перерыва."
+
+msgid "Enabled rule"
+msgstr "Учитывать"
+
+msgid "Sessions per interval"
+msgstr "Сеансов"
+
+msgid "Per allowed interval. Empty means unlimited."
+msgstr "За разрешённый интервал. Пусто — без лимита."
+
+msgid "Session preset"
+msgstr "Режим"
+
+msgid "Process"
+msgstr "Процесс"
+
+msgid "Preset"
+msgstr "Режим"
+
+msgid "Presets"
+msgstr "Режимы"
+
+msgid "Add preset"
+msgstr "Добавить режим"
+
+msgid "Choose day"
+msgstr "Выберите день"
+
+msgid "Allowed"
+msgstr "Разрешён"
+
+msgid "Day"
+msgstr "День"
+
+msgid "Start"
+msgstr "Начало"
+
+msgid "End"
+msgstr "Конец"
+
+msgid "24:00 is allowed."
+msgstr "Допускается 24:00."
+
+msgid "End time must be later than start time."
+msgstr "Конец интервала должен быть позже начала."
+
+msgid "Usage, min"
+msgstr "Время, мин"
+
+msgid "Total application time in one allowed interval. Empty means unlimited."
+msgstr "Суммарно за разрешённый интервал. Пусто — без лимита."
+
+msgid "Launches per interval"
+msgstr "Запусков"
+
+msgid "Exact process name unless another matching method is chosen below."
+msgstr "Точное имя. Способ сравнения можно изменить ниже."
+
+msgid "Remove"
+msgstr "Удалить"
+
+msgid "The rules changed. Reload the card before saving."
+msgstr "Настройки изменились. Обновите карточку перед сохранением."
+
+msgid "Applied ranges must not overlap."
+msgstr "Применяемые диапазоны не должны пересекаться."
+
+msgid "Monitoring"
+msgstr "Наблюдение"
+
+msgid "Limits"
+msgstr "Ограничения"
+
+msgid "Choose preset"
+msgstr "Выберите режим"
+
+msgid "Check the highlighted fields in the tabs."
+msgstr "Исправьте ошибки во вкладках."
+
+msgid "Choose a preset that is not empty or removed."
+msgstr "Выберите заполненный режим, не помеченный к удалению."
 
 msgid "User"
 msgstr "Пользователь"
@@ -60,13 +168,22 @@ msgid "All statuses"
 msgstr "Все состояния"
 
 msgid "Pending"
-msgstr "Ожидает подтверждения"
+msgstr "Ожидание"
 
-msgid "Access"
-msgstr "Доступ"
+msgid "Synchronization"
+msgstr "Синхронизация"
 
-msgid "Blocked computers cannot synchronize or upload data."
-msgstr "Заблокированные компьютеры не могут синхронизироваться или отправлять данные."
+msgid "Synchronization allowed"
+msgstr "Разрешена"
+
+msgid "Synchronization blocked"
+msgstr "Запрещена"
+
+msgid ""
+"Blocking synchronization stops settings and data exchange, not computer use."
+msgstr ""
+"Запрет синхронизации останавливает обмен настройками и данными, но не "
+"запрещает пользоваться компьютером."
 
 msgid "Timezone"
 msgstr "Часовой пояс"
@@ -84,7 +201,7 @@ msgid "All connection states"
 msgstr "Любое соединение"
 
 msgid "Configuration"
-msgstr "Конфигурация"
+msgstr "Настройки"
 
 msgid "All configuration states"
 msgstr "Любое состояние конфигурации"
@@ -93,7 +210,8 @@ msgid "Accounts"
 msgstr "Учётные записи"
 
 msgid "Selected accounts will receive the template limits."
-msgstr "Для выбранных учётных записей будут установлены ограничения из шаблона."
+msgstr ""
+"Для выбранных учётных записей будут установлены ограничения из шаблона."
 
 msgid "Every selected account must belong to this person."
 msgstr "Все выбранные учётные записи должны принадлежать этому пользователю."
@@ -170,9 +288,6 @@ msgstr "Человек"
 msgid "Optional person to whom this concrete local account belongs."
 msgstr "Человек, которому принадлежит эта локальная учётная запись."
 
-msgid "Limits"
-msgstr "Ограничения"
-
 msgid "Immutable limits snapshot currently assigned to this account."
 msgstr "Ограничения, назначенные этой учётной записи."
 
@@ -191,8 +306,8 @@ msgstr "Применять расписание и квоты этой учёт�
 msgid "Applying limits requires event collection."
 msgstr "Для применения ограничений требуется сбор событий."
 
-msgid "Applying limits requires a limits set."
-msgstr "Для применения ограничений требуется набор ограничений."
+msgid "Configure a limits set before enabling restrictions."
+msgstr "Настройте набор ограничений, прежде чем включать их."
 
 msgid "Local account to which this event belongs."
 msgstr "Локальная учётная запись, к которой относится событие."
@@ -258,7 +373,9 @@ msgid "Window identifier"
 msgstr "Идентификатор окна"
 
 msgid "Local window identifier involved in an enforcement failure."
-msgstr "Локальный идентификатор окна, для которого произошла ошибка применения ограничения."
+msgstr ""
+"Локальный идентификатор окна, для которого произошла ошибка применения "
+"ограничения."
 
 msgid "Reason"
 msgstr "Причина"
@@ -294,7 +411,8 @@ msgid "Name"
 msgstr "Название"
 
 msgid "Parent-facing application name; it is not a recognition condition."
-msgstr "Название приложения для родителя; оно не является условием распознавания."
+msgstr ""
+"Название приложения для родителя; оно не является условием распознавания."
 
 msgid "Apply this application rule."
 msgstr "Применять это правило приложения."
@@ -303,13 +421,17 @@ msgid "Maximum launches"
 msgstr "Максимум запусков"
 
 msgid "Maximum launches in one range occurrence; empty means unlimited."
-msgstr "Максимальное число запусков в одном диапазоне; пустое значение снимает ограничение."
+msgstr ""
+"Максимальное число запусков в одном диапазоне; пустое значение снимает "
+"ограничение."
 
 msgid "Maximum time"
 msgstr "Максимальное время"
 
 msgid "Maximum total usage time in seconds; empty means unlimited."
-msgstr "Максимальное суммарное время использования в секундах; пустое значение снимает ограничение."
+msgstr ""
+"Максимальное суммарное время использования в секундах; пустое значение "
+"снимает ограничение."
 
 msgid "Optional process-name recognition condition."
 msgstr "Необязательное условие распознавания по имени процесса."
@@ -321,7 +443,8 @@ msgid "Matching method for prc_name."
 msgstr "Способ сопоставления для prc_name."
 
 msgid "Optional resolved executable-path recognition condition."
-msgstr "Необязательное условие распознавания по полному пути исполняемого файла."
+msgstr ""
+"Необязательное условие распознавания по полному пути исполняемого файла."
 
 msgid "Executable match"
 msgstr "Сопоставление исполняемого файла"
@@ -364,16 +487,15 @@ msgid "Invalid regular expression: %(error)s"
 msgstr "Некорректное регулярное выражение: %(error)s"
 
 msgid "AppRule ident must be unique within one limits set."
-msgstr "Идентификатор AppRule должен быть уникальным в пределах одного набора ограничений."
+msgstr ""
+"Идентификатор AppRule должен быть уникальным в пределах одного набора "
+"ограничений."
 
 msgid "Created"
 msgstr "Дата создания"
 
 msgid "Updated"
 msgstr "Дата изменения"
-
-msgid "Allowed"
-msgstr "Разрешён"
 
 msgid "Blocked"
 msgstr "Заблокирован"
@@ -388,11 +510,11 @@ msgid "Offline"
 msgstr "Не в сети"
 
 msgid "Waiting for sync"
-msgstr "Ожидает синхронизации"
+msgstr "Заданы"
 
 msgctxt "configuration delivery status"
 msgid "Applied"
-msgstr "Применена"
+msgstr "Подтверждены"
 
 msgid "Exact"
 msgstr "Точное совпадение"
@@ -409,10 +531,8 @@ msgstr "Выполнено"
 msgid "Failed"
 msgstr "Ошибка"
 
-#, fuzzy
-#| msgid "Last updated"
 msgid "Global update"
-msgstr "Последнее обновление"
+msgstr "Общее обновление"
 
 msgid "Command type understood by sanex."
 msgstr "Тип команды, поддерживаемый sanex."
@@ -487,7 +607,8 @@ msgid "Client certificate"
 msgstr "Сертификат клиента"
 
 msgid "Issued client certificate retained for registration recovery."
-msgstr "Выданный сертификат клиента, сохранённый для восстановления регистрации."
+msgstr ""
+"Выданный сертификат клиента, сохранённый для восстановления регистрации."
 
 msgid "Last IP address"
 msgstr "Последний IP-адрес"
@@ -523,7 +644,8 @@ msgid "Discovery interval"
 msgstr "Интервал обнаружения"
 
 msgid "Seconds between discovery attempts while synchronization is required."
-msgstr "Число секунд между попытками обнаружения при необходимости синхронизации."
+msgstr ""
+"Число секунд между попытками обнаружения при необходимости синхронизации."
 
 msgid "Walk interval"
 msgstr "Интервал обхода"
@@ -541,7 +663,8 @@ msgid "Minimum process duration"
 msgstr "Минимальная длительность процесса"
 
 msgid "Minimum process duration in seconds retained in statistics."
-msgstr "Минимальная длительность процесса в секундах для сохранения в статистике."
+msgstr ""
+"Минимальная длительность процесса в секундах для сохранения в статистике."
 
 msgid "Current configuration"
 msgstr "Текущая конфигурация"
@@ -637,25 +760,19 @@ msgid "Global sanex updates"
 msgstr "Глобальные обновления sanex"
 
 msgid "Kind"
-msgstr ""
+msgstr "Тип"
 
 msgid "Schedule range"
 msgstr "Диапазон расписания"
 
-#, fuzzy
-#| msgid "Rule identifier"
 msgid "Next identifier"
-msgstr "Идентификатор правила"
+msgstr "Следующий идентификатор"
 
-#, fuzzy
-#| msgid "Identifier"
 msgid "Identifier sequence"
-msgstr "Идентификатор"
+msgstr "Последовательность идентификаторов"
 
-#, fuzzy
-#| msgid "Identifier"
 msgid "Identifier sequences"
-msgstr "Идентификатор"
+msgstr "Последовательности идентификаторов"
 
 msgid "Name of this configuration snapshot or independent set."
 msgstr "Название этой версии настроек или отдельного набора."
@@ -741,9 +858,6 @@ msgstr "Диапазоны расписания"
 msgid "The session rule must belong to the same limits set."
 msgstr "Правило сеанса должно принадлежать тому же набору ограничений."
 
-msgid "Applied ranges must not overlap."
-msgstr "Применяемые диапазоны не должны пересекаться."
-
 msgid "Limits set containing this rule."
 msgstr "Набор ограничений, содержащий это правило."
 
@@ -760,28 +874,36 @@ msgid "Maximum sessions"
 msgstr "Максимум сеансов"
 
 msgid "Maximum sessions in one range occurrence; empty means unlimited."
-msgstr "Максимальное число сеансов в одном диапазоне; пустое значение снимает ограничение."
+msgstr ""
+"Максимальное число сеансов в одном диапазоне; пустое значение снимает "
+"ограничение."
 
 msgid "Maximum duration"
 msgstr "Максимальная длительность"
 
 msgid "Maximum duration of one session in seconds; empty means unlimited."
-msgstr "Максимальная длительность одного сеанса в секундах; пустое значение снимает ограничение."
+msgstr ""
+"Максимальная длительность одного сеанса в секундах; пустое значение снимает "
+"ограничение."
 
 msgid "Break duration"
 msgstr "Длительность перерыва"
 
 msgid "Required break duration in seconds; zero disables the break."
-msgstr "Длительность обязательного перерыва в секундах; ноль отключает перерыв."
+msgstr ""
+"Длительность обязательного перерыва в секундах; ноль отключает перерыв."
 
 msgid "Session rules"
 msgstr "Правила сеансов"
 
 msgid "Optional person represented by this browser user."
-msgstr "Человек, с которым при необходимости связан этот пользователь браузерного интерфейса."
+msgstr ""
+"Человек, с которым при необходимости связан этот пользователь браузерного "
+"интерфейса."
 
 msgid "Fingerprint must contain 64 lowercase hexadecimal characters."
-msgstr "Отпечаток должен содержать 64 шестнадцатеричных символа в нижнем регистре."
+msgstr ""
+"Отпечаток должен содержать 64 шестнадцатеричных символа в нижнем регистре."
 
 msgid "Dashboard"
 msgstr "Обзор"
@@ -798,6 +920,9 @@ msgstr "Настройки"
 msgid "Configure account"
 msgstr "Настроить учётную запись"
 
+msgid "Schedule, sessions and applications"
+msgstr "Расписание, сеансы и приложения"
+
 msgid "Configure limits before enabling them for this account."
 msgstr "Настройте ограничения, прежде чем включать их для этой учётной записи."
 
@@ -807,6 +932,12 @@ msgstr "Создать пустой набор ограничений"
 #, python-format
 msgid "Limits: %(limits)s"
 msgstr "Ограничения: %(limits)s"
+
+msgid "Template session rules"
+msgstr "Правила сеансов шаблона"
+
+msgid "Template schedule"
+msgstr "Расписание шаблона"
 
 msgid "Schedule"
 msgstr "Расписание"
@@ -820,14 +951,42 @@ msgstr "Сохранить"
 msgid "Cancel"
 msgstr "Отмена"
 
-msgid "Local accounts are reported by sanex; monitoring is disabled for newly discovered accounts."
-msgstr "Локальные учётные записи передаёт sanex; для новых учётных записей наблюдение отключено."
+msgid ""
+"Local accounts are reported by sanex; monitoring is disabled for newly "
+"discovered accounts."
+msgstr ""
+"Локальные учётные записи передаёт sanex; для новых учётных записей "
+"наблюдение отключено."
 
-msgid "Monitoring"
-msgstr "Наблюдение"
+msgid "Statuses"
+msgstr "Статусы"
 
-msgid "Presence"
-msgstr "Наличие"
+msgid ""
+"Account presence reflects the last list received from the computer, not an "
+"active session."
+msgstr ""
+"«На компьютере» — наличие учётной записи в последнем полученном списке, а не "
+"текущий сеанс."
+
+msgid ""
+"Unconfirmed means sanex on this computer has not acknowledged the latest "
+"settings."
+msgstr ""
+"«Заданы» — настройки сохранены в sanea; sanex на компьютере ещё не "
+"подтвердил их получение."
+
+msgid ""
+"Confirmed means the computer accepted the settings, not that every "
+"restriction succeeded."
+msgstr ""
+"«Подтверждены» — компьютер подтвердил получение настроек, но не выполнение "
+"ограничений."
+
+msgid "Advanced recognition"
+msgstr "Распознавание"
+
+msgid "On computer"
+msgstr "На компьютере"
 
 msgid "Actions"
 msgstr "Действия"
@@ -835,23 +994,29 @@ msgstr "Действия"
 msgid "Not assigned"
 msgstr "Не привязан"
 
-msgid "Collecting"
-msgstr "Сбор включён"
+msgid "Enabled"
+msgstr "Включено"
 
 msgid "Disabled"
-msgstr "Отключено"
+msgstr "Выключено"
 
-msgid "Applied"
-msgstr "Применяются"
+msgid "Settings confirmed"
+msgstr "Подтверждены"
+
+msgid "Waiting for confirmation"
+msgstr "Заданы"
 
 msgid "Not applied"
-msgstr "Не применяются"
+msgstr "Выключены"
 
 msgid "Not configured"
-msgstr "Не настроены"
+msgstr "Не заданы"
 
-msgid "Not reported"
-msgstr "Не передан"
+msgid "Exists"
+msgstr "Существует"
+
+msgid "Missing"
+msgstr "Отсутствует"
 
 msgid "Configure"
 msgstr "Настроить"
@@ -859,11 +1024,97 @@ msgstr "Настроить"
 msgid "No local accounts have been reported."
 msgstr "Локальные учётные записи ещё не получены."
 
+msgid "Account limits"
+msgstr "Ограничения"
+
+msgid "Child accounts"
+msgstr "Учётные записи ребёнка"
+
+#, python-format
+msgid "Source: %(source)s"
+msgstr "Набор: %(source)s"
+
+msgid ""
+"No limits are configured yet. Start with a session rule, then add allowed "
+"intervals and application limits."
+msgstr "Ограничения ещё не заданы. Добавьте режим во вкладке «Сеансы», затем интервалы и приложения."
+
+msgid ""
+"Changes affect only this account. The template and other computers will not "
+"change."
+msgstr "Изменения — только для этой учётной записи. Шаблон и другие компьютеры не изменятся."
+
+msgid "New preset"
+msgstr "Новый режим"
+
+msgid "Sessions"
+msgstr "Сеансы"
+
+msgid "Applications"
+msgstr "Приложения"
+
+msgid "Allowed intervals"
+msgstr "Интервалы"
+
+msgid ""
+"Outside enabled intervals, computer use is blocked. Session rules are "
+"configured on the Sessions tab."
+msgstr "Вне разрешённых интервалов использование компьютера запрещено. Режимы — во вкладке «Сеансы»."
+
+msgid "Interval"
+msgstr "Интервал"
+
+msgid "Add interval"
+msgstr "Добавить интервал"
+
+msgid "Empty schedule"
+msgstr "Пустое расписание"
+
+msgid ""
+"Enabling limits with no active intervals blocks all computer use for this "
+"account."
+msgstr "Включение ограничений без разрешённых интервалов запрещает все сеансы этой учётной записи."
+
+msgid ""
+"Name each rule and set session duration, session count per allowed interval "
+"and the break between sessions. Durations are in minutes."
+msgstr "Режим задаёт длительность сеанса, число сеансов за интервал и перерыв между ними. Время — в минутах."
+
+msgid "Session"
+msgstr "Сеанс"
+
+msgid "Add session rule"
+msgstr "Добавить правило сеанса"
+
+msgid "Application limits"
+msgstr "Лимиты"
+
+msgid ""
+"Choose a session rule, enter an application process name and set its limits. "
+"Suggestions come from recorded activity; you can also enter a value manually."
+msgstr "Выберите режим и задайте лимиты. Имя процесса можно выбрать из статистики или ввести вручную."
+
+msgid "Application"
+msgstr "Приложение"
+
+msgid "Add application"
+msgstr "Добавить приложение"
+
+msgid "All three sections are saved together."
+msgstr "Все вкладки сохраняются вместе."
+
 msgid "Edit application rule"
 msgstr "Изменить правило приложения"
 
 msgid "Add application rule"
 msgstr "Добавить правило приложения"
+
+msgid ""
+"Process names and executable paths offer suggestions from recorded activity. "
+"You can also enter a value manually."
+msgstr ""
+"Для имён процессов и путей к программам доступны подсказки из накопленных "
+"данных. Можно также ввести значение вручную."
 
 #, python-format
 msgid "Session rule: %(rule)s"
@@ -871,6 +1122,9 @@ msgstr "Правило сеанса: %(rule)s"
 
 msgid "Recognition conditions"
 msgstr "Условия распознавания"
+
+msgid "Applied"
+msgstr "Применяются"
 
 msgid "Unlimited"
 msgstr "Без ограничений"
@@ -911,21 +1165,6 @@ msgstr "Посмотреть неудачные команды для %(computer
 
 msgid "Command history"
 msgstr "История команд"
-
-msgid "Computer list"
-msgstr "Список компьютеров"
-
-msgid "Registration"
-msgstr "Регистрация"
-
-msgid "Updates"
-msgstr "Обновления"
-
-msgid "Connection status"
-msgstr "Как определяется состояние связи"
-
-msgid "Refreshes every 5 seconds while this page is visible."
-msgstr "Обновляется каждые 5 секунд, пока страница видима."
 
 msgid "Commands sent to sanex, newest first."
 msgstr "Команды, отправленные sanex, сначала новые."
@@ -986,11 +1225,61 @@ msgstr "Неизвестно"
 msgid "Not issued"
 msgstr "Не выдан"
 
+msgid "Not reported"
+msgstr "Не передан"
+
 msgid "Configure computer"
 msgstr "Настроить компьютер"
 
 msgid "Never"
 msgstr "Никогда"
+
+msgid "Refreshes every 5 seconds while this page is visible."
+msgstr "Обновляется каждые 5 секунд, пока страница видима."
+
+msgid "Connection status"
+msgstr "Как определяется состояние связи"
+
+msgid ""
+"A computer is online for two synchronization intervals, overdue through five "
+"intervals, and offline after that."
+msgstr ""
+"Компьютер считается на связи в течение двух интервалов синхронизации, "
+"задержавшимся — до пяти, затем — не в сети."
+
+msgid "Registration is open"
+msgstr "Регистрация открыта"
+
+msgid "The first computer using this code will be registered."
+msgstr "Будет зарегистрирован первый компьютер, использовавший этот код."
+
+msgid "Registration code"
+msgstr "Код регистрации"
+
+msgid "On the computer being registered, run as root:"
+msgstr "На регистрируемом компьютере выполните от root:"
+
+msgid "Registration closes in"
+msgstr "До закрытия регистрации"
+
+msgid "Registration time remaining"
+msgstr "Оставшееся время регистрации"
+
+msgid "Refresh registration state"
+msgstr "Обновить состояние регистрации"
+
+msgid "Register a computer"
+msgstr "Зарегистрировать компьютер"
+
+msgid ""
+"Open registration. The exact sanex command with the current code will appear "
+"here; run it as root on the computer."
+msgstr ""
+"Откройте регистрацию. Здесь появится точная команда sanex с текущим кодом; "
+"выполните её на компьютере от root."
+
+msgid "Open registration for 30 seconds"
+msgstr "Открыть регистрацию на 30 секунд"
 
 msgid "Last contact"
 msgstr "Последняя связь"
@@ -1017,47 +1306,29 @@ msgstr "Сведения"
 msgid "No computers have been registered."
 msgstr "Компьютеры не зарегистрированы."
 
-msgid "Registration is open"
-msgstr "Регистрация открыта"
-
-msgid "The first computer using this code will be registered."
-msgstr "Будет зарегистрирован первый компьютер, использовавший этот код."
-
-msgid "Registration code"
-msgstr "Код регистрации"
-
-msgid "On the computer being registered, run as root:"
-msgstr "На регистрируемом компьютере выполните от root:"
-
-msgid "Registration closes in"
-msgstr "До закрытия регистрации"
-
-msgid "Registration time remaining"
-msgstr "Оставшееся время регистрации"
-
-msgid "Refresh registration state"
-msgstr "Обновить состояние регистрации"
-
-msgid "Register a computer"
-msgstr "Зарегистрировать компьютер"
-
-msgid "Open registration. The exact sanex command with the current code will appear here; run it as root on the computer."
-msgstr "Откройте регистрацию. Здесь появится точная команда sanex с текущим кодом; выполните её на компьютере от root."
-
-msgid "Open registration for 30 seconds"
-msgstr "Открыть регистрацию на 30 секунд"
-
 msgid "Update sanex"
 msgstr "Обновление sanex"
 
-msgid "Keep offering one version to every allowed computer until you cancel or replace it."
-msgstr "Эта версия будет доступна всем разрешённым компьютерам, пока вы её не отмените или не замените."
+msgid ""
+"Keep offering one version to every allowed computer until you cancel or "
+"replace it."
+msgstr ""
+"Эта версия будет доступна всем разрешённым компьютерам, пока вы её не "
+"отмените или не замените."
 
-msgid "The update was cancelled. Computers will stop retrying after their next synchronization."
-msgstr "Обновление отменено. Компьютеры прекратят повторы после следующей синхронизации."
+msgid ""
+"The update was cancelled. Computers will stop retrying after their next "
+"synchronization."
+msgstr ""
+"Обновление отменено. Компьютеры прекратят повторы после следующей "
+"синхронизации."
 
-msgid "The update is active. There are no allowed computers yet; newly allowed computers will receive it."
-msgstr "Обновление активно. Разрешённых компьютеров пока нет; они получат обновление после разрешения."
+msgid ""
+"The update is active. There are no allowed computers yet; newly allowed "
+"computers will receive it."
+msgstr ""
+"Обновление активно. Разрешённых компьютеров пока нет; они получат обновление "
+"после разрешения."
 
 #, python-format
 msgid "Update queued for %(created)s computer."
@@ -1083,57 +1354,8 @@ msgstr "Запустить обновление"
 msgid "Computers appear here after sanex completes registration."
 msgstr "Компьютеры появляются здесь после завершения регистрации sanex."
 
-msgid "A computer is online for two synchronization intervals, overdue through five intervals, and offline after that."
-msgstr "Компьютер считается на связи в течение двух интервалов синхронизации, задержавшимся — до пяти, затем — не в сети."
-
 msgid "Open"
 msgstr "Открыть"
-
-#, python-format
-msgid "Activity from %(since)s to %(till)s."
-msgstr "Активность с %(since)s по %(till)s."
-
-msgid "Screen time"
-msgstr "Время за компьютером"
-
-msgid "Sessions"
-msgstr "Сеансы"
-
-msgid "Applications"
-msgstr "Приложения"
-
-msgid "Screen time by day"
-msgstr "Время за компьютером по дням"
-
-msgid "No screen time was recorded for this period."
-msgstr "За этот период время за компьютером не зафиксировано."
-
-msgid "Recent activity"
-msgstr "Последняя активность"
-
-msgid "No completed activity was recorded for this period."
-msgstr "За этот период нет завершённых действий."
-
-msgid "Application usage"
-msgstr "Использование приложений"
-
-msgid "Application"
-msgstr "Приложение"
-
-msgid "Time"
-msgstr "Время"
-
-msgid "Launches"
-msgstr "Запуски"
-
-msgid "Last used"
-msgstr "Последнее использование"
-
-msgid "No application use was recorded for this period."
-msgstr "За этот период использование приложений не зафиксировано."
-
-msgid "Correct the filters to view activity."
-msgstr "Исправьте фильтры, чтобы просмотреть активность."
 
 msgid "System status"
 msgstr "Состояние системы"
@@ -1150,14 +1372,21 @@ msgstr "Неудачные команды"
 msgid "Add ignored process"
 msgstr "Добавить игнорируемый процесс"
 
-msgid "Enter the exact case-sensitive process name shown by the operating system. The maximum length is 15 characters."
-msgstr "Введите точное имя процесса, показываемое операционной системой, с учётом регистра. Не более 15 символов."
+msgid ""
+"Enter the exact case-sensitive process name shown by the operating system. "
+"The maximum length is 15 characters."
+msgstr ""
+"Введите точное имя процесса, показываемое операционной системой, с учётом "
+"регистра. Не более 15 символов."
 
 msgid "Add"
 msgstr "Добавить"
 
-msgid "Processes on this list are not included in activity reports on any computer."
-msgstr "Процессы из этого списка не включаются в отчёты об активности ни на одном компьютере."
+msgid ""
+"Processes on this list are not included in activity reports on any computer."
+msgstr ""
+"Процессы из этого списка не включаются в отчёты об активности ни на одном "
+"компьютере."
 
 msgid "Add process"
 msgstr "Добавить процесс"
@@ -1167,9 +1396,6 @@ msgstr "Игнорируется"
 
 msgid "Not ignored"
 msgstr "Не игнорируется"
-
-msgid "Remove"
-msgstr "Удалить"
 
 msgid "Restore"
 msgstr "Восстановить"
@@ -1193,8 +1419,12 @@ msgid "Window"
 msgstr "Окно"
 
 #, python-format
-msgid "Only the latest %(limit)s failures are shown. Narrow the filters to see a smaller period."
-msgstr "Показаны только последние %(limit)s ошибок. Уменьшите период с помощью фильтра."
+msgid ""
+"Only the latest %(limit)s failures are shown. Narrow the filters to see a "
+"smaller period."
+msgstr ""
+"Показаны только последние %(limit)s ошибок. Уменьшите период с помощью "
+"фильтра."
 
 msgid "No enforcement failures were reported for this period."
 msgstr "За этот период ошибок применения ограничений не поступало."
@@ -1212,8 +1442,11 @@ msgstr "Диагностические журналы ещё не получен
 msgid "Correct the filters to view issues."
 msgstr "Исправьте фильтры, чтобы просмотреть проблемы."
 
-msgid "Failures reported while applying limits and the latest diagnostic logs from sanex."
-msgstr "Ошибки применения ограничений и последние диагностические журналы sanex."
+msgid ""
+"Failures reported while applying limits and the latest diagnostic logs from "
+"sanex."
+msgstr ""
+"Ошибки применения ограничений и последние диагностические журналы sanex."
 
 msgid "Rename limits set"
 msgstr "Переименовать набор ограничений"
@@ -1221,8 +1454,12 @@ msgstr "Переименовать набор ограничений"
 msgid "Add limits template"
 msgstr "Добавить шаблон ограничений"
 
-msgid "Create reusable limits for people. After changing a template, use Distribute template to update existing accounts."
-msgstr "Создавайте общие ограничения для людей. После изменения шаблона нажмите «Распространить шаблон», чтобы обновить существующие учётные записи."
+msgid ""
+"Create reusable limits for people. After changing a template, use Distribute "
+"template to update existing accounts."
+msgstr ""
+"Создавайте общие ограничения для людей. После изменения шаблона нажмите "
+"«Распространить шаблон», чтобы обновить существующие учётные записи."
 
 msgid "Add template"
 msgstr "Добавить шаблон"
@@ -1252,14 +1489,48 @@ msgstr "Переименовать"
 msgid "No limits templates have been created."
 msgstr "Шаблоны ограничений ещё не созданы."
 
+#, python-format
+msgid "Editing template: %(template)s."
+msgstr "Редактируется шаблон: %(template)s."
+
+msgid ""
+"Existing accounts keep their assigned version. Distribute the template "
+"explicitly to apply changes."
+msgstr ""
+"Учётные записи сохранят назначенную версию. Чтобы применить изменения, "
+"распространите шаблон явно."
+
+msgid "Distribute from People"
+msgstr "Распространить в разделе «Люди»"
+
+msgid ""
+"This version is shared by several accounts. Customize it separately for an "
+"account before editing."
+msgstr ""
+"Эта версия используется несколькими учётными записями. Перед редактированием "
+"создайте отдельную копию для нужной записи."
+
+msgid "Changes affect only the account listed below."
+msgstr "Изменения затронут только учётную запись, указанную ниже."
+
+msgid "This limits set is not assigned to any account."
+msgstr "Этот набор ограничений не назначен ни одной учётной записи."
+
+msgid "Accounts using this version"
+msgstr "Учётные записи с этой версией"
+
 msgid "Edit person"
 msgstr "Изменить человека"
 
 msgid "Add person"
 msgstr "Добавить человека"
 
-msgid "A person groups local accounts belonging to the same individual on different computers."
-msgstr "Здесь объединяются локальные учётные записи одного человека на разных компьютерах."
+msgid ""
+"A person groups local accounts belonging to the same individual on different "
+"computers."
+msgstr ""
+"Здесь объединяются локальные учётные записи одного человека на разных "
+"компьютерах."
 
 msgid "Not set"
 msgstr "Не задано"
@@ -1274,8 +1545,12 @@ msgid "Distribute limits template"
 msgstr "Распространить шаблон ограничений"
 
 #, python-format
-msgid "Replace limits for selected accounts of %(person_name)s with the %(template)s template."
-msgstr "Заменить ограничения выбранных учётных записей пользователя %(person_name)s настройками шаблона «%(template)s»."
+msgid ""
+"Replace limits for selected accounts of %(person_name)s with the "
+"%(template)s template."
+msgstr ""
+"Заменить ограничения выбранных учётных записей пользователя %(person_name)s "
+"настройками шаблона «%(template)s»."
 
 msgid "Distribute"
 msgstr "Распространить"
@@ -1293,6 +1568,9 @@ msgstr "Набор ограничений: %(limits)s"
 msgid "Add a session rule first"
 msgstr "Сначала добавьте правило сеанса"
 
+msgid "Time"
+msgstr "Время"
+
 msgid "Included"
 msgstr "Включён"
 
@@ -1304,9 +1582,6 @@ msgstr "Диапазоны расписания ещё не добавлены."
 
 msgid "Edit session rule"
 msgstr "Изменить правило сеанса"
-
-msgid "Add session rule"
-msgstr "Добавить правило сеанса"
 
 #, python-format
 msgid "%(count)s application rule"
@@ -1325,11 +1600,82 @@ msgstr "Войти"
 msgid "Use your parent account to continue."
 msgstr "Для продолжения войдите в учетную запись родителя."
 
+#, python-format
+msgid "Activity from %(since)s to %(till)s."
+msgstr "Активность с %(since)s по %(till)s."
+
+msgid "No accounts with activity collection enabled match this selection."
+msgstr "Для выбранных условий нет учётных записей с включённым сбором событий."
+
+msgid "Manage accounts"
+msgstr "Настроить учётные записи"
+
+msgid "No activity events have been received for these accounts yet."
+msgstr "Для этих учётных записей события активности ещё не получены."
+
+msgid ""
+"Time totals include only completed sessions and application runs; ongoing "
+"activity is not included."
+msgstr ""
+"Длительности учитывают только завершённые сеансы и запуски приложений; "
+"текущая активность не включена."
+
+#, python-format
+msgid ""
+"Last activity data received for the selected accounts: %(received)s (UTC)."
+msgstr ""
+"Последние данные активности в выбранной группе получены: %(received)s (UTC)."
+
+msgid "Other accounts in this selection may have older data."
+msgstr "У других учётных записей в этой группе данные могут быть старее."
+
+msgid "Screen time"
+msgstr "Время за компьютером"
+
+msgid "Screen time by day"
+msgstr "Время за компьютером по дням"
+
+msgid "No screen time was recorded for this period."
+msgstr "За этот период время за компьютером не зафиксировано."
+
+msgid "Recent activity"
+msgstr "Последняя активность"
+
+msgid "Times are shown in each computer's timezone."
+msgstr "Время показано в часовом поясе каждого компьютера."
+
+msgid "No completed activity was recorded for this period."
+msgstr "За этот период нет завершённых действий."
+
+msgid "Application usage"
+msgstr "Использование приложений"
+
+msgid "Launches"
+msgstr "Запуски"
+
+msgid "Last used (UTC)"
+msgstr "Последнее использование (UTC)"
+
+msgid "No application use was recorded for this period."
+msgstr "За этот период использование приложений не зафиксировано."
+
+msgid "Correct the filters to view activity."
+msgstr "Исправьте фильтры, чтобы просмотреть активность."
+
 msgid "Account settings saved."
 msgstr "Настройки учётной записи сохранены."
 
 msgid "Application rule saved."
 msgstr "Правило приложения сохранено."
+
+msgid "Computer list"
+msgstr "Список компьютеров"
+
+msgid "Registration"
+msgstr "Регистрация"
+
+msgid "Updates"
+msgstr "Обновления"
 
 msgid "Computer settings saved."
 msgstr "Настройки компьютера сохранены."
@@ -1339,21 +1685,6 @@ msgstr "Команда снова поставлена в очередь."
 
 msgid "An identical command is already pending."
 msgstr "Такая же команда уже ожидает выполнения."
-
-msgid "No user"
-msgstr "Без пользователя"
-
-msgid "h"
-msgstr "ч"
-
-msgid "min"
-msgstr "мин"
-
-msgid "Session"
-msgstr "Сеанс"
-
-msgid "User session"
-msgstr "Пользовательский сеанс"
 
 msgid "Ignored process added."
 msgstr "Игнорируемый процесс добавлен."
@@ -1378,6 +1709,18 @@ msgstr "Диапазон расписания сохранён."
 
 msgid "Session rule saved."
 msgstr "Правило сеанса сохранено."
+
+msgid "No user"
+msgstr "Без пользователя"
+
+msgid "h"
+msgstr "ч"
+
+msgid "min"
+msgstr "мин"
+
+msgid "User session"
+msgstr "Пользовательский сеанс"
 
 msgid "Today"
 msgstr "Сегодня"
@@ -1411,3 +1754,29 @@ msgstr "Суббота"
 
 msgid "Sunday"
 msgstr "Воскресенье"
+
+msgid "Other unsaved changes will be discarded."
+msgstr "Другие несохранённые изменения будут сброшены."
+
+msgid "Remove restriction"
+msgstr "Удаление"
+
+msgid "The rules changed. Reload the card before removing a rule."
+msgstr "Ограничения изменились. Обновите карточку перед удалением."
+
+msgid "Explicitly confirm blocking all sessions before removing the last allowed interval."
+msgstr "Подтвердите полный запрет сеансов перед удалением последнего разрешённого интервала."
+
+#, python-format
+msgid "Remove preset “%(title)s” and its %(ranges)s intervals and %(apps)s application rules?"
+msgstr "Удалить режим «%(title)s» вместе со связанными ограничениями: интервалы — %(ranges)s, приложения — %(apps)s?"
+
+#, python-format
+msgid "Remove “%(title)s”?"
+msgstr "Удалить «%(title)s»?"
+
+msgid "This leaves no allowed intervals and blocks all sessions on this account."
+msgstr "Разрешённых интервалов не останется. Все сеансы этой учётной записи будут запрещены."
+
+msgid "Restriction removed."
+msgstr "Ограничение удалено."

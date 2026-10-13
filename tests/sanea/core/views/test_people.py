@@ -37,6 +37,23 @@ def test_people_lists_domain_records(
     assert f"hx-get=\"{reverse("core:people") + "?" + urlencode({"person": "new"})}\"" in content
 
 
+def test_people_links_child_to_the_combined_limits_card(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    person_record: Person,
+    computer_record: Computer,
+) -> None:
+    account = computer_record.accounts.get()
+    account.person = person_record
+    account.save(update_fields=("person", "updated"))
+    staff_user = user_create(attributes={"is_staff": True})
+
+    response = request_client(user=staff_user).get(reverse("core:people"))
+
+    assert response.status_code == 200
+    assert f"href=\"{reverse("core:account_limits", args=(account.pk,))}\"" in response.content.decode()
+
+
 def test_people_ajax_create_and_update(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],

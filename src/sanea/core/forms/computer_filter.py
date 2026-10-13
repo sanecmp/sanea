@@ -11,9 +11,14 @@ class ComputerFilterForm(SaneaForm):
     """Select access, connection and configuration states for the computer list."""
 
     access = forms.ChoiceField(
-        label=_("Access"),
+        label=_("Synchronization"),
         required=False,
-        choices=(("", _("All access states")), *ComputerStatus.choices),
+        choices=(
+            ("", _("All access states")),
+            (ComputerStatus.PENDING, ComputerStatus.PENDING.label),
+            (ComputerStatus.ALLOWED, _("Synchronization allowed")),
+            (ComputerStatus.BLOCKED, _("Synchronization blocked")),
+        ),
     )
     connection = forms.ChoiceField(
         label=_("Connection"),

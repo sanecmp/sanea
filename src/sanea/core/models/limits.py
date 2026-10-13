@@ -32,6 +32,15 @@ class Limits(TimestampedModel):
     def __str__(self) -> str:
         return self.name
 
+    def get_editing_scope(self) -> dict[str, object]:
+        """Describe whether editing affects a template or concrete accounts."""
+        accounts = tuple(self.accounts.select_related("computer", "person"))
+        return {
+            "template": getattr(self, "current_for_template", None),
+            "accounts": accounts,
+            "shared": len(accounts) > 1,
+        }
+
     @classmethod
     def delete_unreferenced(cls) -> int:
         """Delete snapshots unused by accounts and template pointers."""

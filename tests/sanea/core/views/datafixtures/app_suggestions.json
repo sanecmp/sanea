@@ -1,0 +1,8 @@
+[
+  {"prc_name": "reader&\"<app>", "exe": "/opt/reader&\"/<app>"},
+  {"prc_name": "reader&\"<app>", "exe": "/opt/reader&\"/<app>"},
+  {"prc_name": "browser", "exe": "/usr/bin/browser"},
+  {"prc_name": "", "exe": ""},
+  {"prc_name": null, "exe": null},
+  {"prc_name": "   ", "exe": "   "}
+]

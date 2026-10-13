@@ -17,12 +17,12 @@ class ComputerForm(SaneaModelForm):
     """Edit access, timezone and sanex runtime intervals for one computer."""
 
     status = forms.ChoiceField(
-        label=_("Access"),
+        label=_("Synchronization"),
         choices=(
-            (ComputerStatus.ALLOWED, ComputerStatus.ALLOWED.label),
-            (ComputerStatus.BLOCKED, ComputerStatus.BLOCKED.label),
+            (ComputerStatus.ALLOWED, _("Synchronization allowed")),
+            (ComputerStatus.BLOCKED, _("Synchronization blocked")),
         ),
-        help_text=_("Blocked computers cannot synchronize or upload data."),
+        help_text=_("Blocking synchronization stops settings and data exchange, not computer use."),
     )
 
     timezone = forms.ChoiceField(

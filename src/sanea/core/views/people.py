@@ -166,7 +166,7 @@ class PeopleView(ModelEditorView[None, Person, PersonForm]):
         """Return people with their template and account summary."""
         people: QuerySet[Person] = Person.objects.select_related(
             "limits_tpl__current_limits"
-        ).annotate(account_count=Count("accounts"))
+        ).annotate(account_count=Count("accounts")).prefetch_related("accounts__computer")
         return {"people": people}
 
     def get_success_url(

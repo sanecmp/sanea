@@ -3,6 +3,7 @@
 from typing import Any
 from collections.abc import Callable
 
+import pytest
 from django.urls import reverse
 from django.test import Client
 
@@ -135,3 +136,32 @@ def test_template_edit_forks_snapshot_and_redirects_editor(
     assert response.headers["HX-Redirect"].endswith(
         reverse("core:session_rules", kwargs={"limits_pk": limits_template_record.current_limits_id})
     )
+
+
+@pytest.mark.parametrize("page", ["session_rules", "ranges", "app_rules"])
+def test_rule_pages_explain_template_distribution(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    computer_record: Computer,
+    limits_template_record: LimitsTemplate,
+    session_rule_record: SessionRule,
+    page: str,
+) -> None:
+    account = computer_record.accounts.get()
+    account.limits = limits_template_record.current_limits
+    account.save(update_fields=("limits", "updated"))
+    kwargs = {"limits_pk": account.limits_id}
+
+    if page == "app_rules":
+        kwargs["rule_pk"] = session_rule_record.pk
+
+    staff_user = user_create(attributes={"is_staff": True})
+    response = request_client(user=staff_user).get(reverse(f"core:{page}", kwargs=kwargs))
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert "Editing template:" in content
+    assert "Existing accounts keep their assigned version." in content
+    assert "Distribute from People" in content
+    assert account.name in content
+    assert computer_record.name in content

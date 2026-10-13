@@ -1,0 +1,19 @@
+{% load i18n %}
+<fieldset class="sanea-limits-row" data-form-row data-form-prefix="{{ form.prefix }}"{% if not form.is_bound and not form.instance.pk %} data-extra-row{% endif %}>
+    <legend>{{ row_heading }}</legend>
+    {{ form }}
+    {% if kind == 'apps' %}
+        {% for datalist_id, values in form.suggestions.items %}
+            <datalist id="{{ datalist_id }}">
+                {% for value in values %}<option value="{{ value }}"></option>{% endfor %}
+            </datalist>
+        {% endfor %}
+    {% endif %}
+    <div class="sanea-limits-actions mt-3">
+        {% if form.instance.pk %}
+            <button class="btn btn-outline-danger" type="submit" form="account-remove-{{ kind }}-{{ form.instance.pk }}">{% translate "Remove" %}</button>
+        {% else %}
+            <button class="btn btn-outline-danger" type="button" data-discard-form hidden>{% translate "Remove" %}</button>
+        {% endif %}
+    </div>
+</fieldset>

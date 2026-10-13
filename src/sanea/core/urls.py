@@ -3,6 +3,8 @@
 from django.urls import include, path
 
 from .views import (
+    account_limits,
+    account_rule_delete,
     accounts,
     app_rules,
     client_events,
@@ -40,7 +42,13 @@ urlpatterns = [
     path("statistics/", statistics, name="statistics"),
     path("people/", people, name="people"),
     path("computers/", computers, name="computers"),
-    path("accounts/", accounts, name="accounts"),
+    path("accounts/", include([
+        path("", accounts, name="accounts"),
+        path("<int:account_pk>/limits/", include([
+            path("", account_limits, name="account_limits"),
+            path("remove/<str:kind>/<int:rule_pk>/", account_rule_delete, name="account_rule_delete"),
+        ])),
+    ])),
     path("limits/", include([
         path("", limits, name="limits"),
         path("<int:limits_pk>/", include([

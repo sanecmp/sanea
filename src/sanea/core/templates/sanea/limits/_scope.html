@@ -1,0 +1,31 @@
+{% load i18n %}
+<div class="alert alert-secondary small">
+    {% if scope.template %}
+        <p class="mb-1">
+            {% blocktranslate with template=scope.template %}Editing template: {{ template }}.{% endblocktranslate %}
+        </p>
+        <p class="mb-0">
+            {% translate "Existing accounts keep their assigned version. Distribute the template explicitly to apply changes." %}
+            <a href="{% url 'core:people' %}">{% translate "Distribute from People" %}</a>
+        </p>
+    {% elif scope.shared %}
+        <p class="mb-0">
+            {% translate "This version is shared by several accounts. Customize it separately for an account before editing." %}
+            <a href="{% url 'core:accounts' %}">{% translate "Accounts" %}</a>
+        </p>
+    {% elif scope.accounts %}
+        <p class="mb-0">{% translate "Changes affect only the account listed below." %}</p>
+    {% else %}
+        <p class="mb-0">{% translate "This limits set is not assigned to any account." %}</p>
+    {% endif %}
+    {% if scope.accounts %}
+        <details class="mt-2">
+            <summary>{% translate "Accounts using this version" %}: {{ scope.accounts|length }}</summary>
+            <ul class="mb-0 mt-1">
+                {% for scope_account in scope.accounts %}
+                    <li>{{ scope_account.name|default:scope_account.login }} · {{ scope_account.computer.get_display_name }}</li>
+                {% endfor %}
+            </ul>
+        </details>
+    {% endif %}
+</div>

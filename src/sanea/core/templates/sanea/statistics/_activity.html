@@ -1,4 +1,4 @@
-{% load activity i18n %}
+{% load activity i18n tz %}
 <div id="activity-area" aria-live="polite">
     <section class="card mb-4">
         <div class="card-body p-3 p-lg-4">
@@ -14,6 +14,26 @@
     {% if activity_report %}
         <p class="text-body-secondary small mb-3">
             {% blocktranslate with since=activity_since|date:"SHORT_DATE_FORMAT" till=activity_till|date:"SHORT_DATE_FORMAT" %}Activity from {{ since }} to {{ till }}.{% endblocktranslate %}
+        </p>
+
+        {% if not activity_has_accounts %}
+            <div class="alert alert-info" role="status">
+                <p class="mb-2">{% translate "No accounts with activity collection enabled match this selection." %}</p>
+                <a href="{% url 'core:accounts' %}">{% translate "Manage accounts" %}</a>
+            </div>
+        {% elif not activity_last_received %}
+            <div class="alert alert-info" role="status">
+                {% translate "No activity events have been received for these accounts yet." %}
+            </div>
+        {% else %}
+        <p class="text-body-secondary small mb-1">
+            {% translate "Time totals include only completed sessions and application runs; ongoing activity is not included." %}
+        </p>
+        <p class="text-body-secondary small mb-3">
+            {% timezone "UTC" %}
+                {% blocktranslate with received=activity_last_received|date:"SHORT_DATETIME_FORMAT" %}Last activity data received for the selected accounts: {{ received }} (UTC).{% endblocktranslate %}
+            {% endtimezone %}
+            {% translate "Other accounts in this selection may have older data." %}
         </p>
 
         <div class="row g-3 mb-4">
@@ -65,6 +85,7 @@
                 <section class="card h-100">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-bold mb-3">{% translate "Recent activity" %}</h2>
+                        <p class="text-body-secondary small mb-3">{% translate "Times are shown in each computer's timezone." %}</p>
                         {% if recent_activity %}
                             <div class="list-group list-group-flush sanea-recent-activity">
                                 {% for item in recent_activity %}
@@ -77,7 +98,8 @@
                                                 </div>
                                             </div>
                                             <div class="small text-body-secondary text-nowrap text-end">
-                                                <div>{{ item.started|date:"SHORT_DATETIME_FORMAT" }}</div>
+                                                <div>{% localtime off %}{{ item.started|date:"SHORT_DATETIME_FORMAT" }}{% endlocaltime %}</div>
+                                                <div>{{ item.computer.timezone }}</div>
                                                 <div>{{ item.duration|activity_duration }}</div>
                                             </div>
                                         </div>
@@ -106,7 +128,7 @@
                             <th scope="col">{% translate "Application" %}</th>
                             <th scope="col">{% translate "Time" %}</th>
                             <th scope="col">{% translate "Launches" %}</th>
-                            <th scope="col">{% translate "Last used" %}</th>
+                            <th scope="col">{% translate "Last used (UTC)" %}</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -118,7 +140,7 @@
                                 </td>
                                 <td>{{ item.duration|activity_duration }}</td>
                                 <td>{{ item.launches }}</td>
-                                <td>{{ item.last_used|activity_datetime|date:"SHORT_DATETIME_FORMAT" }}</td>
+                                <td>{% timezone "UTC" %}{{ item.last_used|activity_datetime|date:"SHORT_DATETIME_FORMAT" }}{% endtimezone %}</td>
                             </tr>
                         {% endfor %}
                         </tbody>
@@ -130,6 +152,7 @@
                 </div>
             {% endif %}
         </section>
+        {% endif %}
     {% else %}
         <div class="alert alert-warning" role="alert">
             {% translate "Correct the filters to view activity." %}

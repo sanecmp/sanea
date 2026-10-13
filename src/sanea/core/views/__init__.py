@@ -1,6 +1,7 @@
 """Views exposed by the sanea core application."""
 
 from .accounts import accounts
+from .account_limits import account_limits, account_rule_delete
 from .app_rules import app_rules
 from .authentication import sign_in, sign_out
 from .client import client_events, client_log, client_register, client_register_confirm, client_sync
@@ -16,6 +17,8 @@ from .statistics import statistics
 
 
 __all__ = [
+    "account_limits",
+    "account_rule_delete",
     "accounts",
     "app_rules",
     "client_events",

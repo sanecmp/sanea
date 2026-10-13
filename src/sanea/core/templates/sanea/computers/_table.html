@@ -1,11 +1,11 @@
 {% load i18n %}
 <section class="card" id="computer-table">
-    <div class="table-responsive position-relative">
+    <div class="table-responsive sanea-mobile-table position-relative">
         <table class="table align-middle mb-0">
             <thead>
             <tr>
                 <th scope="col">{% translate "Computer" %}</th>
-                <th scope="col">{% translate "Access" %}</th>
+                <th scope="col">{% translate "Synchronization" %}</th>
                 <th scope="col">{% translate "Connection" %}</th>
                 <th scope="col">{% translate "Configuration" %}</th>
                 <th scope="col">{% translate "Version" %}</th>
@@ -17,22 +17,22 @@
             </thead>
             <tbody>
             {% for item in computers %}
-                <tr>
+                <tr class="sanea-table-item">
                     <td>
                         <div class="fw-semibold">{{ item.get_display_name }}</div>
                         {% if item.name %}<div class="small text-body-secondary">{{ item.hostname }}</div>{% endif %}
                     </td>
-                    <td>{% include "sanea/computers/_access.html" %}</td>
-                    <td>{% include "sanea/computers/_connection.html" %}</td>
-                    <td>{% include "sanea/computers/_config_status.html" %}</td>
-                    <td>{{ item.version|default:_('Unknown') }}</td>
-                    <td class="text-nowrap">{% include "sanea/computers/_last_contact.html" %}</td>
-                    <td>{% include "sanea/computers/_command_counts.html" %}</td>
-                    <td>
+                    <td data-label="{% translate 'Synchronization' %}">{% include "sanea/computers/_access.html" %}</td>
+                    <td data-label="{% translate 'Connection' %}">{% include "sanea/computers/_connection.html" %}</td>
+                    <td data-label="{% translate 'Configuration' %}">{% include "sanea/computers/_config_status.html" %}</td>
+                    <td data-label="{% translate 'Version' %}">{{ item.version|default:_('Unknown') }}</td>
+                    <td class="text-nowrap" data-label="{% translate 'Last contact' %}">{% include "sanea/computers/_last_contact.html" %}</td>
+                    <td data-label="{% translate 'Commands' %}">{% include "sanea/computers/_command_counts.html" %}</td>
+                    <td data-label="{% translate 'Local accounts' %}">
                         {{ item.account_count }}
                         <span class="text-body-secondary">({% blocktranslate with count=item.collecting_count %}collecting: {{ count }}{% endblocktranslate %})</span>
                     </td>
-                    <td class="text-end text-nowrap">
+                    <td class="text-end text-nowrap sanea-table-actions">
                         <div class="dropdown" id="computer-menu-{{ item.pk }}"{% if preserve_details %} hx-preserve{% endif %}>
                             <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
                                     id="computer-actions-{{ item.pk }}" type="button"

@@ -1,9 +1,9 @@
 """Tests for sanea domain translations."""
 
-from django.utils.translation import override
+from django.utils.translation import gettext, override
 
 from sanea.core.models.account import Account
-from sanea.core.models.choices import ComputerStatus
+from sanea.core.models.choices import ComputerStatus, ConfigDeliveryStatus
 from sanea.core.models.computer import Computer
 
 
@@ -16,4 +16,11 @@ def test_domain_model_text_has_russian_translation() -> None:
             f"{Computer._meta.get_field("timezone").help_text}"
             == "Часовой пояс IANA для расчёта недельных расписаний."
         )
-        assert f"{ComputerStatus.PENDING.label}" == "Ожидает подтверждения"
+        assert f"{ComputerStatus.PENDING.label}" == "Ожидание"
+        assert f"{ConfigDeliveryStatus.WAITING.label}" == "Заданы"
+        assert f"{ConfigDeliveryStatus.APPLIED.label}" == "Подтверждены"
+        assert gettext("On computer") == "На компьютере"
+        assert gettext("Exists") == "Существует"
+        assert gettext("Missing") == "Отсутствует"
+        assert gettext("Waiting for confirmation") == "Заданы"
+        assert gettext("Settings confirmed") == "Подтверждены"

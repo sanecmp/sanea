@@ -1,0 +1,131 @@
+{% extends "sanea/base.html" %}
+{% load i18n static %}
+
+{% block content %}
+<div class="sanea-account-limits">
+    <a class="d-inline-block text-body-secondary mb-3" href="{% url 'core:accounts' %}">{% translate "Accounts" %}</a>
+    <section class="card">
+        <div class="card-body p-3 p-sm-4">
+            <header class="mb-4">
+                <p class="small text-body-secondary mb-1">{% translate "Account limits" %}</p>
+                <h1 class="h3 fw-bold mb-2">{{ account.person.name|default:account.name|default:account.login }}</h1>
+                <p class="text-body-secondary mb-1">
+                    {{ account.computer.get_display_name }} · {{ account.login }} · UID {{ account.uid }}
+                </p>
+                <p class="small text-body-secondary mb-3">{% translate "Timezone" %}: {{ account.computer.timezone }}</p>
+                {% if account_choices|length > 1 %}
+                    <nav class="sanea-limits-accounts mb-3" aria-label="{% translate 'Child accounts' %}">
+                        {% for choice in account_choices %}
+                            <a class="btn btn-sm {% if choice.pk == account.pk %}btn-primary{% else %}btn-outline-secondary{% endif %}"
+                               href="{% url 'core:account_limits' choice.pk %}"{% if choice.pk == account.pk %} aria-current="page"{% endif %}>
+                                {{ choice.computer.get_display_name }} · {{ choice.login }}
+                            </a>
+                        {% endfor %}
+                    </nav>
+                {% endif %}
+                {% if account.limits_id %}
+                    <p class="small mb-1">{% blocktranslate with source=account.limits.name %}Source: {{ source }}{% endblocktranslate %}</p>
+                {% else %}
+                    <p class="small mb-1">{% translate "No limits are configured yet. Start with a session rule, then add allowed intervals and application limits." %}</p>
+                {% endif %}
+                <p class="small text-body-secondary mb-0">
+                    {% translate "Changes affect only this account. The template and other computers will not change." %}
+                </p>
+            </header>
+
+            {% if message %}<div class="alert alert-success" role="status">{{ message }}</div>{% endif %}
+            <form id="account-limits-form" method="post" action="{% url 'core:account_limits' account.pk %}"
+                  data-new-preset-label="{% translate 'New preset' %}"
+                  data-discard-notice="{% translate 'Other unsaved changes will be discarded.' %}" novalidate>
+                {% csrf_token %}
+                {{ limits_form }}
+
+                <div class="nav sanea-limits-tabs" id="account-limits-tabs" role="tablist" hidden>
+                    <button class="nav-link active" id="account-limits-schedule-tab" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#account-limits-schedule"
+                            aria-controls="account-limits-schedule" aria-selected="true">{% translate "Schedule" %}</button>
+                    <button class="nav-link" id="account-limits-sessions-tab" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#account-limits-sessions"
+                            aria-controls="account-limits-sessions" aria-selected="false">{% translate "Sessions" %}</button>
+                    <button class="nav-link" id="account-limits-apps-tab" type="button" role="tab"
+                            data-bs-toggle="tab" data-bs-target="#account-limits-apps"
+                            aria-controls="account-limits-apps" aria-selected="false">{% translate "Applications" %}</button>
+                </div>
+                <div id="account-limits-panels" class="sanea-limits-panels">
+                    <section id="account-limits-schedule" class="sanea-limits-panel tab-pane active" data-limits-panel
+                             role="tabpanel" aria-labelledby="account-limits-schedule-tab">
+                        <h2 class="h5 fw-bold">{% translate "Allowed intervals" %}</h2>
+                        <p class="small text-body-secondary">{% translate "Outside enabled intervals, computer use is blocked. Session rules are configured on the Sessions tab." %}</p>
+                        <div data-formset="ranges">
+                            <div{% if limits_form.ranges.management_form.errors %} data-limits-error{% endif %}>{{ limits_form.ranges.management_form }}</div>
+                            {% if limits_form.ranges.non_form_errors %}<div class="alert alert-danger" role="alert" data-limits-error>{{ limits_form.ranges.non_form_errors }}</div>{% endif %}
+                            {% translate "Interval" as row_heading %}
+                            <div data-form-rows>
+                                {% for form in limits_form.ranges %}
+                                    {% include "sanea/accounts/_limits_row.html" with kind="ranges" %}
+                                {% endfor %}
+                            </div>
+                            <template data-empty-form>{% include "sanea/accounts/_limits_row.html" with form=limits_form.ranges.empty_form kind="ranges" %}</template>
+                            <button class="btn btn-outline-secondary" type="button" data-add-form hidden>{% translate "Add interval" %}</button>
+                        </div>
+                    </section>
+
+                    <section id="account-limits-sessions" class="sanea-limits-panel tab-pane" data-limits-panel
+                             role="tabpanel" aria-labelledby="account-limits-sessions-tab">
+                        <h2 class="h5 fw-bold">{% translate "Presets" %}</h2>
+                        <p class="small text-body-secondary">{% translate "Name each rule and set session duration, session count per allowed interval and the break between sessions. Durations are in minutes." %}</p>
+                        <div data-formset="sessions">
+                            <div{% if limits_form.sessions.management_form.errors %} data-limits-error{% endif %}>{{ limits_form.sessions.management_form }}</div>
+                            {% if limits_form.sessions.non_form_errors %}<div class="alert alert-danger" role="alert" data-limits-error>{{ limits_form.sessions.non_form_errors }}</div>{% endif %}
+                            <button class="btn btn-outline-secondary mb-3" type="button" data-add-form hidden>{% translate "Add preset" %}</button>
+                            {% translate "Preset" as row_heading %}
+                            <div data-form-rows>
+                                {% for form in limits_form.sessions %}
+                                    {% include "sanea/accounts/_limits_row.html" with kind="sessions" %}
+                                {% endfor %}
+                            </div>
+                            <template data-empty-form>{% include "sanea/accounts/_limits_row.html" with form=limits_form.sessions.empty_form kind="sessions" %}</template>
+                        </div>
+                    </section>
+
+                    <section id="account-limits-apps" class="sanea-limits-panel tab-pane" data-limits-panel
+                             role="tabpanel" aria-labelledby="account-limits-apps-tab">
+                        <h2 class="h5 fw-bold">{% translate "Application limits" %}</h2>
+                        <p class="small text-body-secondary">{% translate "Choose a session rule, enter an application process name and set its limits. Suggestions come from recorded activity; you can also enter a value manually." %}</p>
+                        <div data-formset="apps">
+                            <div{% if limits_form.apps.management_form.errors %} data-limits-error{% endif %}>{{ limits_form.apps.management_form }}</div>
+                            {% if limits_form.apps.non_form_errors %}<div class="alert alert-danger" role="alert" data-limits-error>{{ limits_form.apps.non_form_errors }}</div>{% endif %}
+                            {% translate "Application" as row_heading %}
+                            <div data-form-rows>
+                                {% for form in limits_form.apps %}
+                                    {% include "sanea/accounts/_limits_row.html" with kind="apps" %}
+                                {% endfor %}
+                            </div>
+                            <template data-empty-form>{% include "sanea/accounts/_limits_row.html" with form=limits_form.apps.empty_form kind="apps" %}</template>
+                            <button class="btn btn-outline-secondary" type="button" data-add-form hidden>{% translate "Add application" %}</button>
+                        </div>
+                    </section>
+                </div>
+                <div class="sanea-limits-save mt-4 pt-3 border-top">
+                    <button class="btn btn-primary" type="submit">{% translate "Save" %}</button>
+                    <p class="small text-body-secondary mb-0">{% translate "All three sections are saved together." %}</p>
+                </div>
+            </form>
+            {% for deletion in deletion_forms %}
+                <form id="{{ deletion.form_id }}" method="post"
+                      action="{% url 'core:account_rule_delete' account.pk deletion.kind deletion.rule_pk %}"
+                      data-rule-deletion data-confirmation="{{ deletion.confirmation }}"{% if deletion.blocks_sessions %} data-blocks-sessions{% endif %}>
+                    {% csrf_token %}
+                    <input type="hidden" name="limits_version" value="{{ account.limits_id }}">
+                    <input type="hidden" name="confirmed" value="">
+                    <input type="hidden" name="confirm_empty_schedule" value="">
+                </form>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'sanea/js/account-limits.js' %}"></script>
+{% endblock %}

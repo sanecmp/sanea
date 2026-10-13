@@ -2,6 +2,8 @@
 
 from datetime import date
 
+import pytest
+
 from sanea.core.forms import ActivityFilterForm
 from sanea.core.forms.base import SaneaForm
 from sanea.core.models import Account, Computer, Person
@@ -42,3 +44,20 @@ def test_activity_filter_rejects_account_outside_selected_user(
 
     assert not form.is_valid()
     assert "account" in form.errors
+
+
+@pytest.mark.parametrize("name", ["Alex", ""], ids=["display-name", "login"])
+def test_activity_filter_identifies_accounts_by_name_and_computer(
+    activity_filter_records: dict[str, Account | Computer | Person],
+    name: str,
+) -> None:
+    account = activity_filter_records["account"]
+    account.name = name
+    account.save()
+    form = ActivityFilterForm()
+
+    content = f"{form}"
+
+    assert f"{name or account.login} · study-pc" in content
+    assert "Maya · spare-pc" in content
+    assert f"{account.uid}@{account.computer_id}" not in content

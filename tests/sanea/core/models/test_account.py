@@ -41,10 +41,10 @@ def test_applying_limits_requires_collection_and_limits(domain_graph: dict[str, 
     account.collect = False
     account.limits = None
 
-    with pytest.raises(ValidationError) as error:
+    with pytest.raises(ValidationError, match="Configure a limits set") as error:
         account.full_clean()
 
-    assert set(error.value.message_dict) == {"apply", "limits"}
+    assert set(error.value.message_dict) == {"apply"}
 
 
 def test_template_snapshot_can_be_shared(domain_graph: dict[str, Any]) -> None:

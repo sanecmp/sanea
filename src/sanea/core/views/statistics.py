@@ -4,7 +4,7 @@ from collections.abc import Callable
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo
 
-from django.db.models import QuerySet
+from django.db.models import Max, QuerySet
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
@@ -13,7 +13,7 @@ from django.utils.formats import date_format
 from django.utils.translation import gettext_lazy as _
 
 from ..forms import ActivityFilterForm
-from ..models import Account, ActivityEvent
+from ..models import Account, ActivityEvent, EventPacket
 from ..models.activity_event import ActivityReport
 from .base import ManagedView
 
@@ -62,6 +62,10 @@ class _StatisticsPresenter:
         context.update(
             {
                 "activity_report": report,
+                "activity_has_accounts": accounts.exists(),
+                "activity_last_received": EventPacket.objects.filter(
+                    account__in=accounts
+                ).aggregate(latest=Max("created"))["latest"],
                 "activity_since": since,
                 "activity_till": till - timedelta(days=1),
                 "activity_chart": self.build_chart(report, accounts, since, till),

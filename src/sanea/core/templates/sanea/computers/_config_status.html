@@ -1,7 +1,8 @@
 {% load i18n %}
 <span id="computer-config-status-{{ item.pk }}"{% if oob %} hx-swap-oob="outerHTML"{% endif %}>
     {% with delivery=item.get_config_delivery_status %}
-        <span class="badge {% if delivery == 'applied' %}text-bg-success{% else %}text-bg-warning{% endif %}">
+        <span class="badge {% if delivery == 'applied' %}text-bg-success{% else %}text-bg-warning{% endif %}"
+              title="{% if delivery == 'applied' %}{% translate 'Confirmed means the computer accepted the settings, not that every restriction succeeded.' %}{% else %}{% translate 'Unconfirmed means sanex on this computer has not acknowledged the latest settings.' %}{% endif %}">
             {{ delivery.label }}
         </span>
     {% endwith %}

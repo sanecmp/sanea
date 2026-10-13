@@ -260,6 +260,10 @@ body {
     grid-template-columns: repeat(3, minmax(10rem, 1fr)) auto;
 }
 
+.sanea-issue-filter {
+    grid-template-columns: minmax(12rem, 2fr) minmax(10rem, 1fr) auto;
+}
+
 .sanea-activity-filter > div,
 .sanea-command-filter > div,
 .sanea-computer-filter > div,
@@ -299,10 +303,6 @@ body {
     }
 }
 
-.sanea-issue-filter {
-    grid-template-columns: minmax(12rem, 2fr) minmax(10rem, 1fr) auto;
-}
-
 .sanea-issue-meta,
 .sanea-diagnostic-log {
     background: #282c34;
@@ -329,6 +329,78 @@ body {
 }
 
 @media (max-width: 767.98px) {
+    .sanea-mobile-table {
+        overflow: visible;
+    }
+
+    .sanea-mobile-table table,
+    .sanea-mobile-table tbody,
+    .sanea-mobile-table tr,
+    .sanea-mobile-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .sanea-mobile-table thead {
+        clip-path: inset(50%);
+        height: 1px;
+        overflow: hidden;
+        position: absolute;
+        white-space: nowrap;
+        width: 1px;
+    }
+
+    .sanea-mobile-table thead th {
+        display: block;
+        padding: 0;
+    }
+
+    .sanea-mobile-table .sanea-table-item {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        padding: 0.5rem;
+    }
+
+    .sanea-table-item:not(:first-child) {
+        border-top: 1px solid var(--sanea-border);
+    }
+
+    .sanea-table-item > td {
+        border: 0;
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .sanea-table-item .text-nowrap {
+        white-space: normal !important;
+    }
+
+    .sanea-table-item .badge {
+        line-height: 1.3;
+        white-space: normal;
+    }
+
+    .sanea-table-item > td[data-label]::before {
+        color: var(--sanea-muted);
+        content: attr(data-label);
+        display: block;
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+    }
+
+    .sanea-table-item > .sanea-table-actions {
+        grid-column: 2;
+        grid-row: 1;
+    }
+
+    .sanea-table-actions .btn {
+        min-height: 2.75rem;
+    }
+
+    .sanea-computer-details .d-flex {
+        flex-wrap: wrap;
+    }
+
     .sanea-update-form {
         grid-template-columns: 1fr;
     }
@@ -369,4 +441,195 @@ body {
 
 .sanea-wordmark-text {
     display: inline-flex;
+}
+
+.sanea-account-limits {
+    margin-inline: auto;
+    max-width: 68rem;
+    overflow-wrap: anywhere;
+}
+
+.sanea-account-limits [hidden] {
+    display: none !important;
+}
+
+.sanea-account-limits .sanea-limits-accounts,
+.sanea-account-limits .sanea-limits-controls,
+.sanea-account-limits .sanea-limits-save {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.5rem;
+}
+
+.sanea-account-limits .sanea-limits-controls {
+    align-items: flex-start;
+}
+
+.sanea-account-limits .btn {
+    min-height: 2.75rem;
+}
+
+.sanea-account-limits .sanea-limits-save {
+    background: var(--sanea-ivory);
+    bottom: 0;
+    box-shadow: 0 -0.25rem 1rem rgb(83 65 45 / 6%);
+    padding: 0.75rem;
+    position: sticky;
+    z-index: 2;
+}
+
+.sanea-account-limits .sanea-limits-tabs {
+    border-bottom: 1px solid var(--sanea-border);
+    display: grid;
+    gap: 0.25rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.5rem;
+}
+
+.sanea-account-limits .sanea-limits-tabs .nav-link {
+    border-radius: 0.5rem;
+    color: var(--sanea-ink);
+    font-size: 0.95rem;
+    font-weight: 600;
+    min-height: 2.75rem;
+    padding: 0.5rem 0.25rem;
+    white-space: normal;
+}
+
+.sanea-account-limits .sanea-limits-tabs .nav-link.active {
+    background: #f7dfd2;
+    color: var(--sanea-terracotta-dark);
+}
+
+.sanea-account-limits .sanea-limits-panel + .sanea-limits-panel {
+    margin-top: 2rem;
+}
+
+.sanea-account-limits .tab-content .sanea-limits-panel {
+    margin-top: 0;
+}
+
+.sanea-account-limits .sanea-limits-row {
+    border: 1px solid var(--sanea-border);
+    border-radius: 0.65rem;
+    margin-bottom: 1rem;
+    min-width: 0;
+    padding: 1rem;
+}
+
+.sanea-account-limits .sanea-limits-row legend {
+    float: none;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    padding-inline: 0.25rem;
+    width: auto;
+}
+
+.sanea-account-limits .sanea-limits-fields {
+    display: grid;
+    gap: 0.25rem 1rem;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.sanea-account-limits .sanea-limits-field {
+    min-width: 0;
+}
+
+.sanea-account-limits .sanea-limits-fields > .sanea-limits-field {
+    display: grid;
+    grid-row: span 4;
+    grid-template-rows: subgrid;
+}
+
+.sanea-account-limits :is(.form-control, .form-select) {
+    min-height: 2.75rem;
+    min-width: 0;
+}
+
+.sanea-account-limits .sanea-limits-fields .form-label {
+    grid-row: 1;
+}
+
+.sanea-account-limits .sanea-limits-fields :is(.form-control, .form-select, .form-check) {
+    grid-row: 2;
+}
+
+.sanea-account-limits .sanea-limits-fields .form-check {
+    align-self: center;
+    margin-bottom: 0 !important;
+}
+
+.sanea-account-limits .sanea-limits-fields .invalid-feedback {
+    grid-row: 3;
+}
+
+.sanea-account-limits .sanea-limits-fields .form-text {
+    grid-row: 4;
+    margin-bottom: 0.75rem;
+    margin-top: 0;
+}
+
+.sanea-account-limits .form-check-input:checked {
+    background-color: var(--sanea-terracotta);
+    border-color: var(--sanea-terracotta);
+}
+
+.sanea-account-limits .sanea-limits-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.sanea-account-limits .sanea-limits-actions:has(button[hidden]) {
+    display: none;
+}
+
+.sanea-account-limits details summary {
+    cursor: pointer;
+    font-weight: 500;
+    min-height: 2.75rem;
+    padding-block: 0.5rem;
+}
+
+.sanea-account-limits .sanea-limits-caution {
+    background: #fff8e8;
+    border: 1px solid #e9d9af;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+}
+
+.sanea-account-limits .errorlist {
+    margin-bottom: 0;
+    padding-left: 1.25rem;
+}
+
+@media (max-width: 575.98px) {
+    .sanea-account-limits .sanea-limits-fields {
+        gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .sanea-account-limits .sanea-limits-fields > .sanea-limits-field {
+        display: block;
+        grid-row: auto;
+    }
+
+    .sanea-account-limits .sanea-limits-fields .form-text {
+        margin-bottom: 0;
+        margin-top: 0.25rem;
+    }
+
+    .sanea-account-limits .sanea-limits-tabs {
+        grid-template-columns: 1fr 0.8fr 1.1fr;
+    }
+
+    .sanea-account-limits .sanea-limits-tabs .nav-link {
+        font-size: 0.85rem;
+        padding-inline: 0.125rem;
+        white-space: nowrap;
+    }
 }
