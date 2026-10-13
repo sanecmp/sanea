@@ -1432,6 +1432,18 @@ msgstr "За этот период ошибок применения огран�
 msgid "Latest diagnostic logs"
 msgstr "Последние диагностические журналы"
 
+msgid "Diagnostic logs"
+msgstr "Журналы"
+
+msgid "Refresh"
+msgstr "Обновить"
+
+msgid "Checks for updates every 5 seconds. New logs arrive when sanex synchronizes."
+msgstr "Проверка каждые 5 секунд. Новые строки поступают при синхронизации sanex."
+
+msgid "New lines"
+msgstr "Новые строки"
+
 #, python-format
 msgid "received %(received)s"
 msgstr "получен %(received)s"

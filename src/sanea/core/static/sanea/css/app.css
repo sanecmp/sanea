@@ -319,8 +319,8 @@ body {
     max-height: 10rem;
 }
 
-.sanea-log-summary {
-    cursor: pointer;
+.sanea-diagnostic-log {
+    overflow-wrap: anywhere;
 }
 
 

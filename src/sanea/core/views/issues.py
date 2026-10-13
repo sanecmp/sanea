@@ -26,7 +26,7 @@ class _IssuePresenter:
     def __init__(self, request: HttpRequest) -> None:
         self.request = request
 
-    def build_context(self) -> dict[str, object]:
+    def build_context(self, *, logs_only: bool = False) -> dict[str, object]:
         """Build filter, enforcement-failure, and diagnostic-log context."""
         request = self.request
         data = request.GET or {"period": ReportingPeriod.DAYS_7}
@@ -39,6 +39,7 @@ class _IssuePresenter:
             "issue_count": 0,
             "log_count": 0,
             "issue_limit": _ISSUE_LIMIT,
+            "logs_only": logs_only,
         }
 
         if not form.is_valid():
@@ -46,19 +47,23 @@ class _IssuePresenter:
 
         computer = form.get_computer()
         since = form.get_since(timezone.now())
+        logs = tuple(Computer.get_diagnostic_logs(computer, since).order_by("hostname", "pk"))
+        selected = request.GET.get("log")
+        active_log_id = next((item.pk for item in logs if f"{item.pk}" == selected), logs[0].pk if logs else None)
+        context.update({"diagnostic_logs": logs, "log_count": len(logs), "active_log_id": active_log_id})
+
+        if logs_only:
+            return context
+
         failures = ActivityEvent.objects.get_enforcement_failures(
             computer=computer,
             since=since,
         )
-        logs = Computer.get_diagnostic_logs(computer, since)
         issue_count = failures.count()
-        log_count = logs.count()
         context.update(
             {
                 "issue_rows": self.build_issue_rows(failures[:_ISSUE_LIMIT]),
-                "diagnostic_logs": logs,
                 "issue_count": issue_count,
-                "log_count": log_count,
                 "issues_truncated": issue_count > _ISSUE_LIMIT,
             }
         )
@@ -115,7 +120,11 @@ class IssuesView(ManagedView):
 
     def get_ajax_handlers(self) -> dict[str, Callable[..., HttpResponse]]:
         """Return the independently refreshable issue handler."""
-        return {"issue-filter": self.render_issues}
+        return {
+            "issue-filter": self.render_issues,
+            "diagnostic-logs": self.render_logs,
+            "diagnostic-refresh": self.render_logs,
+        }
 
     def dispatch(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
         """Render the complete issues page."""
@@ -129,6 +138,11 @@ class IssuesView(ManagedView):
         """Render the independently refreshable issue fragment."""
         context = _IssuePresenter(request).build_context()
         return render(request, "sanea/issues/_content.html", context)
+
+    def render_logs(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
+        """Refresh log snapshots without querying or replacing the failure list."""
+        context = _IssuePresenter(request).build_context(logs_only=True)
+        return render(request, "sanea/issues/_logs.html", context)
 
 
 issues = IssuesView().as_view()
