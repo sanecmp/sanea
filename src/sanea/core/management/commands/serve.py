@@ -22,6 +22,7 @@ class Command(BaseCommand):
     help = "Run sanea using the embedded HTTP and HTTPS server"
 
     def add_arguments(self, parser: CommandParser) -> None:
+        """Allow registration to open once the server listeners are ready."""
         parser.add_argument(
             "--open-registration",
             action="store_true",
@@ -29,6 +30,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args: object, **options: object) -> None:
+        """Run browser, API and discovery listeners until interrupted or stopped."""
         server_host = settings.SERVER_HOST
         http_port = settings.HTTP_PORT
         https_port = settings.HTTPS_PORT

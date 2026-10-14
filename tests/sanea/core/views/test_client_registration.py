@@ -240,7 +240,7 @@ def test_issues_client_certificate_and_repeats_same_response(
     ).value
     assert ExtendedKeyUsageOID.CLIENT_AUTH in extended_key_usage
 
-    with pytest.raises(x509.ExtensionNotFound):
+    with pytest.raises(x509.ExtensionNotFound, match="No .*SubjectAlternativeName.*extension was found"):
         certificate.extensions.get_extension_for_class(x509.SubjectAlternativeName)
 
     assert registration_endpoint.get_snapshot() is None

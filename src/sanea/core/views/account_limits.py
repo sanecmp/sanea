@@ -43,6 +43,7 @@ class AccountLimitsView(ManagedView):
     """Save schedule, sessions and applications together without AJAX state."""
 
     def dispatch(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
+        """Show the account editor and save all restriction tabs together."""
         account = get_object_or_404(
             Account.objects.select_related("computer", "person", "limits"), pk=kwargs["account_pk"],
         )
@@ -86,6 +87,7 @@ class AccountRuleDeleteView(ManagedView):
     """Confirm and atomically remove one rule independently of the editor."""
 
     def dispatch(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
+        """Confirm one rule removal and reject stale graph versions."""
 
         if request.method not in ("GET", "POST"):
             return HttpResponseNotAllowed(("GET", "POST"))

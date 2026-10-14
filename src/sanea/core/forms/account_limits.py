@@ -46,10 +46,12 @@ class MinutesField(forms.IntegerField):
         super().__init__(**kwargs)
 
     def to_python(self, value: object) -> int | None:
+        """Convert submitted minutes to the seconds stored in limit models."""
         minutes = forms.DecimalField(min_value=0, max_digits=30).clean(value) if value not in self.empty_values else None
         return None if minutes is None else int((minutes * 60).to_integral_value())
 
     def prepare_value(self, value: object) -> object:
+        """Display stored seconds as minutes without changing empty values."""
 
         if isinstance(value, int):
             return Decimal(value) / 60
@@ -120,6 +122,7 @@ class AccountRangeForm(RangeForm):
         self.instance.session_rule_id = None
 
     def clean(self) -> dict[str, object]:
+        """Require the proposed interval to end after its start."""
         cleaned_data = super().clean()
         since = cleaned_data.get("since")
         till = cleaned_data.get("till")
@@ -172,6 +175,7 @@ class AccountAppForm(AppRuleForm):
         self._bound_fields_cache.clear()
 
     def clean(self) -> dict[str, object]:
+        """Use exact process matching when no matching mode was selected."""
         cleaned_data = super().clean()
 
         if cleaned_data.get("prc_name") and not cleaned_data.get("prc_name_match"):
@@ -184,11 +188,13 @@ class AccountRuleFormSet(BaseModelFormSet):
     """Keep submitted row identities within the selected account graph."""
 
     def add_fields(self, form: SaneaModelForm, index: int | None) -> None:
+        """Restrict row identities to the selected account graph."""
         super().add_fields(form, index)
         form.fields["id"].queryset = self.get_queryset()
         form.fields["DELETE"].label = _("Remove")
 
     def clean(self) -> None:
+        """Reject changed or forged rule identities before validating the form set."""
         expected_ids = set(self.get_queryset().values_list("pk", flat=True))
         submitted_ids = [form.instance.pk for form in self.initial_forms]
 
@@ -207,6 +213,7 @@ class AccountRangeFormSet(AccountRuleFormSet):
     """Check overlap between all prospective allowed intervals."""
 
     def clean(self) -> None:
+        """Reject overlaps among the proposed enabled weekly intervals."""
         super().clean()
 
         if any(self.errors):
@@ -291,6 +298,7 @@ class AccountLimitsForm(SaneaForm):
         self.requires_empty_confirmation = not ranges.filter(apply=True).exists()
 
     def get_composer(self) -> AccountLimitsComposer:
+        """Expand the warning when the saved schedule has no enabled intervals."""
         composer = super().get_composer()
 
         if self.requires_empty_confirmation:
@@ -302,6 +310,7 @@ class AccountLimitsForm(SaneaForm):
         return composer
 
     def clean(self) -> dict[str, object]:
+        """Validate all tabs and the saved graph version before an atomic update."""
         cleaned_data = super().clean()
         valid_tabs = (self.sessions.is_valid(), self.ranges.is_valid(), self.apps.is_valid())
         source_version = f"{self.account.limits_id}" if self.account.limits_id else ""

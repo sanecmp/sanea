@@ -26,6 +26,7 @@ class ClockField(forms.CharField):
         super().__init__(**kwargs)
 
     def to_python(self, value: object) -> int | None:
+        """Parse submitted clock text using the permitted end-of-day convention."""
         value = super().to_python(value)
 
         if value in self.empty_values:
@@ -41,6 +42,7 @@ class ClockField(forms.CharField):
             ) from error
 
     def prepare_value(self, value: object) -> object:
+        """Display stored minutes as clock text without changing empty values."""
 
         if isinstance(value, int):
             return format_clock(value)

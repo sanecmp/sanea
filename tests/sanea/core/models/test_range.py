@@ -26,7 +26,7 @@ def test_must_not_cross_or_overlap(domain_graph: dict[str, Any]) -> None:
 
     range_.since = range_.till
 
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError, match="core_range_interval_valid"):
         range_.full_clean()
 
 
