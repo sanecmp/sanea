@@ -59,6 +59,22 @@
         });
     });
 
+    const shouldPauseRefresh = (source) => source?.id === "computer-live-refresh"
+        && Boolean(document.getElementById("computer-save"));
+
+    document.body.addEventListener("htmx:beforeRequest", (event) => {
+        if (shouldPauseRefresh(event.detail.elt)) {
+            event.preventDefault();
+        }
+    });
+
+    document.body.addEventListener("htmx:beforeSwap", (event) => {
+        // beforeSwap's elt is the target; requestConfig retains the request source.
+        if (shouldPauseRefresh(event.detail.requestConfig?.elt)) {
+            event.detail.shouldSwap = false;
+        }
+    });
+
     document.addEventListener("visibilitychange", () => {
         const refresh = document.getElementById("computer-live-refresh");
         if (!document.hidden && refresh && window.htmx) {

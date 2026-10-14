@@ -67,6 +67,7 @@ def test_computers_lists_registered_clients(
     content = response.content.decode()
     command_query = urlencode({"command_computer": computer_record.pk})
     issues_query = escape(urlencode({"computer": computer_record.pk, "period": "7-days"}))
+    configure_query = escape(urlencode({"computer": computer_record.pk, "edit": 1}))
 
     assert response.status_code == 200
     assert computer_record.name in content
@@ -85,6 +86,12 @@ def test_computers_lists_registered_clients(
     assert content.count("class=\"sanea-table-item\"") == 1
     assert "class=\"text-end text-nowrap sanea-table-actions\"" in content
     assert content.count(f"id=\"computer-actions-{computer_record.pk}\"") == 1
+    assert content.count(f"id=\"computer-configure-open-{computer_record.pk}\"") == 1
+    assert f"href=\"{reverse("core:computers")}?{configure_query}\"" in content
+    assert f"hx-get=\"{reverse("core:computers")}?{configure_query}\"" in content
+    assert content.index(f"id=\"computer-configure-open-{computer_record.pk}\"") < content.index(
+        f"id=\"computer-menu-{computer_record.pk}\"",
+    )
 
     for column in ("Synchronization", "Connection", "Configuration", "Version", "Last contact", "Commands", "Local accounts"):
         assert f"data-label=\"{column}\"" in content
@@ -528,6 +535,33 @@ def test_computers_filter_all_command_types_by_status(
     assert "Disk unavailable" not in content
     assert updates_payload["valid"]["version"] not in content
     assert "sanea-shell" not in content
+
+
+@pytest.mark.parametrize(
+    "request_headers",
+    [pytest.param({}, id="page"), pytest.param({"HTTP_HX_REQUEST": "true"}, id="ajax")],
+)
+def test_computers_open_editor_directly_from_table(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    computer_record: Computer,
+    request_headers: dict[str, str],
+) -> None:
+    staff_user = user_create(attributes={"is_staff": True})
+
+    response = request_client(user=staff_user).get(
+        reverse("core:computers"), {"computer": computer_record.pk, "edit": 1},
+        HTTP_HX_TRIGGER=f"computer-configure-open-{computer_record.pk}",
+        **request_headers,
+    )
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert "id=\"computer-save\"" in content
+    assert "name=\"computer-name\"" in content
+    assert "name=\"computer-status\"" in content
+    assert "name=\"computer-timezone\"" in content
+    assert computer_record.get_display_name() in content
 
 
 def test_computers_ajax_edits_access_and_runtime_intervals(

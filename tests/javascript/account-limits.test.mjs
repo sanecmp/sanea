@@ -29,7 +29,12 @@ const createRow = (prefix, index, { name = "", extra = false, deleted = false, p
     };
     row.rule = {
         value: extra ? "" : "0", dataset: {}, options: [{ value: "", textContent: "Choose preset" }],
+        updates: [],
         replaceChildren(...options) { this.options = options; },
+        dispatchEvent(event) {
+            this.updates.push({ type: event.type, bubbles: event.bubbles, value: this.value,
+                labels: this.options.map((option) => option.textContent) });
+        },
     };
     row.querySelector = (selector) => ({
         'input[name$="-DELETE"]': row.deletion,
@@ -126,7 +131,10 @@ const createPage = ({ bootstrap = true, initial = 1, bound = false, errors = {},
         confirm: (message) => { confirmation.messages.push(message); return confirmation.accepted; },
         ...(bootstrap ? { bootstrap: { Tab: { getOrCreateInstance: (button) => ({ show: () => shown.push(button.id) }) } } } : {}),
     };
-    runInNewContext(script, { document, window });
+    class CustomEvent {
+        constructor(type, options) { this.type = type; this.bubbles = options.bubbles; }
+    }
+    runInNewContext(script, { document, window, CustomEvent });
     return { document, form, formsets, tabs, panelContainer, details, shown, removal, confirmation };
 };
 
@@ -167,6 +175,10 @@ test("Add reveals the existing extra row before cloning, and new presets can be 
     assert.equal(added.discardButton.hidden, false);
     assert.equal(selection.value, "2");
     assert.deepEqual(selection.options.map((option) => option.textContent), ["Choose preset", "Everyday", "New preset", "After school <script>"]);
+    assert.deepEqual(selection.updates.at(-1), {
+        type: "sanea:choices-updated", bubbles: true, value: "2",
+        labels: ["Choose preset", "Everyday", "New preset", "After school <script>"],
+    });
 });
 
 test("discarding an unsaved row hides it immediately without changing stored rows or TOTAL_FORMS", () => {
@@ -185,6 +197,7 @@ test("discarding an unsaved row hides it immediately without changing stored row
     assert.equal(page.formsets.sessions.total.value, "2");
     assert.equal(page.formsets.apps.rows[0].rule.value, "");
     assert.deepEqual(page.formsets.apps.rows[0].rule.options.map((option) => option.value), ["", "0"]);
+    assert.equal(page.formsets.apps.rows[0].rule.updates.at(-1).value, "");
     assert.equal(page.formsets.sessions.rows[0].deletion.checked, false);
     assert.equal(page.formsets.sessions.total.value, "2");
     assert.deepEqual(page.confirmation.messages, []);

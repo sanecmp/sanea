@@ -37,6 +37,11 @@ def test_dashboard_uses_approved_local_layout(request_client: Callable[..., Clie
     assert "vendor/bootstrap/bootstrap.min.css" in content
     assert "href=\"/static/sanea/favicon.svg\"" in content
     assert "vendor/htmx/htmx.min.js" in content
+    assert "vendor/tom-select/tom-select.bootstrap5.min.css" in content
+    assert "vendor/tom-select/tom-select.complete.min.js" in content
+    assert "sanea/js/searchable-selects.js" in content
+    assert 'data-select-search="Search"' in content
+    assert 'data-select-empty="No matches"' in content
     assert "https://" not in content
     assert content.count("Dashboard") >= 2
     assert "People" in content

@@ -8,10 +8,11 @@
     <title>{% block title %}{{ page_title }} · sanea{% endblock %}</title>
     <link rel="icon" href="{% static 'sanea/favicon.svg' %}" type="image/svg+xml">
     <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/tom-select/tom-select.bootstrap5.min.css' %}">
     <link rel="stylesheet" href="{% static 'sanea/css/app.css' %}">
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body data-select-search="{% translate 'Search' %}" data-select-empty="{% translate 'No matches' %}">
 <svg class="d-none" aria-hidden="true">
     <symbol id="icon-dashboard" viewBox="0 0 24 24">
         <path d="M3 11.5 12 4l9 7.5v8a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>
@@ -107,6 +108,8 @@
 {% include "siteajax/cdn.html" %}
 <script>{% include "siteajax/init_csrf.js" %}</script>
 <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+<script src="{% static 'vendor/tom-select/tom-select.complete.min.js' %}"></script>
+<script src="{% static 'sanea/js/searchable-selects.js' %}"></script>
 {% block extra_body %}{% endblock %}
 </body>
 </html>

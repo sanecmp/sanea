@@ -107,6 +107,59 @@ test("background history refresh keeps surviving commands expanded without retai
     assert.equal(refreshed.status, "done");
 });
 
+test("background refresh requests pause while editing and resume after the editor closes", () => {
+    const page = createPage();
+    page.elements.set("computer-save", { id: "computer-save" });
+    let prevented = false;
+    const event = { detail: { elt: page.refresh }, preventDefault: () => { prevented = true; } };
+
+    page.body.emit("htmx:beforeRequest", event);
+
+    assert.equal(prevented, true);
+
+    page.elements.delete("computer-save");
+    prevented = false;
+    page.body.emit("htmx:beforeRequest", event);
+
+    assert.equal(prevented, false);
+});
+
+test("an in-flight background response cannot swap an open editor but swaps after it closes", () => {
+    const page = createPage();
+    page.elements.set("computer-save", { id: "computer-save" });
+    const target = { id: "computer-table" };
+    const detail = { elt: target, target, requestConfig: { elt: page.refresh }, shouldSwap: true };
+
+    page.body.emit("htmx:beforeSwap", { detail });
+
+    assert.equal(detail.shouldSwap, false);
+
+    page.elements.delete("computer-save");
+    detail.shouldSwap = true;
+    page.body.emit("htmx:beforeSwap", { detail });
+
+    assert.equal(detail.shouldSwap, true);
+});
+
+test("editor actions and filters still request and swap while editing", () => {
+    const page = createPage();
+    page.elements.set("computer-save", { id: "computer-save" });
+    const target = { id: "computer-table" };
+
+    for (const id of ["computer-save", "computer-configure-open-12", "computer-close-12", "computer-filter", "command-filter"]) {
+        const source = { id };
+        page.body.emit("htmx:beforeRequest", {
+            detail: { elt: source },
+            preventDefault: () => assert.fail(`Blocked explicit request from ${id}`),
+        });
+        const detail = { elt: target, target, requestConfig: { elt: source }, shouldSwap: true };
+
+        page.body.emit("htmx:beforeSwap", { detail });
+
+        assert.equal(detail.shouldSwap, true);
+    }
+});
+
 test("visibility changes refresh only when the computers page becomes visible", () => {
     const page = createPage();
 

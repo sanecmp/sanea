@@ -33,6 +33,14 @@
                         <span class="text-body-secondary">({% blocktranslate with count=item.collecting_count %}collecting: {{ count }}{% endblocktranslate %})</span>
                     </td>
                     <td class="text-end text-nowrap sanea-table-actions">
+                        <div class="mb-2">
+                            <a class="btn btn-sm btn-outline-primary" id="computer-configure-open-{{ item.pk }}"
+                               href="{{ computers_url }}?computer={{ item.pk }}&amp;edit=1"
+                               hx-get="{{ computers_url }}?computer={{ item.pk }}&amp;edit=1"
+                               hx-target="#computer-details-{{ item.pk }}" hx-swap="innerHTML">
+                                {% translate "Configure" %}
+                            </a>
+                        </div>
                         <div class="dropdown" id="computer-menu-{{ item.pk }}"{% if preserve_details %} hx-preserve{% endif %}>
                             <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
                                     id="computer-actions-{{ item.pk }}" type="button"

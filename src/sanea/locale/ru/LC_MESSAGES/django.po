@@ -1234,8 +1234,8 @@ msgstr "Настроить компьютер"
 msgid "Never"
 msgstr "Никогда"
 
-msgid "Refreshes every 5 seconds while this page is visible."
-msgstr "Обновляется каждые 5 секунд, пока страница видима."
+msgid "Refreshes every 5 seconds while visible. Paused during editing."
+msgstr "Обновляется каждые 5 секунд, пока страница видима. При редактировании — пауза."
 
 msgid "Connection status"
 msgstr "Как определяется состояние связи"
@@ -1792,3 +1792,9 @@ msgstr "Разрешённых интервалов не останется. В�
 
 msgid "Restriction removed."
 msgstr "Ограничение удалено."
+
+msgid "Search"
+msgstr "Поиск"
+
+msgid "No matches"
+msgstr "Нет совпадений"

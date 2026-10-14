@@ -25,6 +25,7 @@
                 });
                 select.replaceChildren(...options);
                 select.value = choices.some((choice) => choice.value === selected) ? selected : "";
+                select.dispatchEvent(new CustomEvent("sanea:choices-updated", { bubbles: true }));
             });
         };
 
