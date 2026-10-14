@@ -3,7 +3,6 @@
 import json
 from collections.abc import Callable, Iterable
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
@@ -71,7 +70,7 @@ class _IssuePresenter:
 
     @classmethod
     def build_issue_rows(cls, failures: Iterable[ActivityEvent]) -> tuple[dict[str, object], ...]:
-        """Convert stored failures to rows localized to each computer."""
+        """Convert stored failures to rows in sanea's current timezone."""
         rows = []
         add_row = rows.append
 
@@ -84,7 +83,7 @@ class _IssuePresenter:
                     "computer": computer,
                     "timestamp": datetime.fromtimestamp(
                         failure.timestamp,
-                        ZoneInfo(computer.timezone),
+                        timezone.get_current_timezone(),
                     ),
                     "reason": cls.format_reason(failure.reason),
                     "rule_ident": failure.rule_ident,

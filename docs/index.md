@@ -42,6 +42,14 @@ node --test tests/javascript/*.mjs
 navigation item, shows activity charts, recent activity and the top 10 applications
 by recorded usage time, with user, computer, account and period filters.
 
+Time totals include only completed sessions and application runs. A dash in
+application usage means no final duration has been received yet.
+Dates and times use sanea's timezone, including the days selected in statistics.
+By default this is the system timezone of the computer running sanea;
+`SANEA_TIME_ZONE` overrides it with an IANA name such as `Europe/Berlin`.
+UTC is used if no valid system timezone name is available.
+Children's schedule timezones remain configured separately for each computer.
+
 **Computers** opens with the computer list. Command history, registration and sanex
 updates have separate tabs. While the browser page is visible, the table refreshes
 every five seconds without resetting filters or open computer settings.

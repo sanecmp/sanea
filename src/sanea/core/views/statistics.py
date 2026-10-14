@@ -2,7 +2,6 @@
 
 from collections.abc import Callable
 from datetime import date, datetime, timedelta
-from zoneinfo import ZoneInfo
 
 from django.db.models import Max, QuerySet
 from django.http import HttpRequest, HttpResponse
@@ -68,6 +67,7 @@ class _StatisticsPresenter:
                 ).aggregate(latest=Max("created"))["latest"],
                 "activity_since": since,
                 "activity_till": till - timedelta(days=1),
+                "activity_timezone": timezone.get_current_timezone_name(),
                 "activity_chart": self.build_chart(report, accounts, since, till),
                 "recent_activity": self.build_recent_activity(report),
             }
@@ -137,11 +137,11 @@ class _StatisticsPresenter:
         }
         rows = []
         add_row = rows.append
+        zone = timezone.get_current_timezone()
 
         for item in report.recent:
             account = accounts[item.account_id]
             computer = account.computer
-            zone = ZoneInfo(computer.timezone)
             add_row(
                 {
                     "kind": _("Session")

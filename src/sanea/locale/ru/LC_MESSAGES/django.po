@@ -1632,11 +1632,14 @@ msgstr ""
 "Длительности учитывают только завершённые сеансы и запуски приложений; "
 "текущая активность не включена."
 
+msgid "A dash means no final duration has been received yet."
+msgstr "Прочерк означает, что итоговая длительность ещё не получена."
+
 #, python-format
 msgid ""
-"Last activity data received for the selected accounts: %(received)s (UTC)."
+"Last activity data received for the selected accounts: %(received)s."
 msgstr ""
-"Последние данные активности в выбранной группе получены: %(received)s (UTC)."
+"Последние данные активности в выбранной группе получены: %(received)s."
 
 msgid "Other accounts in this selection may have older data."
 msgstr "У других учётных записей в этой группе данные могут быть старее."
@@ -1653,8 +1656,9 @@ msgstr "За этот период время за компьютером не �
 msgid "Recent activity"
 msgstr "Последняя активность"
 
-msgid "Times are shown in each computer's timezone."
-msgstr "Время показано в часовом поясе каждого компьютера."
+#, python-format
+msgid "Times are shown in sanea's timezone: %(zone)s."
+msgstr "Время показано в часовом поясе sanea: %(zone)s."
 
 msgid "No completed activity was recorded for this period."
 msgstr "За этот период нет завершённых действий."
@@ -1665,8 +1669,8 @@ msgstr "Использование приложений"
 msgid "Launches"
 msgstr "Запуски"
 
-msgid "Last used (UTC)"
-msgstr "Последнее использование (UTC)"
+msgid "Last used"
+msgstr "Последнее использование"
 
 msgid "No application use was recorded for this period."
 msgstr "За этот период использование приложений не зафиксировано."

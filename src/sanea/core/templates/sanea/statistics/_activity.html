@@ -1,4 +1,4 @@
-{% load activity i18n tz %}
+{% load activity i18n %}
 <div id="activity-area" aria-live="polite">
     <section class="card mb-4">
         <div class="card-body p-3 p-lg-4">
@@ -28,12 +28,12 @@
         {% else %}
         <p class="text-body-secondary small mb-1">
             {% translate "Time totals include only completed sessions and application runs; ongoing activity is not included." %}
+            {% translate "A dash means no final duration has been received yet." %}
         </p>
         <p class="text-body-secondary small mb-3">
-            {% timezone "UTC" %}
-                {% blocktranslate with received=activity_last_received|date:"SHORT_DATETIME_FORMAT" %}Last activity data received for the selected accounts: {{ received }} (UTC).{% endblocktranslate %}
-            {% endtimezone %}
+            {% blocktranslate with received=activity_last_received|date:"SHORT_DATETIME_FORMAT" %}Last activity data received for the selected accounts: {{ received }}.{% endblocktranslate %}
             {% translate "Other accounts in this selection may have older data." %}
+            {% blocktranslate with zone=activity_timezone %}Times are shown in sanea's timezone: {{ zone }}.{% endblocktranslate %}
         </p>
 
         <div class="row g-3 mb-4">
@@ -85,7 +85,6 @@
                 <section class="card h-100">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-bold mb-3">{% translate "Recent activity" %}</h2>
-                        <p class="text-body-secondary small mb-3">{% translate "Times are shown in each computer's timezone." %}</p>
                         {% if recent_activity %}
                             <div class="list-group list-group-flush sanea-recent-activity">
                                 {% for item in recent_activity %}
@@ -98,8 +97,7 @@
                                                 </div>
                                             </div>
                                             <div class="small text-body-secondary text-nowrap text-end">
-                                                <div>{% localtime off %}{{ item.started|date:"SHORT_DATETIME_FORMAT" }}{% endlocaltime %}</div>
-                                                <div>{{ item.computer.timezone }}</div>
+                                                <div>{{ item.started|date:"SHORT_DATETIME_FORMAT" }}</div>
                                                 <div>{{ item.duration|activity_duration }}</div>
                                             </div>
                                         </div>
@@ -128,7 +126,7 @@
                             <th scope="col">{% translate "Application" %}</th>
                             <th scope="col">{% translate "Time" %}</th>
                             <th scope="col">{% translate "Launches" %}</th>
-                            <th scope="col">{% translate "Last used (UTC)" %}</th>
+                            <th scope="col">{% translate "Last used" %}</th>
                         </tr>
                         </thead>
                         <tbody>
@@ -140,7 +138,7 @@
                                 </td>
                                 <td>{{ item.duration|activity_duration }}</td>
                                 <td>{{ item.launches }}</td>
-                                <td>{% timezone "UTC" %}{{ item.last_used|activity_datetime|date:"SHORT_DATETIME_FORMAT" }}{% endtimezone %}</td>
+                                <td>{{ item.last_used|activity_datetime|date:"SHORT_DATETIME_FORMAT" }}</td>
                             </tr>
                         {% endfor %}
                         </tbody>

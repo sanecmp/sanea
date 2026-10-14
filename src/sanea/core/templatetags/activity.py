@@ -11,8 +11,12 @@ register = template.Library()
 
 @register.filter
 def activity_duration(value: int | None) -> str:
-    """Format seconds as a compact clock-style duration."""
-    seconds_total = max(value or 0, 0)
+    """Format seconds as a compact duration, or a dash when still unknown."""
+
+    if value is None:
+        return "—"
+
+    seconds_total = max(value, 0)
     hours, remainder = divmod(seconds_total, 3_600)
     minutes, seconds = divmod(remainder, 60)
 

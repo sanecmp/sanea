@@ -1,10 +1,12 @@
 """Settings shared by all sanea environments."""
 
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from sanelib.protocol import MAX_EVENT_PACKET_SIZE
 
 from ..exceptions import ConfigurationError
+from ..utils.timezone import get_local_timezone_name
 from .environment import ENVIRONMENT
 
 
@@ -144,7 +146,15 @@ LANGUAGES = [
     ("ru", "Russian"),
 ]
 LOCALE_PATHS = [Path(__file__).resolve().parent.parent / "locale"]
-TIME_ZONE = "UTC"
+_time_zone_default = "UTC" if ENVIRONMENT.is_testing else get_local_timezone_name()
+TIME_ZONE = f"{ENVIRONMENT.get("SANEA_TIME_ZONE", _time_zone_default)}"
+
+try:
+    ZoneInfo(TIME_ZONE)
+
+except (ValueError, ZoneInfoNotFoundError) as error:
+    raise ConfigurationError("SANEA_TIME_ZONE must be an available IANA timezone name") from error
+
 USE_I18N = True
 USE_TZ = True
 

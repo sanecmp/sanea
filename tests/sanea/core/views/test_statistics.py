@@ -1,8 +1,9 @@
 """Tests for the dedicated activity statistics page."""
 
 import hashlib
+import json
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -63,9 +64,10 @@ def test_statistics_filters_and_renders_received_activity(
 
     content = response.content.decode()
     ajax_content = ajax_response.content.decode()
-    local_start = datetime.fromtimestamp(packet.events[0].timestamp, ZoneInfo(computer_record.timezone))
-    utc_last_used = datetime.fromtimestamp(packet.events[1].timestamp, UTC)
-    received = account.event_packets.get().created
+    zone = ZoneInfo("America/New_York")
+    local_start = datetime.fromtimestamp(packet.events[0].timestamp, zone)
+    local_last_used = datetime.fromtimestamp(packet.events[1].timestamp, zone)
+    received = timezone.localtime(account.event_packets.get().created, zone)
 
     assert response.status_code == 200
     assert "Statistics" in content
@@ -84,18 +86,109 @@ def test_statistics_filters_and_renders_received_activity(
     assert "3,137" not in content
     assert "Time totals include only completed sessions and application runs" in content
     assert "Other accounts in this selection may have older data." in content
-    assert (
-        f"Last activity data received for the selected accounts: {date_format(received, "SHORT_DATETIME_FORMAT")} (UTC)."
-        in content
-    )
-    assert f"<div>{date_format(local_start, "SHORT_DATETIME_FORMAT")}</div>" in content
-    assert "Asia/Novosibirsk" in content
-    assert "Last used (UTC)" in content
-    assert f"<td>{date_format(utc_last_used, "SHORT_DATETIME_FORMAT")}</td>" in content
     assert ajax_response.status_code == 200
     assert "id=\"activity-area\"" in ajax_content
     assert "yandex_browser" in ajax_content
     assert "sanea-shell" not in ajax_content
+
+    for rendered in (content, ajax_content):
+        assert (
+            f"Last activity data received for the selected accounts: {date_format(received, "SHORT_DATETIME_FORMAT")}."
+            in rendered
+        )
+        assert f"<div>{date_format(local_start, "SHORT_DATETIME_FORMAT")}</div>" in rendered
+        assert "Times are shown in sanea's timezone: America/New_York." in rendered
+        assert "Asia/Novosibirsk" not in rendered
+        assert "(UTC)" not in rendered
+        assert "Last used" in rendered
+        assert f"<td>{date_format(local_last_used, "SHORT_DATETIME_FORMAT")}</td>" in rendered
+
+
+@pytest.mark.parametrize(
+    "request_options",
+    [{}, {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "activity-filter"}],
+    ids=["page", "fragment"],
+)
+@pytest.mark.parametrize(
+    ("language", "explanation"),
+    [
+        ("en", "A dash means no final duration has been received yet."),
+        ("ru", "Прочерк означает, что итоговая длительность ещё не получена."),
+    ],
+)
+def test_statistics_shows_a_dash_until_application_end_is_received(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    computer_record: Computer,
+    client_events_content: bytes,
+    request_options: dict[str, str],
+    language: str,
+    explanation: str,
+) -> None:
+    account = computer_record.accounts.get()
+    lines = client_events_content.splitlines(keepends=True)
+    content = b"".join(lines[:2])
+    packet = parse_event_packet(content, hashlib.sha256(content).hexdigest())
+    account.store_event_packet(packet, len(content), None)
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+
+    response = client.get(
+        reverse("core:statistics"), {"period": "7-days"}, HTTP_ACCEPT_LANGUAGE=language, **request_options,
+    )
+    rendered = response.content.decode()
+
+    assert response.status_code == 200
+    assert "yandex_browser" in rendered
+    assert "<td>—</td>" in rendered
+    assert "<td>0:00</td>" not in rendered
+    assert explanation in rendered
+
+    ending_content = lines[3]
+    ending_packet = parse_event_packet(ending_content, hashlib.sha256(ending_content).hexdigest())
+    account.store_event_packet(ending_packet, len(ending_content), None)
+
+    completed_response = client.get(
+        reverse("core:statistics"), {"period": "7-days"}, HTTP_ACCEPT_LANGUAGE=language, **request_options,
+    )
+    completed = completed_response.content.decode()
+
+    assert completed_response.status_code == 200
+    assert "<td>52:17</td>" in completed
+    assert "<td>—</td>" not in completed
+
+
+def test_statistics_today_chart_uses_the_sanea_day_instead_of_the_computer_day(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    computer_record: Computer,
+    client_events_content: bytes,
+    calendar_time: TimeMachineFixture,
+) -> None:
+    events = [json.loads(line) for line in client_events_content.splitlines()]
+    timestamp = int(datetime(2026, 10, 2, 2, tzinfo=UTC).timestamp())
+    offset = timestamp - events[0]["timestamp"]
+
+    for event in events:
+        event["timestamp"] += offset
+
+    content = ("\n".join(json.dumps(event) for event in events) + "\n").encode()
+    packet = parse_event_packet(content, hashlib.sha256(content).hexdigest())
+    computer_record.accounts.get().store_event_packet(packet, len(content), None)
+    calendar_time.move_to("2026-10-02T03:30:00+00:00", tick=False)
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+
+    with timezone.override("America/New_York"):
+        response = client.get(reverse("core:statistics"))
+
+    rendered = response.content.decode()
+    chart_content = rendered.split('<script id="activity-chart-data" type="application/json">', 1)[1].split("</script>", 1)[0]
+    chart = json.loads(chart_content)
+
+    assert response.status_code == 200
+    assert computer_record.timezone == "Asia/Novosibirsk"
+    assert chart["labels"] == [date_format(date(2026, 10, 1), "SHORT_DATE_FORMAT")]
+    assert chart["datasets"][0]["data"] == [3017]
+    assert "yandex_browser" in rendered
 
 
 def test_statistics_explains_missing_activity_collection(

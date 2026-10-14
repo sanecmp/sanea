@@ -4,11 +4,11 @@ from collections import defaultdict
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import date, datetime, time
-from zoneinfo import ZoneInfo
 from typing import Self, TYPE_CHECKING
 
 from django.db import models
-from django.db.models import Q, QuerySet
+from django.db.models import QuerySet
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from sanelib.protocol import Event as ClientEvent
 
@@ -49,7 +49,7 @@ class ApplicationUsage:
 
     prc_name: str
     exe: str
-    duration: int
+    duration: int | None
     launches: int
     last_used: int
 
@@ -306,7 +306,7 @@ class _ActivityReportBuilder:
             key = (event.prc_name or "", event.exe or "")
             usage = applications.setdefault(
                 key,
-                {"duration": 0, "launches": 0, "last_used": 0},
+                {"duration": 0, "launches": 0, "completed_launches": 0, "last_used": 0},
             )
             usage["launches"] += 1
             usage["last_used"] = max(usage["last_used"], event.timestamp)
@@ -314,6 +314,7 @@ class _ActivityReportBuilder:
 
             if end is not None:
                 usage["duration"] += end.duration or 0
+                usage["completed_launches"] += 1
 
         recent = self._build_recent(starts, session_ends, process_ends)
         daily_screen_time = tuple(
@@ -326,13 +327,13 @@ class _ActivityReportBuilder:
                     ApplicationUsage(
                         prc_name,
                         exe,
-                        values["duration"],
+                        values["duration"] if values["completed_launches"] else None,
                         values["launches"],
                         values["last_used"],
                     )
                     for (prc_name, exe), values in applications.items()
                 ),
-                key=lambda item: (-item.duration, -item.launches, item.prc_name, item.exe),
+                key=lambda item: (-(item.duration or 0), -item.launches, item.prc_name, item.exe),
             )
         )
         summary = ActivitySummary(
@@ -348,25 +349,18 @@ class _ActivityReportBuilder:
         )
 
     def _load_starts(self) -> tuple[ActivityEvent, ...]:
-        accounts = self.accounts
-        condition = Q(pk__in=())
 
-        for account in accounts:
-            zone = ZoneInfo(account.computer.timezone)
-            lower = int(datetime.combine(self.since, time.min, zone).timestamp())
-            upper = int(datetime.combine(self.till, time.min, zone).timestamp())
-            condition |= Q(
-                account_id=account.pk,
-                timestamp__gte=lower,
-                timestamp__lt=upper,
-            )
-
-        if not accounts:
+        if not self.accounts:
             return ()
 
+        zone = timezone.get_current_timezone()
+        lower = int(datetime.combine(self.since, time.min, zone).timestamp())
+        upper = int(datetime.combine(self.till, time.min, zone).timestamp())
         return tuple(
             self.events.filter(
-                condition,
+                account_id__in=[account.pk for account in self.accounts],
+                timestamp__gte=lower,
+                timestamp__lt=upper,
                 type__in=(_SESSION_START, _PROCESS_START),
             ).select_related("account__computer", "account__person")
         )
@@ -434,5 +428,4 @@ class _ActivityReportBuilder:
 
     @staticmethod
     def _get_local_date(event: ActivityEvent) -> date:
-        zone = ZoneInfo(event.account.computer.timezone)
-        return datetime.fromtimestamp(event.timestamp, zone).date()
+        return datetime.fromtimestamp(event.timestamp, timezone.get_current_timezone()).date()

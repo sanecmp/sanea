@@ -3,10 +3,13 @@
 import hashlib
 from collections.abc import Callable
 from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 import pytest
 from django.test import Client
 from django.urls import reverse
+from django.utils import timezone
+from django.utils.formats import date_format
 from sanelib.protocol import parse_event_packet
 
 from sanea.core.models import Computer, User
@@ -39,15 +42,20 @@ def test_issues_show_enforcement_failures_and_escaped_log_tail(
     computer_record.replace_log_tail("failed <script>alert(1)</script>", None)
     client = request_client(user=staff_user)
 
-    response = client.get(reverse("core:issues"), {"period": "30-days"})
-    ajax_response = client.get(
-        reverse("core:issues"),
-        {"period": "30-days", "computer": computer_record.pk},
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER="issue-filter",
-    )
+    with timezone.override("America/New_York"):
+        response = client.get(reverse("core:issues"), {"period": "30-days"})
+        ajax_response = client.get(
+            reverse("core:issues"),
+            {"period": "30-days", "computer": computer_record.pk},
+            HTTP_HX_REQUEST="true",
+            HTTP_HX_TRIGGER="issue-filter",
+        )
+
     content = response.content.decode()
     ajax_content = ajax_response.content.decode()
+    failure = packet.events[-1]
+    local_timestamp = datetime.fromtimestamp(failure.timestamp, ZoneInfo("America/New_York"))
+    formatted_timestamp = date_format(local_timestamp, "SHORT_DATETIME_FORMAT")
 
     assert response.status_code == 200
     assert "id=\"icon-issues\"" in content
@@ -64,6 +72,8 @@ def test_issues_show_enforcement_failures_and_escaped_log_tail(
     assert ajax_response.status_code == 200
     assert "id=\"issues-content\"" in ajax_content
     assert "sanea-shell" not in ajax_content
+    assert f"<td class=\"text-nowrap\">{formatted_timestamp}</td>" in content
+    assert f"<td class=\"text-nowrap\">{formatted_timestamp}</td>" in ajax_content
 
 
 @pytest.mark.parametrize("trigger", ["diagnostic-logs", "diagnostic-refresh"])
