@@ -58,6 +58,30 @@ class _StatisticsPresenter:
         since, till = form.get_date_range(today)
         accounts = form.get_accounts()
         report = ActivityEvent.objects.build_report(accounts, since, till)
+        recent = self.build_recent_activity(report)
+        selected_kind = request.GET.get("activity_kind", "application")
+
+        if selected_kind not in recent:
+            selected_kind = "application"
+
+        tabs = []
+
+        for kind, label, empty_label in (
+            ("application", _("Applications"), _("No completed application runs for this period.")),
+            ("session", _("Sessions"), _("No completed sessions for this period.")),
+        ):
+            query = request.GET.copy()
+            query.setdefault("period", form.cleaned_data["period"])
+            query["activity_kind"] = kind
+            tabs.append({
+                "kind": kind,
+                "label": label,
+                "empty_label": empty_label,
+                "items": recent[kind],
+                "active": kind == selected_kind,
+                "url": f"{context["activity_url"]}?{query.urlencode()}",
+            })
+
         context.update(
             {
                 "activity_report": report,
@@ -69,7 +93,8 @@ class _StatisticsPresenter:
                 "activity_till": till - timedelta(days=1),
                 "activity_timezone": timezone.get_current_timezone_name(),
                 "activity_chart": self.build_chart(report, accounts, since, till),
-                "recent_activity": self.build_recent_activity(report),
+                "recent_activity_tabs": tabs,
+                "activity_kind": selected_kind,
             }
         )
         return context
@@ -126,8 +151,8 @@ class _StatisticsPresenter:
         }
 
     @staticmethod
-    def build_recent_activity(report: ActivityReport) -> tuple[dict[str, object], ...]:
-        """Resolve recent rows to human-readable account and computer labels."""
+    def build_recent_activity(report: ActivityReport) -> dict[str, list[dict[str, object]]]:
+        """Group recent applications and sessions with familiar account labels."""
         account_ids = {item.account_id for item in report.recent}
         accounts = {
             account.pk: account
@@ -135,27 +160,24 @@ class _StatisticsPresenter:
                 "computer"
             )
         }
-        rows = []
-        add_row = rows.append
+        rows: dict[str, list[dict[str, object]]] = {"application": [], "session": []}
         zone = timezone.get_current_timezone()
 
         for item in report.recent:
             account = accounts[item.account_id]
             computer = account.computer
-            add_row(
+            account_name = account.name or account.login
+            is_session = item.kind == "session"
+            rows[item.kind].append(
                 {
-                    "kind": _("Session")
-                    if item.kind == "session"
-                    else _("Application"),
-                    "name": item.prc_name or item.exe or _("User session"),
-                    "account": account,
-                    "computer": computer,
+                    "name": account_name if is_session else item.prc_name or item.exe,
+                    "details": computer.get_display_name() if is_session else f"{account_name} · {computer.get_display_name()}",
                     "started": datetime.fromtimestamp(item.started, zone),
                     "duration": item.duration,
                 }
             )
 
-        return tuple(rows)
+        return rows
 
 
 class StatisticsView(ManagedView):

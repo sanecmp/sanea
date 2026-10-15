@@ -9,15 +9,8 @@ from django.utils.translation import gettext_lazy as _
 
 from ...utils.periods import ReportingPeriod
 from ..models import Account, Computer, Person
+from .account_choices import AccountChoiceField
 from .base import SaneaForm
-
-
-class ActivityAccountChoiceField(forms.ModelChoiceField):
-    """Identify a local account by its familiar name and computer."""
-
-    def label_from_instance(self, account: Account) -> str:
-        """Avoid exposing internal identifiers in account selections."""
-        return f"{account.name or account.login} · {account.computer.get_display_name()}"
 
 
 class ActivityFilterForm(SaneaForm):
@@ -31,19 +24,19 @@ class ActivityFilterForm(SaneaForm):
         label=_("User"),
         queryset=Person.objects.none(),
         required=False,
-        empty_label=_("All users"),
+        empty_label=_("All"),
     )
     computer = forms.ModelChoiceField(
         label=_("Computer"),
         queryset=Computer.objects.none(),
         required=False,
-        empty_label=_("All computers"),
+        empty_label=_("All"),
     )
-    account = ActivityAccountChoiceField(
+    account = AccountChoiceField(
         label=_("Account"),
         queryset=Account.objects.none(),
         required=False,
-        empty_label=_("All accounts"),
+        empty_label=_("All"),
     )
     period = forms.ChoiceField(
         label=_("Period"),

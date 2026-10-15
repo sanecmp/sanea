@@ -14,7 +14,7 @@ class ComputerFilterForm(SaneaForm):
         label=_("Synchronization"),
         required=False,
         choices=(
-            ("", _("All access states")),
+            ("", _("All")),
             (ComputerStatus.PENDING, ComputerStatus.PENDING.label),
             (ComputerStatus.ALLOWED, _("Synchronization allowed")),
             (ComputerStatus.BLOCKED, _("Synchronization blocked")),
@@ -23,12 +23,12 @@ class ComputerFilterForm(SaneaForm):
     connection = forms.ChoiceField(
         label=_("Connection"),
         required=False,
-        choices=(("", _("All connection states")), *ConnectionStatus.choices),
+        choices=(("", _("All")), *ConnectionStatus.choices),
     )
     config_delivery = forms.ChoiceField(
         label=_("Configuration"),
         required=False,
-        choices=(("", _("All configuration states")), *ConfigDeliveryStatus.choices),
+        choices=(("", _("All")), *ConfigDeliveryStatus.choices),
     )
 
     def get_filters(self) -> dict[str, str | None]:

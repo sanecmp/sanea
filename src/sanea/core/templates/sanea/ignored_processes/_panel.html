@@ -1,0 +1,10 @@
+<section id="ignored-processes" class="mt-5">
+{% include "sanea/ignored_processes/_header.html" %}
+<div id="ignored-processes-message" class="mb-3"></div>
+
+{% with editor=ignored_process_editor.editor exclusion=ignored_process_editor.exclusion %}
+{% include "sanea/_editor_dialog.html" %}
+{% endwith %}
+
+{% include "sanea/ignored_processes/_list.html" %}
+</section>

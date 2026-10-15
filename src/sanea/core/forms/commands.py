@@ -16,18 +16,18 @@ class CommandFilterForm(SaneaForm):
         label=_("Computer"),
         queryset=Computer.objects.none(),
         required=False,
-        empty_label=_("All computers"),
+        empty_label=_("All"),
     )
     command_type = forms.ChoiceField(
-        label=_("Type"),
+        label=_("Command"),
         required=False,
-        choices=(("", _("All command types")),),
+        choices=(("", _("All")),),
     )
     command_status = forms.ChoiceField(
         label=_("Command status"),
         required=False,
         choices=(
-            ("", _("All statuses")),
+            ("", _("All")),
             (STATUS_PENDING, _("Pending")),
             *CommandStatus.choices,
         ),
@@ -38,7 +38,7 @@ class CommandFilterForm(SaneaForm):
         fields = self.fields
         fields["command_computer"].queryset = Computer.objects.all()
         fields["command_type"].choices = (
-            ("", _("All command types")),
+            ("", _("All")),
             *(
                 (command_type, command_type)
                 for command_type in ClientCommand.get_types()

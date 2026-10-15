@@ -1,66 +1,43 @@
 (() => {
     "use strict";
 
-    const hashTabs = {
-        "#computer-list": "computers",
-        "#command-history": "commands",
-        "#registration-window": "registration",
-        "#sanex-updates": "updates",
-    };
-
-    const showTab = (name) => {
-        const tab = document.getElementById(`${name}-tab`);
-        if (tab && window.bootstrap) {
-            window.bootstrap.Tab.getOrCreateInstance(tab).show();
-        }
-    };
-
-    const restoreTab = () => {
-        const url = new URL(window.location.href);
-        const requested = url.searchParams.get("tab") || hashTabs[url.hash];
-        const hasCommands = ["command_computer", "command_type", "command_status", "command_page"]
-            .some((field) => url.searchParams.get(field));
-        const fallback = hasCommands ? "commands" : "computers";
-        showTab(document.getElementById(`${requested}-tab`) ? requested : fallback);
-    };
-
-    document.addEventListener("DOMContentLoaded", restoreTab);
-    window.addEventListener("popstate", restoreTab);
-    window.addEventListener("hashchange", restoreTab);
-    document.body.addEventListener("htmx:historyRestore", restoreTab);
-
-    document.body.addEventListener("shown.bs.tab", (event) => {
-        const name = event.target.dataset.computerTab;
-        if (!name) {
-            return;
-        }
-        const url = new URL(window.location.href);
-        url.searchParams.set("tab", name);
-        url.hash = "";
-        window.history.replaceState(window.history.state, "", url);
-    });
-
-    document.body.addEventListener("htmx:afterSwap", (event) => {
-        if (event.detail.target.id === "command-history") {
-            showTab("commands");
-        }
-    });
-
-    document.body.addEventListener("htmx:oobBeforeSwap", (event) => {
-        const { target, fragment } = event.detail;
-        if (target.id !== "command-history-results") {
-            return;
-        }
-        target.querySelectorAll("details[open]").forEach((command) => {
-            const refreshed = fragment.querySelector(`#${command.id}`);
-            if (refreshed) {
-                refreshed.open = true;
-            }
-        });
-    });
-
+    const scrollPositions = new Map();
+    const refreshIds = new Set(["computer-live-refresh", "command-live-refresh"]);
+    const isBackground = (source) => refreshIds.has(source?.id);
     const shouldPauseRefresh = (source) => source?.id === "computer-live-refresh"
-        && Boolean(document.getElementById("computer-save"));
+        && Boolean(document.getElementById("computer-editor")?.querySelector("[data-dialog-panel]"));
+
+    const rememberScroll = (target) => {
+        const scroller = target?.querySelector(".table-responsive");
+        if (scroller) {
+            scrollPositions.set(target.id, { left: scroller.scrollLeft, top: scroller.scrollTop });
+        }
+    };
+
+    const restoreScroll = (event) => {
+        const targetId = event.detail.target?.id;
+        const position = scrollPositions.get(targetId);
+        if (!position) {
+            return;
+        }
+        const scroller = document.getElementById(targetId)?.querySelector(".table-responsive");
+        if (scroller) {
+            scroller.scrollLeft = position.left;
+            scroller.scrollTop = position.top;
+        }
+        scrollPositions.delete(targetId);
+    };
+
+    const preserveOpenCommands = (current, refreshed) => {
+        if (current.id === "command-history-results") {
+            current.querySelectorAll("details[open]").forEach((command) => {
+                const replacement = refreshed.querySelector(`#${command.id}`);
+                if (replacement) {
+                    replacement.open = true;
+                }
+            });
+        }
+    };
 
     document.body.addEventListener("htmx:beforeRequest", (event) => {
         if (shouldPauseRefresh(event.detail.elt)) {
@@ -69,16 +46,47 @@
     });
 
     document.body.addEventListener("htmx:beforeSwap", (event) => {
-        // beforeSwap's elt is the target; requestConfig retains the request source.
-        if (shouldPauseRefresh(event.detail.requestConfig?.elt)) {
-            event.detail.shouldSwap = false;
+        const detail = event.detail;
+        const source = detail.requestConfig?.elt;
+        if (shouldPauseRefresh(source)) {
+            detail.shouldSwap = false;
+            return;
         }
+        if (!detail.shouldSwap) {
+            return;
+        }
+
+        if (isBackground(source) && detail.serverResponse) {
+            const refreshed = new DOMParser().parseFromString(detail.serverResponse, "text/html")
+                .getElementById(detail.target.id);
+            if (refreshed) {
+                preserveOpenCommands(detail.target, refreshed);
+                // Compare parsed markup, ignoring request classes on the outer target.
+                if (detail.target.innerHTML === refreshed.innerHTML) {
+                    detail.shouldSwap = false;
+                    return;
+                }
+                detail.serverResponse = refreshed.outerHTML;
+            }
+        }
+        rememberScroll(detail.target);
     });
 
+    document.body.addEventListener("htmx:oobBeforeSwap", (event) => {
+        rememberScroll(event.detail.target);
+    });
+    document.body.addEventListener("htmx:afterSwap", restoreScroll);
+    document.body.addEventListener("htmx:oobAfterSwap", restoreScroll);
+
     document.addEventListener("visibilitychange", () => {
-        const refresh = document.getElementById("computer-live-refresh");
-        if (!document.hidden && refresh && window.htmx) {
-            window.htmx.trigger(refresh, "computer-refresh");
+        if (document.hidden || !window.htmx) {
+            return;
         }
+        refreshIds.forEach((identifier) => {
+            const refresh = document.getElementById(identifier);
+            if (refresh) {
+                window.htmx.trigger(refresh, "computer-refresh");
+            }
+        });
     });
 })();

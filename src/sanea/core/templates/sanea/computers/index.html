@@ -2,56 +2,42 @@
 {% load i18n static %}
 
 {% block content %}
-<div class="mb-3">
-    <h1 class="display-6 fw-bold mb-1">{% translate "Computers" %}</h1>
+<div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+    <h1 class="display-6 fw-bold mb-0">{% translate "Computers" %}</h1>
+    <div class="d-flex flex-wrap gap-3">
+        <a href="{% url 'core:computer_commands' %}">{% translate "Command history" %}</a>
+        <a href="{% url 'core:computer_updates' %}">{% translate "Updates" %}</a>
+    </div>
 </div>
 
 <div id="computers-page" hx-sync="this:replace">
-    <ul class="nav nav-tabs mb-3" id="computer-tabs" role="tablist" aria-label="{% translate 'Computers' %}">
-        {% for tab_name, tab_label in computer_tabs %}
-            <li class="nav-item" role="presentation">
-                <a class="nav-link{% if active_tab == tab_name %} active{% endif %}" id="{{ tab_name }}-tab"
-                   href="{{ computers_url }}?tab={{ tab_name }}{% if tab_filter_query %}&amp;{{ tab_filter_query }}{% endif %}"
-                   data-bs-toggle="tab" data-bs-target="#{{ tab_name }}-panel" data-computer-tab="{{ tab_name }}"
-                   role="tab" aria-controls="{{ tab_name }}-panel" aria-selected="{% if active_tab == tab_name %}true{% else %}false{% endif %}">
-                    {{ tab_label }}
-                </a>
-            </li>
-        {% endfor %}
-    </ul>
-    <div class="tab-content">
-        <div class="tab-pane{% if active_tab == 'computers' %} active{% endif %}" id="computers-panel"
-             role="tabpanel" aria-labelledby="computers-tab" tabindex="0">
-            {% include "sanea/computers/_list.html" %}
+    <details class="card mb-3 sanea-registration-panel"{% if registration_expanded %} open{% endif %}>
+        <summary class="px-4 py-3 fw-semibold">{% translate "Registration" %}</summary>
+        <div id="registration-window" class="border-top">
+            {% include "sanea/computers/_registration.html" %}
         </div>
-        <div class="tab-pane{% if active_tab == 'commands' %} active{% endif %}" id="commands-panel"
-             role="tabpanel" aria-labelledby="commands-tab" tabindex="0">
-            {% include "sanea/computers/_command_history.html" %}
-        </div>
-        <div class="tab-pane{% if active_tab == 'registration' %} active{% endif %}" id="registration-panel"
-             role="tabpanel" aria-labelledby="registration-tab" tabindex="0">
-            <p class="text-body-secondary">{% translate "Computers appear here after sanex completes registration." %}</p>
-            <section class="card" id="registration-window">
-                {% include "sanea/computers/_registration.html" %}
-            </section>
-        </div>
-        <div class="tab-pane{% if active_tab == 'updates' %} active{% endif %}" id="updates-panel"
-             role="tabpanel" aria-labelledby="updates-tab" tabindex="0">
-            <section class="card" id="sanex-updates">
-                {% include "sanea/computers/_updates.html" %}
-            </section>
+    </details>
+    {% include "sanea/computers/_list.html" %}
+    <div id="computer-dialog" class="sanea-editor-dialog" data-editor-dialog data-dialog-fallback="computer-list"
+         tabindex="-1" aria-labelledby="computer-dialog-title"{% if not computer_form %} hidden{% endif %}>
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div id="computer-editor" class="modal-content" data-dialog-editor>
+                {% if computer_form %}
+                    {% if read_only %}{% include "sanea/computers/_details.html" %}{% else %}{% include "sanea/computers/_editor.html" %}{% endif %}
+                {% endif %}
+            </div>
         </div>
     </div>
-
     <div id="computer-live-refresh" class="d-none" aria-hidden="true"
          hx-get="{{ computers_url }}" hx-trigger="every 5s [!document.hidden], computer-refresh[!document.hidden]"
          hx-target="#computer-table" hx-swap="outerHTML" hx-sync="#computers-page:abort"
-         hx-include="#command-filter select, #computer-filter select, #command-current-page"></div>
+         hx-include="#computer-filter select"></div>
 </div>
+{% include "sanea/issues/_content.html" %}
 {% endblock %}
 
 {% block extra_body %}
-{{ block.super }}
 <script src="{% static 'sanea/js/registration-window.js' %}"></script>
 <script src="{% static 'sanea/js/computers.js' %}"></script>
+<script src="{% static 'sanea/js/diagnostic-logs.js' %}"></script>
 {% endblock %}

@@ -18,13 +18,19 @@ def test_accounts_requires_management_user(request_client: Callable[..., Client]
     assert regular_response.status_code == 403
 
 
+@pytest.mark.parametrize("present, collect", [(False, True), (True, False)])
 def test_accounts_lists_reported_records(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],
     computer_record: Computer,
+    present: bool,
+    collect: bool,
 ) -> None:
     staff_user = user_create(attributes={"is_staff": True})
     account = Account.objects.get(computer=computer_record)
+    account.present = present
+    account.collect = collect
+    account.save(update_fields=("present", "collect", "updated"))
 
     response = request_client(user=staff_user).get(reverse("core:accounts"))
     content = response.content.decode()
@@ -35,11 +41,35 @@ def test_accounts_lists_reported_records(
     assert f"id=\"account-edit-{account.pk}\"" in content
     assert "sanea-mobile-table" in content
     assert "sanea-table-actions" in content
-    assert "data-label=\"Monitoring\"" in content
+    assert '<td class="small text-body-secondary" data-label="Computer">' in content
+    assert '<td class="small text-body-secondary" data-label="Person">—</td>' in content
+    assert '<ul class="text-body-secondary small mt-2 mb-0 ps-3">' not in content
+    assert "<details" not in content
+    assert '<th scope="col" class="text-center">Monitoring</th>' in content
+    assert '<td class="text-center" data-label="Monitoring">' in content
+    monitoring_markup = content.split('data-label="Monitoring">', 1)[1].split("</td>", 1)[0]
+    monitoring = "Enabled" if collect else "Disabled"
+    monitoring_icon = "check" if collect else "ban"
+    assert f'title="Monitoring: {monitoring}"' in monitoring_markup
+    assert f'aria-label="Monitoring: {monitoring}"' in monitoring_markup
+    assert 'class="sanea-status-icon" role="img"' in monitoring_markup
+    assert f'<use href="#icon-{monitoring_icon}">' in monitoring_markup
+    assert "badge" not in monitoring_markup
     assert "data-label=\"On computer\"" in content
-    assert "Exists" in content
+    presence = "Exists" if present else "Missing"
+    icon = "check" if present else "ban"
+    assert presence in content
     assert "not an active session" in content
     assert "Add account" not in content
+    assert "id=\"account-dialog\"" in content
+    assert "data-dialog-editor" in content
+    assert "id=\"account-save\"" not in content
+    assert f"aria-label=\"Configure: {account.login} · {computer_record.get_display_name()}\"" in content
+    assert "<use href=\"#icon-edit\">" in content
+    assert "<use href=\"#icon-limits\">" in content
+    assert "<td class=\"text-center\" data-label=\"On computer\">" in content
+    assert f"role=\"img\" aria-label=\"{presence}\"" in content
+    assert f"<use href=\"#icon-{icon}\">" in content
 
 
 def test_accounts_ajax_updates_sanea_owned_settings(
@@ -57,8 +87,11 @@ def test_accounts_ajax_updates_sanea_owned_settings(
         HTTP_HX_REQUEST="true",
         HTTP_HX_TRIGGER=f"account-edit-{account.pk}",
     )
+    editor_content = editor_response.content.decode()
+
     assert editor_response.status_code == 200
-    assert "name=\"account-person\"" in editor_response.content.decode()
+    assert editor_content.index('name="account-collect"') < editor_content.index('name="account-apply"')
+    assert editor_content.index('name="account-apply"') < editor_content.index('name="account-person"')
 
     save_response = client.post(
         reverse("core:accounts"),
@@ -77,28 +110,44 @@ def test_accounts_ajax_updates_sanea_owned_settings(
     assert account.person == person_record
     assert account.collect is True
     assert account.apply is False
+    assert f'data-label="Person">{person_record.name}</td>' in save_response.content.decode()
     assert "hx-swap-oob=\"outerHTML\"" in save_response.content.decode()
+    assert "id=\"accounts-message\"" in save_response.content.decode()
+    assert "id=\"account-save\"" not in save_response.content.decode()
 
-def test_accounts_ajax_creates_independent_limits(
+
+@pytest.mark.parametrize("ajax", [False, True])
+def test_account_editor_cancels_without_saving_and_preserves_invalid_input(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],
     computer_record: Computer,
+    ajax: bool,
 ) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
+    client = request_client(user=user_create(attributes={"is_staff": True}))
     account = Account.objects.get(computer=computer_record)
+    original_collect = account.collect
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "account-save"} if ajax else {}
 
-    response = request_client(user=staff_user).post(
+    response = client.post(
         reverse("core:accounts"),
-        {"account": f"{account.pk}", "customize_limits": "1"},
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER=f"account-limits-customize-{account.pk}",
+        {"account": f"{account.pk}", "__submit": "account", "account-person": "not-a-person"},
+        **headers,
     )
-    account.refresh_from_db()
 
     assert response.status_code == 200
-    assert account.limits is not None
-    assert account.limits.name == f"{account.login} @ {computer_record.hostname}"
-    assert "Limits:" in response.content.decode()
+    assert "id=\"account-dialog-title\"" in response.content.decode()
+    assert "data-dialog-panel" in response.content.decode()
+    assert "Select a valid choice." in response.content.decode()
+
+    cancel_headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "account-cancel"} if ajax else {}
+    cancelled = client.get(reverse("core:accounts"), **cancel_headers)
+    account.refresh_from_db()
+
+    assert cancelled.status_code == 200
+    assert "id=\"account-save\"" not in cancelled.content.decode()
+    assert account.person_id is None
+    assert account.collect is original_collect
+    assert account.limits_id is None
 
 
 
@@ -267,17 +316,29 @@ def test_person_change_cannot_silently_replace_active_limits_with_empty_schedule
     assert account.limits == previous_limits
 
 
-@pytest.mark.parametrize("confirmed", [False, True])
-def test_accounts_distinguish_requested_and_confirmed_settings(
+@pytest.mark.parametrize(
+    "configured, applied, confirmed, label, icon",
+    [
+        pytest.param(True, True, True, "Settings confirmed", "check", id="confirmed"),
+        pytest.param(True, True, False, "Waiting for confirmation", "clock", id="waiting"),
+        pytest.param(True, False, True, "Not applied", "ban", id="disabled"),
+        pytest.param(False, False, True, "Not configured", "minus", id="not-configured"),
+    ],
+)
+def test_accounts_distinguish_limit_states_with_accessible_icons(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],
     computer_record: Computer,
     range_record: Range,
+    configured: bool,
+    applied: bool,
     confirmed: bool,
+    label: str,
+    icon: str,
 ) -> None:
     account = computer_record.accounts.get()
-    account.limits = range_record.limits
-    account.apply = True
+    account.limits = range_record.limits if configured else None
+    account.apply = applied
     account.collect = True
     account.save(update_fields=("limits", "apply", "collect", "updated"))
     config = computer_record.materialize_config()
@@ -290,14 +351,21 @@ def test_accounts_distinguish_requested_and_confirmed_settings(
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert ("Settings confirmed" in content) is confirmed
-    assert ("Waiting for confirmation" in content) is not confirmed
-    assert "not that every restriction succeeded" in content
-    assert "sanex on this computer has not acknowledged the latest settings" in content
+    assert '<th scope="col" class="text-center">Limits</th>' in content
+    assert '<td class="text-center" data-label="Limits">' in content
+    limits_markup = content.split('data-label="Limits">', 1)[1].split("</td>", 1)[0]
+    assert f'title="Limits: {label}' in limits_markup
+    assert f'aria-label="Limits: {label}"' in limits_markup
+    assert 'class="sanea-status-icon" role="img"' in limits_markup
+    assert f'<use href="#icon-{icon}">' in limits_markup
+    assert f'<symbol id="icon-{icon}" viewBox="0 0 24 24">' in content
+    assert "badge" not in limits_markup
+    assert ("not that every restriction succeeded" in limits_markup) is (applied and confirmed)
+    assert ("sanex on this computer has not acknowledged the latest settings" in limits_markup) is (applied and not confirmed)
 
 
 @pytest.mark.parametrize("template", [False, True])
-def test_account_editor_explains_template_or_independent_scope(
+def test_account_editor_keeps_limit_management_on_the_limits_page(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],
     computer_record: Computer,
@@ -321,13 +389,23 @@ def test_account_editor_explains_template_or_independent_scope(
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert ("Template schedule" in content) is template
-    assert ("Existing accounts keep their assigned version." in content) is template
-    assert ("Changes affect only the account listed below." in content) is not template
-    assert "Accounts using this version" in content
+    assert "id=\"account-dialog-title\"" in content
+    assert "data-dialog-panel" in content
+    assert "data-dialog-close" in content
+    assert "name=\"account-person\"" in content
+    assert "name=\"account-collect\"" in content
+    assert "name=\"account-apply\"" in content
+    assert "Schedule, sessions and applications" not in content
+    assert "Existing accounts are updated separately." not in content
+    assert "Changes affect only the account listed below." not in content
+    assert "Accounts using this version" not in content
+    assert "Customize separately" not in content
+    assert "Limits:" not in content
+    account.refresh_from_db()
+    assert account.limits_id == limits_record.pk
 
 
-def test_shared_old_snapshot_requires_independent_customization(
+def test_account_editor_without_javascript_keeps_shared_limits_unchanged(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],
     computer_record: Computer,
@@ -343,7 +421,10 @@ def test_shared_old_snapshot_requires_independent_customization(
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert "This version is shared by several accounts." in content
-    assert "Second child" in content
-    assert "Customize separately" in content
+    assert "id=\"account-save\"" in content
+    assert "data-dialog-panel" in content
+    assert "This version is shared by several accounts." not in content
+    assert "Customize separately" not in content
     assert f"href=\"{reverse("core:session_rules", args=(limits_record.pk,))}\"" not in content
+    account.refresh_from_db()
+    assert account.limits_id == limits_record.pk

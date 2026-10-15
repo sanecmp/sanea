@@ -19,8 +19,8 @@ class AccountLimitsComposer(SaneaModelForm.Composer):
 
     wrappers = {
         ALL_FIELDS: "<div class=\"sanea-limits-field\">{field}</div>",
-        ALL_ROWS: "{fields}",
-        ALL_GROUPS: "<div class=\"sanea-limits-fields\">{rows}</div>",
+        ALL_ROWS: "<div class=\"sanea-limits-fields\">{fields}</div>",
+        ALL_GROUPS: "<div>{rows}</div>",
         "deletion": "<div data-delete-field hidden>{rows}</div>",
         "_hidden": "{rows}",
     }
@@ -71,11 +71,8 @@ class AccountSessionForm(SessionRuleForm):
         initial=SessionRule._meta.get_field("break_duration").get_default(),
     )
 
-    class Composer(AccountLimitsComposer):
-        layout = {FORM: {
-            "rules": ("name", "apply", "max_sessions", "max_duration", "break_duration"),
-            "deletion": ("DELETE",),
-        }}
+    class Composer(AccountLimitsComposer, SessionRuleForm.Composer):
+        layout = {FORM: {"deletion": ("DELETE",)}}
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         super().__init__(*args, **kwargs)
@@ -90,14 +87,14 @@ class AccountSessionForm(SessionRuleForm):
 class AccountRangeForm(RangeForm):
     """Reference a submitted session row, including a newly added one."""
 
-    rule = forms.ChoiceField(label=_("Session preset"))
+    rule = forms.ChoiceField(label=_("Session rule"))
 
     class Meta(RangeForm.Meta):
         fields = ("apply", "weekday", "since", "till")
 
-    class Composer(AccountLimitsComposer):
+    class Composer(AccountLimitsComposer, RangeForm.Composer):
         layout = {FORM: {
-            "rules": ("apply", "weekday", "since", "till", "rule"),
+            "session": ["rule"],
             "deletion": ("DELETE",),
         }}
 
@@ -136,25 +133,18 @@ class AccountRangeForm(RangeForm):
 class AccountAppForm(AppRuleForm):
     """Reuse application recognition validation within the common editor."""
 
-    rule = forms.ChoiceField(label=_("Session preset"))
+    rule = forms.ChoiceField(label=_("Session rule"))
     max_time = MinutesField(
         required=False, label=_("Usage, min"),
         help_text=_("Total application time in one allowed interval. Empty means unlimited."),
     )
 
-    class Composer(AccountLimitsComposer):
+    class Composer(AccountLimitsComposer, AppRuleForm.Composer):
         layout = {FORM: {
-            "rules": ("name", "apply", "max_launches", "max_time", "prc_name", "rule"),
-            "recognition": ("prc_name_match", "exe", "exe_match", "wnd_title", "wnd_title_match"),
+            "identity": [("name", "rule")],
             "deletion": ("DELETE",),
         }}
-        groups = {"recognition": _("Advanced recognition")}
-        wrappers = {
-            "recognition": (
-                "<details class=\"sanea-limits-recognition mt-3\"><summary>{title}</summary>"
-                "<div class=\"sanea-limits-fields mt-2\">{rows}</div></details>"
-            ),
-        }
+        groups = AppRuleForm.Composer.groups
 
     def __init__(
         self, *args: object, rules: tuple[tuple[str, str], ...],
@@ -169,7 +159,11 @@ class AccountAppForm(AppRuleForm):
         self.fields["max_launches"].help_text = _("Per allowed interval. Empty means unlimited.")
         self.fields["name"].help_text = ""
         self.fields["prc_name"].label = _("Process")
-        self.fields["prc_name"].help_text = _("Exact process name unless another matching method is chosen below.")
+        self.fields["prc_name"].help_text = _("Exact process name unless another matching method is selected.")
+
+        for field_name in ("prc_name_match", "exe_match", "wnd_title_match"):
+            self.fields[field_name].help_text = ""
+
         self.initial["rule"] = rule_rows.get(self.instance.session_rule_id, "")
         self.instance.session_rule_id = None
         self._bound_fields_cache.clear()
@@ -254,19 +248,17 @@ class AccountLimitsForm(SaneaForm):
     )
     confirm_empty_schedule = forms.BooleanField(
         required=False, label=_("I understand that an empty schedule blocks all sessions."),
-        help_text=_("Enabling limits with no active intervals blocks all computer use for this account."),
+        widget=forms.HiddenInput,
     )
     limits_version = forms.CharField(required=False, max_length=20, widget=forms.HiddenInput)
 
     class Composer(AccountLimitsComposer):
         layout = {FORM: {
-            "controls": ("collect", "apply"),
-            "caution": ("confirm_empty_schedule",),
+            "controls": [("collect", "apply")],
         }}
-        groups = {"caution": _("Empty schedule")}
         wrappers = {
             "controls": "<div class=\"sanea-limits-controls mb-4\">{rows}</div>",
-            "caution": "<details class=\"sanea-limits-caution mb-4\"><summary>{title}</summary>{rows}</details>",
+            "confirmation": "<div class=\"alert alert-warning mb-4\" role=\"alert\">{rows}</div>",
         }
 
     def __init__(self, *args: object, account: Account, **kwargs: object) -> None:
@@ -284,8 +276,8 @@ class AccountLimitsForm(SaneaForm):
         apps = AppRule.objects.filter(session_rule__limits_id=account.limits_id).order_by("pk")
         rule_rows = {rule.pk: f"{index}" for index, rule in enumerate(sessions)}
         self.sessions = SessionFormSet(data, queryset=sessions, prefix="sessions")
-        choices = (("", _("Choose preset")),) + tuple(
-            (f"{index}", f"{form['name'].value() or _('New preset')}")
+        choices = (("", _("Choose session rule")),) + tuple(
+            (f"{index}", f"{form['name'].value() or _('New session rule')}")
             for index, form in enumerate(self.sessions.forms)
             if not form["DELETE"].value()
         )
@@ -295,16 +287,16 @@ class AccountLimitsForm(SaneaForm):
         self.apps = AppFormSet(
             data, queryset=apps, prefix="apps", form_kwargs={**form_kwargs, "suggestions": suggestions},
         )
-        self.requires_empty_confirmation = not ranges.filter(apply=True).exists()
+        self.had_allowed_times = ranges.filter(apply=True).exists()
 
     def get_composer(self) -> AccountLimitsComposer:
-        """Expand the warning when the saved schedule has no enabled intervals."""
+        """Offer a non-JavaScript confirmation only after an unsafe submission."""
         composer = super().get_composer()
 
-        if self.requires_empty_confirmation:
-            composer.wrappers = {
-                **composer.wrappers,
-                "caution": composer.wrappers["caution"].replace("<details ", "<details open ", 1),
+        if "confirm_empty_schedule" in self.errors:
+            composer.layout = {
+                **composer.layout,
+                FORM: {**composer.layout[FORM], "confirmation": ("confirm_empty_schedule",)},
             }
 
         return composer
@@ -332,7 +324,7 @@ class AccountLimitsForm(SaneaForm):
                 values = form.cleaned_data
 
                 if values and not values.get("DELETE") and values.get("rule") not in session_rows:
-                    form.add_error("rule", _("Choose a preset that is not empty or removed."))
+                    form.add_error("rule", _("Choose a session rule that is not empty or removed."))
                     self.add_error(None, _("Check the highlighted fields in the tabs."))
 
         if cleaned_data.get("apply"):
@@ -341,12 +333,10 @@ class AccountLimitsForm(SaneaForm):
                 form.cleaned_data.get("apply") and not form.cleaned_data.get("DELETE")
                 for form in self.ranges.forms
             )
-            had_allowed_times = not self.requires_empty_confirmation
-            self.requires_empty_confirmation = not has_allowed_times
-
-            if not has_allowed_times and (not self.account.apply or had_allowed_times):
+            if not has_allowed_times and (not self.account.apply or self.had_allowed_times):
 
                 if not cleaned_data.get("confirm_empty_schedule"):
+                    self.fields["confirm_empty_schedule"].widget = forms.CheckboxInput()
                     self.add_error(
                         "confirm_empty_schedule",
                         _("Add allowed times to the schedule or explicitly confirm blocking all sessions."),

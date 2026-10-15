@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+from collections.abc import Callable
 from datetime import UTC, date, datetime
 from typing import Any
 
@@ -9,7 +10,7 @@ import pytest
 from django.utils import timezone
 from sanelib.protocol import parse_event_packet
 
-from sanea.core.models import ActivityEvent
+from sanea.core.models import Account, ActivityEvent, Computer
 
 
 def test_report_aggregates_completed_sessions_and_applications(
@@ -138,3 +139,25 @@ def test_report_uses_sanea_timezone_for_period_bounds_and_daily_totals(
     assert next_day_report.summary.screen_time == 0
     assert next_day_report.daily_screen_time == ()
     assert next_day_report.applications == ()
+
+
+@pytest.mark.parametrize("recent_limit", [0, 2])
+def test_report_limits_recent_runs_per_kind_without_displacing_older_sessions(
+    activity_run_create: Callable[..., None], recent_limit: int,
+) -> None:
+    computer = Computer.objects.create(hostname="synthetic-recent", status="allowed")
+    account = Account.objects.create(computer=computer, uid=1001, collect=True)
+    started = int(datetime(2026, 10, 1, 12, tzinfo=UTC).timestamp())
+
+    for index in range(3):
+        moment = started + index * 120
+        activity_run_create(account, started=moment, finished=moment + 60, duration=60)
+        activity_run_create(account, kind="prc", started=moment + 3_600, finished=moment + 3_660, duration=60)
+
+    report = ActivityEvent.objects.build_report(
+        Account.objects.all(), date(2026, 10, 1), date(2026, 10, 2), recent_limit=recent_limit,
+    )
+
+    assert len(report.recent) == recent_limit * 2
+    assert [item.kind for item in report.recent] == ["application"] * recent_limit + ["session"] * recent_limit
+    assert all(item.started >= started + 120 for item in report.recent)

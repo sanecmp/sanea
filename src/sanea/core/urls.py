@@ -13,9 +13,9 @@ from .views import (
     client_register_confirm,
     client_sync,
     computers,
+    computer_commands,
+    computer_updates,
     dashboard,
-    issues,
-    ignored_processes,
     limits,
     people,
     ranges,
@@ -41,7 +41,11 @@ urlpatterns = [
     path("", dashboard, name="dashboard"),
     path("statistics/", statistics, name="statistics"),
     path("people/", people, name="people"),
-    path("computers/", computers, name="computers"),
+    path("computers/", include([
+        path("", computers, name="computers"),
+        path("commands/", computer_commands, name="computer_commands"),
+        path("updates/", computer_updates, name="computer_updates"),
+    ])),
     path("accounts/", include([
         path("", accounts, name="accounts"),
         path("<int:account_pk>/limits/", include([
@@ -60,10 +64,6 @@ urlpatterns = [
                 ])),
             ])),
         ])),
-    ])),
-    path("issues/", issues, name="issues"),
-    path("settings/", include([
-        path("ignored-processes/", ignored_processes, name="ignored_processes"),
     ])),
     path("signin/", sign_in, name="sign_in"),
     path("signout/", sign_out, name="sign_out"),

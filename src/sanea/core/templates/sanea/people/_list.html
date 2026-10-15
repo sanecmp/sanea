@@ -1,11 +1,11 @@
 {% load i18n %}
 <div id="people-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
     <section class="card">
-        <div class="table-responsive">
+        <div class="table-responsive sanea-table-wrap">
             <table class="table align-middle mb-0">
                 <thead>
                 <tr>
-                    <th scope="col">{% translate "Name" %}</th>
+                    <th scope="col">{% translate "Name" context "person" %}</th>
                     <th scope="col">{% translate "Local accounts" %}</th>
                     <th scope="col">{% translate "Limits template" %}</th>
                     <th scope="col">{% translate "Updated" %}</th>
@@ -15,32 +15,35 @@
                 <tbody>
                 {% for item in people %}
                     <tr>
-                        <td class="fw-semibold">{{ item.name }}</td>
-                        <td>{{ item.account_count }}</td>
-                        <td>{{ item.limits_tpl|default:_('Not set') }}</td>
-                        <td>{{ item.updated|date:"Y-m-d H:i" }}</td>
-                        <td class="text-end">
+                        <td>{{ item.name }}</td>
+                        <td class="small text-body-secondary text-center">{{ item.account_count }}</td>
+                        <td class="small text-body-secondary">
+                            {% if item.limits_tpl_id %}
+                                <a class="d-inline-block text-body-secondary" href="{% url 'core:limits' %}?limits={{ item.limits_tpl_id }}">
+                                    {{ item.limits_tpl }}
+                                </a>
+                            {% else %}{% translate "Not set" %}{% endif %}
+                        </td>
+                        <td class="small text-body-secondary text-nowrap">{{ item.updated|date:"Y-m-d H:i" }}</td>
+                        <td class="text-end sanea-person-actions">
+                            <div class="d-inline-flex gap-1">
                             {% with child_account=item.accounts.all.0 %}
                                 {% if child_account %}
-                                    <a class="btn btn-sm btn-outline-primary" href="{% url 'core:account_limits' child_account.pk %}">
-                                        {% translate "Limits" %}
+                                    <a class="btn btn-sm btn-outline-secondary sanea-icon-button"
+                                       href="{% url 'core:account_limits' child_account.pk %}"
+                                       title="{% translate 'Limits' %}" aria-label="{% translate 'Limits' %}: {{ item.name }}">
+                                        <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-limits"></use></svg>
                                     </a>
                                 {% endif %}
                             {% endwith %}
-                            {% if item.limits_tpl_id and item.account_count %}
-                                <a class="btn btn-sm btn-outline-primary" id="person-propagate-{{ item.pk }}"
-                                   href="{% url 'core:people' %}?person={{ item.pk }}&amp;propagate=1"
-                                   hx-get="{% url 'core:people' %}?person={{ item.pk }}"
-                                   hx-target="#person-editor" hx-swap="innerHTML">
-                                    {% translate "Distribute template" %}
-                                </a>
-                            {% endif %}
-                            <a class="btn btn-sm btn-outline-secondary" id="person-edit-{{ item.pk }}"
+                            <a class="btn btn-sm btn-outline-secondary sanea-icon-button" id="person-edit-{{ item.pk }}"
                                href="{% url 'core:people' %}?person={{ item.pk }}"
                                hx-get="{% url 'core:people' %}?person={{ item.pk }}"
-                               hx-target="#person-editor" hx-swap="innerHTML">
-                                {% translate "Edit" %}
+                               hx-target="#person-editor" hx-swap="innerHTML"
+                               title="{% translate 'Edit' %}" aria-label="{% translate 'Edit' %}: {{ item.name }}">
+                                <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-edit"></use></svg>
                             </a>
+                            </div>
                         </td>
                     </tr>
                 {% empty %}

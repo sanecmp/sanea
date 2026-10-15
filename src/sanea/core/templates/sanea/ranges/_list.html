@@ -1,36 +1,40 @@
 {% load i18n %}
 <div id="ranges-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
     <section class="card">
-        <div class="table-responsive">
+        <div class="table-responsive sanea-table-wrap">
             <table class="table align-middle mb-0">
                 <thead>
                 <tr>
                     <th scope="col">{% translate "Weekday" %}</th>
                     <th scope="col">{% translate "Time" %}</th>
                     <th scope="col">{% translate "Session rule" %}</th>
-                    <th scope="col">{% translate "Status" %}</th>
+                    <th scope="col" class="text-center">{% translate "In schedule" %}</th>
                     <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for item in ranges %}
                     <tr>
-                        <td class="fw-semibold">{{ item.weekday_label }}</td>
-                        <td>{{ item.since_label }}–{{ item.till_label }}</td>
+                        <td>{{ item.weekday_label }}</td>
+                        <td class="small text-body-secondary text-nowrap">{{ item.since_label }}–{{ item.till_label }}</td>
                         <td>{{ item.session_rule }}</td>
-                        <td>
+                        <td class="text-center">
                             {% if item.apply %}
-                                <span class="badge text-bg-success">{% translate "Included" %}</span>
+                                {% translate "Included in schedule" as schedule_status %}
                             {% else %}
-                                <span class="badge text-bg-secondary">{% translate "Excluded" %}</span>
+                                {% translate "Not included in schedule" as schedule_status %}
                             {% endif %}
+                            <span class="sanea-status-icon" role="img" title="{{ schedule_status }}" aria-label="{{ schedule_status }}">
+                                <svg class="sanea-action-icon" aria-hidden="true"><use href="{% if item.apply %}#icon-check{% else %}#icon-ban{% endif %}"></use></svg>
+                            </span>
                         </td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary" id="range-edit-{{ item.pk }}"
+                            <a class="btn btn-sm btn-outline-secondary sanea-icon-button" id="range-edit-{{ item.pk }}"
                                href="{% url 'core:ranges' limits.pk %}?range={{ item.pk }}"
                                hx-get="{% url 'core:ranges' limits.pk %}?range={{ item.pk }}"
-                               hx-target="#range-editor" hx-swap="innerHTML">
-                                {% translate "Edit" %}
+                               hx-target="#range-editor" hx-swap="innerHTML"
+                               title="{% translate 'Edit' %}" aria-label="{% translate 'Edit' %}: {{ item.weekday_label }} {{ item.since_label }}–{{ item.till_label }}">
+                                <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-edit"></use></svg>
                             </a>
                         </td>
                     </tr>

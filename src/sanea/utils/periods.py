@@ -10,7 +10,7 @@ class ReportingPeriod(TextChoices):
     TODAY = "today", _("Today")
     DAYS_7 = "7-days", _("Last 7 days")
     DAYS_30 = "30-days", _("Last 30 days")
-    ALL = "all", _("All time")
+    ALL = "all", _("All")
 
     def get_day_count(self) -> int | None:
         """Return the inclusive day count or no bound for all time."""

@@ -4,7 +4,7 @@
         <div>
             <h2 class="h5 fw-bold mb-1">{% translate "Update sanex" %}</h2>
             <p class="text-body-secondary mb-0">
-                {% translate "Keep offering one version to every allowed computer until you cancel or replace it." %}
+                {% translate "The selected version will be offered to all allowed computers." %}
             </p>
         </div>
     </div>
@@ -32,8 +32,8 @@
             <span>
                 {% blocktranslate with version=active_update.version index_url=active_update.index_url %}Active update: sanex {{ version }} from {{ index_url }}.{% endblocktranslate %}
             </span>
-            <form method="post" action="{{ computers_url }}"
-                  hx-post="{{ computers_url }}" hx-target="#sanex-updates" hx-swap="innerHTML">
+            <form method="post" action="{{ updates_url }}"
+                  hx-post="{{ updates_url }}" hx-target="#sanex-updates" hx-swap="innerHTML">
                 {% csrf_token %}
                 <button class="btn btn-sm btn-outline-danger" id="update-cancel" type="submit"
                         name="__submit" value="update_cancel">{% translate "Cancel update" %}</button>
@@ -41,8 +41,8 @@
         </div>
     {% endif %}
 
-    <form id="sanex-update-form" class="sanea-update-form" method="post" action="{{ computers_url }}"
-          hx-post="{{ computers_url }}" hx-target="#sanex-updates" hx-swap="innerHTML">
+    <form id="sanex-update-form" class="sanea-update-form" method="post" action="{{ updates_url }}"
+          hx-post="{{ updates_url }}" hx-target="#sanex-updates" hx-swap="innerHTML">
         {% csrf_token %}
         {{ update_form }}
         <button class="btn btn-primary align-self-end" id="update-save" type="submit"

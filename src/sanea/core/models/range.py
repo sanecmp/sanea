@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Self
 from sanelib.protocol import Range as ClientRange
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models, transaction
+from django.db import models
 from django.db.models import F, Q
 from django.utils.translation import gettext_lazy as _
 
 from .base import TimestampedModel
-from .identifier_sequence import IdentifierSequence
+from .rule_editing import save_limits_form
 from .validation import NON_NEGATIVE
 
 if TYPE_CHECKING:
@@ -83,34 +83,15 @@ class Range(TimestampedModel):
         return f"{self.weekday}:{self.since}-{self.till}"
 
     @classmethod
-    @transaction.atomic
     def save_form(cls, form: "RangeForm", limits: "Limits") -> Self:
         """Save a range, forking an assigned snapshot when required."""
-        target_limits = limits.checkout_for_edit()
-        manager = cls.objects
-        source = form.save(commit=False)
-
-        if source.pk and target_limits.pk != limits.pk:
-            range_ = manager.get(limits=target_limits, ident=source.ident)
-            range_.apply_form(form)
-
-        else:
-            range_ = source
-
-        range_.limits = target_limits
-        rule_model = cls._meta.get_field("session_rule").remote_field.model
-        range_.session_rule = rule_model.objects.get(
-            limits=target_limits,
-            ident=form.cleaned_data["session_rule"].ident,
+        return save_limits_form(
+            cls, form, limits,
+            get_relations=lambda target: {
+                "limits": target,
+                "session_rule": target.session_rules.get(ident=form.cleaned_data["session_rule"].ident),
+            },
         )
-
-        if not range_.pk:
-            range_.ident = IdentifierSequence.allocate(cls)
-
-        range_.full_clean()
-        range_.save()
-        target_limits.materialize_computer_configs()
-        return range_
 
     def build_client_config(self) -> ClientRange:
         """Build this range in the shared sanex configuration format."""

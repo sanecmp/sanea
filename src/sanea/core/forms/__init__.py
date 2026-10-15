@@ -5,7 +5,9 @@ from .activity import ActivityFilterForm
 from .app_rule import AppRuleForm
 from .commands import CommandFilterForm
 from .computer import ComputerForm
+from .computer_details import ComputerDetailsForm
 from .computer_filter import ComputerFilterForm
+from .dashboard import DashboardFilterForm
 from .issues import IssueFilterForm
 from .limits import LimitsTemplateForm
 from .person import PersonForm
@@ -21,8 +23,10 @@ __all__ = [
     "ActivityFilterForm",
     "AppRuleForm",
     "CommandFilterForm",
+    "ComputerDetailsForm",
     "ComputerForm",
     "ComputerFilterForm",
+    "DashboardFilterForm",
     "IssueFilterForm",
     "LimitsTemplateForm",
     "PersonForm",

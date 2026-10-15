@@ -1,48 +1,74 @@
 {% load i18n %}
 <div id="limits-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
     <section class="card">
-        <div class="table-responsive">
-            <table class="table align-middle mb-0">
+        <div class="table-responsive sanea-table-wrap">
+            <table class="table align-top mb-0">
                 <thead>
                 <tr>
                     <th scope="col">{% translate "Name" %}</th>
                     <th scope="col">{% translate "People" %}</th>
-                    <th scope="col">{% translate "Accounts using latest version" %}</th>
-                    <th scope="col">{% translate "Session rules" %}</th>
-                    <th scope="col">{% translate "Schedule ranges" %}</th>
-                    <th scope="col">{% translate "Updated" %}</th>
+                    <th scope="col" title="{% translate 'Accounts using latest version' %}">{% translate "Accounts" %}</th>
+                    <th scope="col" class="text-center">{% translate "Sessions" %}</th>
+                    <th scope="col" class="text-center">{% translate "Ranges" %}</th>
                     <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
                 </tr>
                 </thead>
                 <tbody>
                 {% for item in limits_sets %}
                     <tr>
-                        <td class="fw-semibold">{{ item.name }}</td>
-                        <td>{{ item.person_count }}</td>
-                        <td>{{ item.account_count }}</td>
-                        <td>
-                            <a href="{% url 'core:session_rules' item.current_limits_id %}">
-                                {% blocktranslate count count=item.rule_count %}{{ count }} rule{% plural %}{{ count }} rules{% endblocktranslate %}
+                        <td>{{ item.name }}</td>
+                        <td class="small text-body-secondary">
+                            {% if item.people.all %}
+                                <ul class="ps-3 mb-0">
+                                    {% for person in item.people.all %}
+                                        <li>{{ person.name }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="small text-body-secondary">
+                            {% if item.current_limits.latest_accounts %}
+                                <ul class="ps-3 mb-0">
+                                    {% for account in item.current_limits.latest_accounts %}
+                                        <li>{{ account.get_display_name }} · {{ account.computer.get_display_name }}</li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td class="small text-center">
+                            <a href="{% url 'core:session_rules' item.current_limits_id %}"
+                               title="{% translate 'Session rules' %}" aria-label="{% translate 'Session rules' %}: {{ item.rule_count }}">
+                                {{ item.rule_count }}
                             </a>
                         </td>
-                        <td>
-                            <a href="{% url 'core:ranges' item.current_limits_id %}">
-                                {% blocktranslate count count=item.range_count %}{{ count }} range{% plural %}{{ count }} ranges{% endblocktranslate %}
+                        <td class="small text-center">
+                            <a href="{% url 'core:ranges' item.current_limits_id %}"
+                               title="{% translate 'Schedule ranges' %}" aria-label="{% translate 'Schedule ranges' %}: {{ item.range_count }}">
+                                {{ item.range_count }}
                             </a>
                         </td>
-                        <td>{{ item.updated|date:"Y-m-d H:i" }}</td>
-                        <td class="text-end">
-                            <a class="btn btn-sm btn-outline-secondary" id="limits-edit-{{ item.pk }}"
-                               href="{% url 'core:limits' %}?limits={{ item.pk }}"
-                               hx-get="{% url 'core:limits' %}?limits={{ item.pk }}"
-                               hx-target="#limits-editor" hx-swap="innerHTML">
-                                {% translate "Rename" %}
-                            </a>
+                        <td class="text-end text-nowrap">
+                            <div class="d-inline-flex gap-1">
+                                <a class="btn btn-sm btn-outline-secondary sanea-icon-button" id="limits-apply-{{ item.pk }}"
+                                   href="{% url 'core:limits' %}?limits={{ item.pk }}&amp;apply=1"
+                                   hx-get="{% url 'core:limits' %}?limits={{ item.pk }}&amp;apply=1"
+                                   hx-target="#limits-editor" hx-swap="innerHTML"
+                                   title="{% translate 'Distribute template' %}" aria-label="{% translate 'Distribute template' %}: {{ item.name }}">
+                                    <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-distribute"></use></svg>
+                                </a>
+                                <a class="btn btn-sm btn-outline-secondary sanea-icon-button" id="limits-edit-{{ item.pk }}"
+                                   href="{% url 'core:limits' %}?limits={{ item.pk }}"
+                                   hx-get="{% url 'core:limits' %}?limits={{ item.pk }}"
+                                   hx-target="#limits-editor" hx-swap="innerHTML"
+                                   title="{% translate 'Edit' %}" aria-label="{% translate 'Edit' %}: {{ item.name }}">
+                                    <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-edit"></use></svg>
+                                </a>
+                            </div>
                         </td>
                     </tr>
                 {% empty %}
                     <tr>
-                        <td class="text-body-secondary text-center py-5" colspan="7">
+                        <td class="text-body-secondary text-center py-5" colspan="6">
                             {% translate "No limits templates have been created." %}
                         </td>
                     </tr>

@@ -23,12 +23,16 @@ const createRow = (prefix, index, { name = "", extra = false, deleted = false, p
     };
     row.name = { name: `${prefix}-${index}-name`, value: name, focus: () => { row.focused = true; } };
     row.deletion = { name: `${prefix}-${index}-DELETE`, checked: deleted, closest: () => row };
+    row.apply = { checked: true };
+    row.weekday = { value: extra ? "" : "0" };
+    row.since = { value: extra ? "" : "09:00" };
+    row.till = { value: extra ? "" : "18:00" };
     row.discardButton = persisted ? null : {
         hidden: true,
         closest: (selector) => selector === "[data-discard-form]" ? row.discardButton : row,
     };
     row.rule = {
-        value: extra ? "" : "0", dataset: {}, options: [{ value: "", textContent: "Choose preset" }],
+        value: extra ? "" : "0", dataset: {}, options: [{ value: "", textContent: "Choose session rule" }],
         updates: [],
         replaceChildren(...options) { this.options = options; },
         dispatchEvent(event) {
@@ -39,13 +43,19 @@ const createRow = (prefix, index, { name = "", extra = false, deleted = false, p
     row.querySelector = (selector) => ({
         'input[name$="-DELETE"]': row.deletion,
         'input[name$="-name"]': row.name,
+        'input[name$="-apply"]': row.apply,
+        '[name$="-weekday"]': row.weekday,
+        '[name$="-since"]': row.since,
+        '[name$="-till"]': row.till,
+        '[name$="-rule"]': row.rule,
         "[data-discard-form]": row.discardButton,
         'input:not([type="hidden"]):not([type="checkbox"]), select': row.name,
     })[selector];
     return row;
 };
 
-const createPage = ({ bootstrap = true, initial = 1, bound = false, errors = {}, deletedSession = false, blocksSessions = false } = {}) => {
+const createPage = ({ bootstrap = true, initial = 1, bound = false, errors = {}, deletedSession = false,
+    blocksSessions = false, limitsApplied = false, hadAllowedTimes = true } = {}) => {
     const formsets = Object.fromEntries(["ranges", "sessions", "apps"].map((prefix) => {
         const rows = initial ? [createRow(prefix, 0, { name: "Everyday", deleted: prefix === "sessions" && deletedSession, persisted: true })] : [];
         rows.push(createRow(prefix, initial, { extra: !bound }));
@@ -80,11 +90,24 @@ const createPage = ({ bootstrap = true, initial = 1, bound = false, errors = {},
         querySelectorAll: () => markers[name === "schedule" ? "ranges" : name] || [],
     }));
     const details = { open: false, querySelectorAll: () => markers.apps || [] };
+    const apply = { checked: false };
+    const emptySchedule = { type: "hidden", value: "", checked: false };
     const form = {
-        ...createEvents(), dataset: { newPresetLabel: "New preset", discardNotice: "Unsaved changes will be discarded." },
+        ...createEvents(), dataset: {
+            newRuleLabel: "New session rule", discardNotice: "Unsaved changes will be discarded.",
+            limitsApplied: `${limitsApplied}`, hadAllowedTimes: `${hadAllowedTimes}`,
+            emptyScheduleConfirmation: "There are no allowed intervals. Save and block all sessions for this account?",
+        },
+        querySelector(selector) {
+            return {
+                'input[name="limits-apply"]': apply,
+                'input[name="limits-confirm_empty_schedule"]': emptySchedule,
+            }[selector];
+        },
         querySelectorAll(selector) {
             return {
                 '[data-formset="sessions"] [data-form-row]': formsets.sessions.rows,
+                '[data-formset="ranges"] [data-form-row]': formsets.ranges.rows,
                 'select[name$="-rule"]': [...formsets.ranges.rows, ...formsets.apps.rows].map((row) => row.rule),
                 "[data-form-row]": Object.values(formsets).flatMap((formset) => formset.rows),
                 "[data-formset]": Object.values(formsets),
@@ -135,7 +158,7 @@ const createPage = ({ bootstrap = true, initial = 1, bound = false, errors = {},
         constructor(type, options) { this.type = type; this.bubbles = options.bubbles; }
     }
     runInNewContext(script, { document, window, CustomEvent });
-    return { document, form, formsets, tabs, panelContainer, details, shown, removal, confirmation };
+    return { document, form, formsets, tabs, panelContainer, details, shown, removal, confirmation, apply, emptySchedule };
 };
 
 test("initialization opens Schedule and hides only pristine extra rows beside existing rules", () => {
@@ -174,10 +197,10 @@ test("Add reveals the existing extra row before cloning, and new presets can be 
     assert.equal(added.focused, true);
     assert.equal(added.discardButton.hidden, false);
     assert.equal(selection.value, "2");
-    assert.deepEqual(selection.options.map((option) => option.textContent), ["Choose preset", "Everyday", "New preset", "After school <script>"]);
+    assert.deepEqual(selection.options.map((option) => option.textContent), ["Choose session rule", "Everyday", "New session rule", "After school <script>"]);
     assert.deepEqual(selection.updates.at(-1), {
         type: "sanea:choices-updated", bubbles: true, value: "2",
-        labels: ["Choose preset", "Everyday", "New preset", "After school <script>"],
+        labels: ["Choose session rule", "Everyday", "New session rule", "After school <script>"],
     });
 });
 
@@ -248,7 +271,7 @@ test("empty accounts keep their blank forms visible and application errors open 
     assert.equal(page.formsets.apps.rows[0].hidden, false);
     assert.deepEqual(page.shown, ["account-limits-apps-tab"]);
     assert.equal(page.details.open, true);
-    assert.deepEqual(page.formsets.ranges.rows[0].rule.options.map((option) => option.textContent), ["Choose preset", "New preset"]);
+    assert.deepEqual(page.formsets.ranges.rows[0].rule.options.map((option) => option.textContent), ["Choose session rule", "New session rule"]);
 });
 
 test("submitted extra rows remain visible and errors from removed rows do not hide relevant application errors", () => {
@@ -273,4 +296,89 @@ test("without Bootstrap the sections remain visible, while formsets and recognit
     assert.equal(page.formsets.apps.rows[1].hidden, false);
     assert.equal(page.details.open, true);
     assert.deepEqual(page.shown, []);
+});
+
+test("enabling an empty schedule asks at Save, cancellation keeps drafts, and confirmation is never reused", () => {
+    const page = createPage({ initial: 0, hadAllowedTimes: false });
+    page.document.emit("DOMContentLoaded");
+    page.apply.checked = true;
+    page.formsets.sessions.rows[0].name.value = "Unsaved session rule";
+    page.confirmation.accepted = false;
+    let prevented = false;
+
+    page.form.emit("submit", { preventDefault: () => { prevented = true; } });
+
+    assert.equal(prevented, true);
+    assert.deepEqual(page.confirmation.messages, [page.form.dataset.emptyScheduleConfirmation]);
+    assert.equal(page.emptySchedule.value, "");
+    assert.equal(page.formsets.sessions.rows[0].name.value, "Unsaved session rule");
+
+    page.confirmation.accepted = true;
+    page.form.emit("submit", { preventDefault: () => { throw new Error("Confirmed save was cancelled"); } });
+
+    assert.equal(page.emptySchedule.value, "on");
+
+    page.confirmation.accepted = false;
+    page.form.emit("submit", { preventDefault: () => {} });
+
+    assert.equal(page.emptySchedule.value, "");
+    assert.equal(page.emptySchedule.checked, false);
+    assert.equal(page.confirmation.messages.length, 3);
+});
+
+test("removing the last allowed interval asks again even for active restrictions, ignoring hidden or removed rows", () => {
+    const page = createPage({ limitsApplied: true });
+    page.document.emit("DOMContentLoaded");
+    page.apply.checked = true;
+    page.formsets.ranges.rows[0].apply.checked = false;
+    page.emptySchedule.type = "checkbox";
+
+    page.form.emit("submit", { preventDefault: () => { throw new Error("Confirmed save was cancelled"); } });
+
+    assert.equal(page.confirmation.messages.length, 1);
+    assert.equal(page.emptySchedule.value, "on");
+    assert.equal(page.emptySchedule.checked, true);
+
+    page.formsets.ranges.rows[0].apply.checked = true;
+    page.formsets.ranges.rows[0].deletion.checked = true;
+    page.confirmation.accepted = false;
+    let prevented = false;
+    page.form.emit("submit", { preventDefault: () => { prevented = true; } });
+
+    assert.equal(prevented, true);
+    assert.equal(page.confirmation.messages.length, 2);
+    assert.equal(page.emptySchedule.value, "");
+    assert.equal(page.emptySchedule.checked, false);
+});
+
+test("monitoring alone, an allowed interval, and an already blocked account do not ask to block sessions", () => {
+    const monitoring = createPage({ initial: 0 });
+    const scheduled = createPage();
+    const blocked = createPage({ initial: 0, limitsApplied: true, hadAllowedTimes: false });
+    scheduled.apply.checked = true;
+    blocked.apply.checked = true;
+
+    for (const page of [monitoring, scheduled, blocked]) {
+        page.document.emit("DOMContentLoaded");
+        page.form.emit("submit", { preventDefault: () => { throw new Error("Safe save was cancelled"); } });
+
+        assert.deepEqual(page.confirmation.messages, []);
+        assert.equal(page.emptySchedule.value, "");
+    }
+});
+
+test("a newly completed interval prevents an empty-schedule warning", () => {
+    const page = createPage({ initial: 0, hadAllowedTimes: false });
+    page.document.emit("DOMContentLoaded");
+    page.apply.checked = true;
+    const row = page.formsets.ranges.rows[0];
+    row.weekday.value = "0";
+    row.since.value = "09:00";
+    row.till.value = "18:00";
+    row.rule.value = "0";
+
+    page.form.emit("submit", { preventDefault: () => { throw new Error("Safe save was cancelled"); } });
+
+    assert.deepEqual(page.confirmation.messages, []);
+    assert.equal(page.emptySchedule.value, "");
 });

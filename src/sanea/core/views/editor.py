@@ -29,6 +29,10 @@ class ModelEditorView(ManagedView, Generic[ScopeT, SelectedT, FormT]):
     form_context_name: str
     url_context_name: str
     saved_message: str | Promise
+    page_template = "sanea/editor_index.html"
+    dialog_fallback: str | None = None
+    large_editor = False
+    message_id: str | None = None
     add_trigger: str | None = None
     edit_trigger: str | None = None
     save_trigger: str | None = None
@@ -102,7 +106,7 @@ class ModelEditorView(ManagedView, Generic[ScopeT, SelectedT, FormT]):
     ) -> HttpResponse:
         """Render the common editor page with view-specific context."""
         context = self.build_page_context(request, scope, selected, form)
-        return render(request, "sanea/editor_index.html", context)
+        return render(request, self.page_template, context)
 
     def build_page_context(
         self,
@@ -112,20 +116,49 @@ class ModelEditorView(ManagedView, Generic[ScopeT, SelectedT, FormT]):
         form: FormT | None,
     ) -> dict[str, object]:
         """Build the common editor-page context for specialized renderers."""
-        context = self.get_scope_context(scope)
+        context = self.build_editor_context(scope, selected, form)
         context.update(self.get_list_context(scope))
         context.update(
             {
                 "page_title": self.page_title,
                 "section": self.section,
-                "editor_id": self.editor_id,
-                "editor_form": form,
-                self.selected_context_name: selected,
-                self.form_context_name: form,
-                self.url_context_name: self.get_success_url(selected, scope),
+                "message_id": self.message_id or f"{self.section}-message",
             }
         )
         context.update(self.get_page_context(request, scope, selected, form))
+        return context
+
+    def build_editor_context(
+        self,
+        scope: ScopeT,
+        selected: SelectedT | None,
+        form: BaseForm | None,
+    ) -> dict[str, object]:
+        """Describe one dialog without coupling it to another editor on the page."""
+        url = self.get_success_url(selected, scope)
+        context = self.get_scope_context(scope)
+        context.update(
+            {
+                "editor": {
+                    "id": self.editor_id,
+                    "dialog_id": self.editor_id.removesuffix("-editor") + "-dialog",
+                    "fallback": self.dialog_fallback or self.add_trigger,
+                    "large": self.large_editor,
+                    "template": self.editor_template,
+                    "form": form,
+                    "selected": selected,
+                    "url": url,
+                    "post_url": url.split("#", 1)[0],
+                    "reference_name": self.reference_name,
+                    "save_id": self.save_trigger,
+                    "cancel_id": self.cancel_trigger,
+                    "submit_name": form.prefix if form is not None else None,
+                },
+                self.selected_context_name: selected,
+                self.form_context_name: form,
+                self.url_context_name: url,
+            }
+        )
         return context
 
     def render_editor_response(
@@ -136,13 +169,7 @@ class ModelEditorView(ManagedView, Generic[ScopeT, SelectedT, FormT]):
         form: FormT,
     ) -> HttpResponse:
         """Render the shared context contract of one editor fragment."""
-        context = self.get_scope_context(scope)
-        context.update(
-            {
-                self.selected_context_name: selected,
-                self.form_context_name: form,
-            }
-        )
+        context = self.build_editor_context(scope, selected, form)
         return render(request, self.editor_template, context)
 
     def render_saved_response(
@@ -157,6 +184,7 @@ class ModelEditorView(ManagedView, Generic[ScopeT, SelectedT, FormT]):
         context.update(
             {
                 "section": self.section,
+                "message_id": self.message_id or f"{self.section}-message",
                 "list_oob": True,
                 "message": message,
             }

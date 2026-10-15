@@ -1,0 +1,17 @@
+{% extends "sanea/base.html" %}
+{% load i18n static %}
+
+{% block content %}
+<h1 class="display-6 fw-bold mb-4">{% translate "Command history" %}</h1>
+<div id="commands-page" hx-sync="this:replace">
+    {% include "sanea/computers/_command_history.html" %}
+    <div id="command-live-refresh" class="d-none" aria-hidden="true"
+         hx-get="{{ commands_url }}" hx-trigger="every 5s [!document.hidden], computer-refresh[!document.hidden]"
+         hx-target="#command-history-results" hx-swap="outerHTML" hx-sync="#commands-page:abort"
+         hx-include="#command-filter select, #command-current-page"></div>
+</div>
+{% endblock %}
+
+{% block extra_body %}
+<script src="{% static 'sanea/js/computers.js' %}"></script>
+{% endblock %}

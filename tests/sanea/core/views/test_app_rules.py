@@ -2,6 +2,7 @@
 
 import hashlib
 import json
+import re
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -244,14 +245,23 @@ def test_app_rules_suggestions_allow_manual_values_with_matching_validation(
     assert rule.max_launches == 3
 
 
+@pytest.mark.parametrize(
+    "applied, status, icon",
+    [(True, "Limits applied", "check"), (False, "Limits not applied", "ban")],
+)
 def test_app_rules_list_session_members(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],
     limits_record: Limits,
     session_rule_record: SessionRule,
     app_rule_record: AppRule,
+    applied: bool,
+    status: str,
+    icon: str,
 ) -> None:
     staff_user = user_create(attributes={"is_staff": True})
+    app_rule_record.apply = applied
+    app_rule_record.save(update_fields=("apply", "updated"))
 
     response = request_client(user=staff_user).get(
         _app_rules_url(limits_record, session_rule_record)
@@ -264,15 +274,67 @@ def test_app_rules_list_session_members(
     assert app_rule_record.prc_name in content
     assert "id=\"app-rule-add\"" in content
     assert f"id=\"app-rule-edit-{app_rule_record.pk}\"" in content
+    assert "←" not in content
+    assert '<nav aria-label="Breadcrumbs">' in content
+    assert '<use href="#icon-plus">' in content
+    assert '<use href="#icon-edit">' in content
+    assert '<th scope="col" class="text-center">Applied</th>' in content
+    assert '<th scope="col" class="text-center">Maximum launches</th>' in content
+    assert f'<td class="small text-body-secondary text-center">{app_rule_record.max_launches}</td>' in content
+    assert f'role="img" title="{status}" aria-label="{status}"' in content
+    assert f'<use href="#icon-{icon}">' in content
+    assert "badge" not in content
+    assert 'id="app-rule-dialog"' in content
+    assert "data-editor-dialog" in content
+    assert 'id="app-rule-save"' not in content
 
 
-def test_app_rules_ajax_create_and_update(
+@pytest.mark.parametrize("partial", [False, True], ids=["ordinary", "ajax"])
+@pytest.mark.parametrize("creating", [False, True], ids=["edit", "add"])
+def test_app_rules_add_and_edit_in_one_dialog_with_shared_field_rows(
+    request_client: Callable[..., Client], user_create: Callable[..., User],
+    limits_record: Limits, session_rule_record: SessionRule, app_rule_record: AppRule,
+    partial: bool, creating: bool,
+) -> None:
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+    reference = "new" if creating else f"{app_rule_record.pk}"
+    trigger = "app-rule-add" if creating else f"app-rule-edit-{app_rule_record.pk}"
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": trigger} if partial else {}
+
+    response = client.get(_app_rules_url(limits_record, session_rule_record), {"app_rule": reference}, **headers)
+    content = response.content.decode()
+    rows = re.split(r'<div\s+class="row gx-3">', content)[1:]
+    field_rows = [re.findall(r' name="(app_rule-[^"]+)"', row) for row in rows]
+
+    assert response.status_code == 200
+    assert 'id="app-rule-dialog-title"' in content
+    assert 'id="app-rule-save" data-dialog-panel' in content
+    assert "data-dialog-close" in content
+    assert field_rows == [
+        ["app_rule-apply"],
+        ["app_rule-name"],
+        ["app_rule-max_launches", "app_rule-max_time"],
+        ["app_rule-prc_name", "app_rule-prc_name_match"],
+        ["app_rule-exe", "app_rule-exe_match"],
+        ["app_rule-wnd_title", "app_rule-wnd_title_match"],
+    ]
+    assert "Recognition conditions</legend>" in content
+    assert content.count(">Comparison:</label>") == 3
+
+    if not creating:
+        assert f'value="{app_rule_record.max_time}"' in content
+        assert f'value="{app_rule_record.prc_name}"' in content
+
+
+@pytest.mark.parametrize("partial", [False, True], ids=["ordinary", "ajax"])
+def test_app_rules_create_and_update(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],
     limits_record: Limits,
     session_rule_record: SessionRule,
     app_rule_record: AppRule,
     app_rules_payload: dict[str, Any],
+    partial: bool,
 ) -> None:
     staff_user = user_create(attributes={"is_staff": True})
     client = request_client(user=staff_user)
@@ -280,7 +342,7 @@ def test_app_rules_ajax_create_and_update(
     ajax_headers = {
         "HTTP_HX_REQUEST": "true",
         "HTTP_HX_TRIGGER": "app-rule-save",
-    }
+    } if partial else {}
     created = app_rules_payload["created"]
 
     create_response = client.post(
@@ -304,9 +366,18 @@ def test_app_rules_ajax_create_and_update(
         name=created["name"],
     )
 
-    assert create_response.status_code == 200
+    assert create_response.status_code == (200 if partial else 302)
     assert created_rule.ident == app_rule_record.ident + 1
-    assert "hx-swap-oob=\"outerHTML\"" in create_response.content.decode()
+    assert created_rule.max_time == created["max_time"]
+
+    if partial:
+        saved_content = create_response.content.decode()
+        assert 'id="app-rules-list" hx-swap-oob="outerHTML"' in saved_content
+        assert 'id="app_rules-message"' in saved_content
+        assert "data-dialog-panel" not in saved_content
+
+    else:
+        assert create_response.url == url
 
     update_response = client.post(
         url,
@@ -323,9 +394,80 @@ def test_app_rules_ajax_create_and_update(
     )
     app_rule_record.refresh_from_db()
 
-    assert update_response.status_code == 200
+    assert update_response.status_code == (200 if partial else 302)
     assert app_rule_record.name == app_rules_payload["renamed"]["name"]
     assert app_rule_record.apply is False
+
+
+@pytest.mark.parametrize("partial", [False, True], ids=["ordinary", "ajax"])
+def test_app_rules_keep_invalid_values_in_the_dialog_and_cancel_without_saving(
+    request_client: Callable[..., Client], user_create: Callable[..., User],
+    limits_record: Limits, session_rule_record: SessionRule, app_rule_record: AppRule, partial: bool,
+) -> None:
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+    url = _app_rules_url(limits_record, session_rule_record)
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "app-rule-save"} if partial else {}
+    original_values = (app_rule_record.name, app_rule_record.max_launches, app_rule_record.apply)
+
+    response = client.post(url, {
+        "__submit": "app_rule", "app_rule": app_rule_record.pk,
+        "app_rule-name": "Unsaved application", "app_rule-max_launches": "-1",
+        "app_rule-prc_name": app_rule_record.prc_name, "app_rule-prc_name_match": app_rule_record.prc_name_match,
+    }, **headers)
+    content = response.content.decode()
+    app_rule_record.refresh_from_db()
+
+    assert response.status_code == 200
+    assert 'id="app-rule-save" data-dialog-panel' in content
+    assert "Ensure this value is greater than or equal to 0." in content
+    assert 'value="-1"' in content
+    assert 'value="Unsaved application"' in content
+    assert (app_rule_record.name, app_rule_record.max_launches, app_rule_record.apply) == original_values
+
+    cancel_headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "app-rule-cancel"} if partial else {}
+    cancelled = client.get(url, **cancel_headers)
+    app_rule_record.refresh_from_db()
+
+    assert cancelled.status_code == 200
+    assert 'id="app-rule-save"' not in cancelled.content.decode()
+    assert (app_rule_record.name, app_rule_record.max_launches, app_rule_record.apply) == original_values
+
+
+@pytest.mark.parametrize("partial", [False, True], ids=["ordinary", "ajax"])
+def test_app_rules_edit_assigned_template_as_a_new_version_without_changing_accounts(
+    request_client: Callable[..., Client], user_create: Callable[..., User],
+    computer_record: Computer, limits_template_record: LimitsTemplate,
+    session_rule_record: SessionRule, app_rule_record: AppRule, partial: bool,
+) -> None:
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+    source_limits = limits_template_record.current_limits
+    account = computer_record.accounts.get()
+    account.limits = source_limits
+    account.save(update_fields=("limits", "updated"))
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "app-rule-save"} if partial else {}
+    original_name = app_rule_record.name
+
+    response = client.post(_app_rules_url(source_limits, session_rule_record), {
+        "__submit": "app_rule", "app_rule": app_rule_record.pk, "app_rule-apply": "on",
+        "app_rule-name": "Updated application", "app_rule-max_launches": "7", "app_rule-max_time": "1800",
+        "app_rule-prc_name": app_rule_record.prc_name, "app_rule-prc_name_match": app_rule_record.prc_name_match,
+    }, **headers)
+    limits_template_record.refresh_from_db()
+    account.refresh_from_db()
+    app_rule_record.refresh_from_db()
+    target_limits = limits_template_record.current_limits
+    target_session = target_limits.session_rules.get(ident=session_rule_record.ident)
+    updated = target_session.app_rules.get(ident=app_rule_record.ident)
+
+    assert response.status_code == (204 if partial else 302)
+    assert target_limits.pk != source_limits.pk
+    assert account.limits_id == source_limits.pk
+    assert app_rule_record.name == original_name
+    assert app_rule_record.max_launches == 5
+    assert updated.name == "Updated application"
+    assert updated.max_launches == 7
+    assert updated.max_time == 1800
+    assert response.headers["HX-Redirect" if partial else "Location"] == _app_rules_url(target_limits, target_session)
 
 
 def test_app_rule_accepts_time_limit_without_launch_limit(

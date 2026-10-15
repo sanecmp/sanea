@@ -1,0 +1,43 @@
+{% load activity i18n %}
+<h2 class="h5 fw-bold mb-3" id="recent-activity-heading">{% translate "Recent activity" %}</h2>
+<ul class="nav nav-tabs sanea-recent-tabs mb-3" role="tablist" aria-labelledby="recent-activity-heading">
+    {% for tab in recent_activity_tabs %}
+        <li class="nav-item" role="presentation">
+            <a class="nav-link{% if tab.active %} active{% endif %}" id="recent-{{ tab.kind }}-tab"
+               href="{{ tab.url }}" data-bs-toggle="tab" data-bs-target="#recent-{{ tab.kind }}-panel"
+               data-activity-kind="{{ tab.kind }}" role="tab" aria-controls="recent-{{ tab.kind }}-panel"
+               aria-selected="{% if tab.active %}true{% else %}false{% endif %}">
+                {{ tab.label }}
+            </a>
+        </li>
+    {% endfor %}
+</ul>
+<div class="tab-content">
+    {% for tab in recent_activity_tabs %}
+        <div class="tab-pane{% if tab.active %} active{% endif %}" id="recent-{{ tab.kind }}-panel"
+             role="tabpanel" aria-labelledby="recent-{{ tab.kind }}-tab" tabindex="0">
+            {% if tab.items %}
+                <div class="list-group list-group-flush sanea-recent-activity" role="list">
+                    {% for item in tab.items %}
+                        <div class="list-group-item px-0" role="listitem">
+                            <div class="d-flex justify-content-between gap-3">
+                                <div class="min-width-0">
+                                    <div class="fw-semibold text-truncate">{{ item.name }}</div>
+                                    <div class="small text-body-secondary">{{ item.details }}</div>
+                                </div>
+                                <div class="small text-body-secondary text-nowrap text-end">
+                                    <div>{{ item.started|date:"Y-m-d H:i" }}</div>
+                                    <div>{{ item.duration|activity_duration }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="sanea-empty-state">
+                    <p class="mb-0 text-body-secondary">{{ tab.empty_label }}</p>
+                </div>
+            {% endif %}
+        </div>
+    {% endfor %}
+</div>

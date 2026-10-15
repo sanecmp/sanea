@@ -24,7 +24,7 @@ def build_rule_deletion(account: Account, kind: str, rule: SessionRule | Range |
     related_apps = rule.app_rules.count() if isinstance(rule, SessionRule) else 0
     blocks_sessions = account.should_confirm_rule_removal(rule)
     confirmation = (
-        _("Remove preset “%(title)s” and its %(ranges)s intervals and %(apps)s application rules?")
+        _("Remove session rule “%(title)s” and its %(ranges)s intervals and %(apps)s application rules?")
         % {"title": title, "ranges": related_ranges, "apps": related_apps}
         if isinstance(rule, SessionRule) else _("Remove “%(title)s”?") % {"title": title}
     )

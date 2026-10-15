@@ -7,183 +7,165 @@ import { createEvents } from "./support/events.mjs";
 
 const script = readFileSync(new URL("../../src/sanea/core/static/sanea/js/computers.js", import.meta.url), "utf8");
 
-const createPage = (path = "/computers/") => {
+const createRegion = (id, content, scroller = null, commands = []) => ({
+    id, content,
+    get innerHTML() { return this.content + commands.map((command) => `${command.id}:${command.open}`).join(";"); },
+    get outerHTML() { return `${this.id}:${this.innerHTML}`; },
+    querySelector(selector) {
+        return selector === ".table-responsive" ? scroller : commands.find((command) => selector === `#${command.id}`);
+    },
+    querySelectorAll: () => commands.filter((command) => command.open),
+});
+
+const createPage = (refreshId = "computer-live-refresh") => {
     const body = createEvents();
-    const elements = new Map(["computers", "commands", "registration", "updates"].map((name) => [
-        `${name}-tab`, { id: `${name}-tab`, dataset: { computerTab: name } },
-    ]));
-    const refresh = { id: "computer-live-refresh" };
-    elements.set(refresh.id, refresh);
+    const refresh = { id: refreshId };
+    const elements = new Map([[refreshId, refresh]]);
     const document = {
         ...createEvents(), body, hidden: false,
         getElementById: (id) => elements.get(id),
     };
-    const shown = [];
     const requests = [];
-    let active = "computers";
-    const window = {
-        ...createEvents(),
-        location: { href: `http://localhost${path}` },
-        history: {
-            state: { htmx: true },
-            replaceState(state, title, url) {
-                this.state = state;
-                window.location.href = url.href;
-            },
-        },
-        bootstrap: {
-            Tab: {
-                getOrCreateInstance(tab) {
-                    return {
-                        show() {
-                            const name = tab.dataset.computerTab;
-                            shown.push(name);
-                            if (active !== name) {
-                                active = name;
-                                body.emit("shown.bs.tab", { target: tab });
-                            }
-                        },
-                    };
-                },
-            },
-        },
-        htmx: { trigger: (...args) => requests.push(args) },
-    };
-    runInNewContext(script, { document, window, URL });
-    return { document, window, body, elements, shown, requests, refresh };
+    const window = { htmx: { trigger: (...args) => requests.push(args) } };
+    const responses = new Map();
+    class DOMParser {
+        parseFromString(response) {
+            return { getElementById: (id) => responses.get(response)?.id === id ? responses.get(response) : null };
+        }
+    }
+    runInNewContext(script, { document, window, DOMParser });
+    return { document, window, body, elements, requests, refresh, responses };
 };
 
-test("direct command links open history, and tab changes retain filters and pagination", () => {
-    const page = createPage("/computers/?access=allowed&command_status=failed&command_page=2#command-history");
-
-    page.document.emit("DOMContentLoaded");
-    page.body.emit("shown.bs.tab", { target: page.elements.get("updates-tab") });
-    const url = new URL(page.window.location.href);
-
-    assert.deepEqual(page.shown, ["commands"]);
-    assert.equal(url.searchParams.get("tab"), "updates");
-    assert.equal(url.searchParams.get("access"), "allowed");
-    assert.equal(url.searchParams.get("command_status"), "failed");
-    assert.equal(url.searchParams.get("command_page"), "2");
-    assert.equal(url.hash, "");
-    assert.deepEqual(page.window.history.state, { htmx: true });
+const buildSwap = (page, target, response = "result") => ({
+    target, requestConfig: { elt: page.refresh }, shouldSwap: true, serverResponse: response,
 });
 
-test("URL and HTMX history restoration select the intended pane including the default", () => {
-    const page = createPage("/computers/?tab=registration");
-
-    page.document.emit("DOMContentLoaded");
-    page.window.location.href = "http://localhost/computers/";
-    page.window.emit("popstate");
-    page.window.location.href = "http://localhost/computers/#sanex-updates";
-    page.window.emit("hashchange");
-    page.window.location.href = "http://localhost/computers/?tab=computers&command_status=failed";
-    page.body.emit("htmx:historyRestore");
-
-    assert.deepEqual(page.shown, ["registration", "computers", "updates", "computers"]);
-});
-
-test("history responses open the commands pane but background table refreshes do not", () => {
+test("unchanged background markup is not swapped, leaving horizontal scroll and table focus untouched", () => {
     const page = createPage();
-
-    page.body.emit("htmx:afterSwap", { detail: { target: { id: "computer-table" } } });
-    page.body.emit("htmx:afterSwap", { detail: { target: { id: "command-history" } } });
-
-    assert.deepEqual(page.shown, ["commands"]);
-});
-
-test("background history refresh keeps surviving commands expanded without retaining stale content", () => {
-    const page = createPage();
-    const refreshed = { id: "command-12", open: false, status: "done" };
-    const target = {
-        id: "command-history-results",
-        querySelectorAll: () => [{ id: "command-12" }, { id: "command-removed" }],
-    };
-    const fragment = { querySelector: (selector) => selector === "#command-12" ? refreshed : null };
-
-    page.body.emit("htmx:oobBeforeSwap", { detail: { target, fragment } });
-
-    assert.equal(refreshed.open, true);
-    assert.equal(refreshed.status, "done");
-});
-
-test("background refresh requests pause while editing and resume after the editor closes", () => {
-    const page = createPage();
-    page.elements.set("computer-save", { id: "computer-save" });
-    let prevented = false;
-    const event = { detail: { elt: page.refresh }, preventDefault: () => { prevented = true; } };
-
-    page.body.emit("htmx:beforeRequest", event);
-
-    assert.equal(prevented, true);
-
-    page.elements.delete("computer-save");
-    prevented = false;
-    page.body.emit("htmx:beforeRequest", event);
-
-    assert.equal(prevented, false);
-});
-
-test("an in-flight background response cannot swap an open editor but swaps after it closes", () => {
-    const page = createPage();
-    page.elements.set("computer-save", { id: "computer-save" });
-    const target = { id: "computer-table" };
-    const detail = { elt: target, target, requestConfig: { elt: page.refresh }, shouldSwap: true };
+    const scroller = { scrollLeft: 240, scrollTop: 12 };
+    const target = createRegion("computer-table", "same rows", scroller);
+    page.responses.set("result", createRegion(target.id, "same rows"));
+    const detail = buildSwap(page, target);
 
     page.body.emit("htmx:beforeSwap", { detail });
 
     assert.equal(detail.shouldSwap, false);
+    assert.equal(scroller.scrollLeft, 240);
+    assert.equal(scroller.scrollTop, 12);
+});
 
-    page.elements.delete("computer-save");
-    detail.shouldSwap = true;
+test("changed rows are swapped and horizontal scroll is restored on the replacement table", () => {
+    const page = createPage();
+    const target = createRegion("computer-table", "old rows", { scrollLeft: 240, scrollTop: 12 });
+    const refreshedScroller = { scrollLeft: 0, scrollTop: 0 };
+    const replacement = createRegion(target.id, "new rows", refreshedScroller);
+    page.responses.set("result", replacement);
+    const detail = buildSwap(page, target);
+
     page.body.emit("htmx:beforeSwap", { detail });
+    page.elements.set(target.id, replacement);
+    page.body.emit("htmx:afterSwap", { detail: { target } });
 
+    assert.equal(detail.shouldSwap, true);
+    assert.equal(detail.serverResponse, replacement.outerHTML);
+    assert.equal(refreshedScroller.scrollLeft, 240);
+    assert.equal(refreshedScroller.scrollTop, 12);
+});
+
+test("out-of-band saves and explicit filter replacements also retain table scroll", () => {
+    const page = createPage();
+    const target = createRegion("computer-table", "old", { scrollLeft: 180, scrollTop: 0 });
+    const scroller = { scrollLeft: 0, scrollTop: 0 };
+    page.body.emit("htmx:oobBeforeSwap", { detail: { target } });
+    page.elements.set(target.id, createRegion(target.id, "saved", scroller));
+    page.body.emit("htmx:oobAfterSwap", { detail: { target } });
+    assert.equal(scroller.scrollLeft, 180);
+
+    const filterTarget = createRegion("computer-list", "old filter", { scrollLeft: 90, scrollTop: 0 });
+    const detail = { target: filterTarget, requestConfig: { elt: { id: "computer-filter" } }, shouldSwap: true };
+    page.body.emit("htmx:beforeSwap", { detail });
+    page.elements.set(filterTarget.id, createRegion(filterTarget.id, "new filter", scroller));
+    page.body.emit("htmx:afterSwap", { detail });
+    assert.equal(scroller.scrollLeft, 90);
+});
+
+test("background requests and in-flight responses pause for both read-only and editable computer dialogs", () => {
+    const page = createPage();
+    page.elements.set("computer-editor", { querySelector: () => ({}) });
+    let prevented = false;
+    const event = { detail: { elt: page.refresh }, preventDefault: () => { prevented = true; } };
+    const detail = buildSwap(page, createRegion("computer-table", "rows"));
+
+    page.body.emit("htmx:beforeRequest", event);
+    page.body.emit("htmx:beforeSwap", { detail });
+    assert.equal(prevented, true);
+    assert.equal(detail.shouldSwap, false);
+
+    page.elements.delete("computer-editor");
+    prevented = false;
+    detail.shouldSwap = true;
+    page.body.emit("htmx:beforeRequest", event);
+    page.body.emit("htmx:beforeSwap", { detail });
+    assert.equal(prevented, false);
     assert.equal(detail.shouldSwap, true);
 });
 
-test("editor actions and filters still request and swap while editing", () => {
+test("explicit dialog and filter requests are never blocked by the background refresh guard", () => {
     const page = createPage();
-    page.elements.set("computer-save", { id: "computer-save" });
-    const target = { id: "computer-table" };
+    page.elements.set("computer-editor", { querySelector: () => ({}) });
 
-    for (const id of ["computer-save", "computer-configure-open-12", "computer-close-12", "computer-filter", "command-filter"]) {
-        const source = { id };
+    for (const id of ["computer-save", "computer-configure-12", "computer-details-open-12", "computer-filter", "command-filter"]) {
+        const detail = { target: createRegion("computer-editor", "details"), requestConfig: { elt: { id } }, shouldSwap: true };
         page.body.emit("htmx:beforeRequest", {
-            detail: { elt: source },
-            preventDefault: () => assert.fail(`Blocked explicit request from ${id}`),
+            detail: { elt: { id } }, preventDefault: () => assert.fail(`Blocked explicit request ${id}`),
         });
-        const detail = { elt: target, target, requestConfig: { elt: source }, shouldSwap: true };
-
         page.body.emit("htmx:beforeSwap", { detail });
-
         assert.equal(detail.shouldSwap, true);
     }
 });
 
-test("visibility changes refresh only when the computers page becomes visible", () => {
-    const page = createPage();
+test("command polling retains expanded rows while applying new statuses, and skips truly unchanged results", () => {
+    const page = createPage("command-live-refresh");
+    const current = createRegion("command-history-results", "pending", null, [
+        { id: "command-12", open: true }, { id: "command-removed", open: true },
+    ]);
+    const refreshedCommand = { id: "command-12", open: false };
+    const replacement = createRegion(current.id, "done", null, [refreshedCommand]);
+    page.responses.set("result", replacement);
+    const detail = buildSwap(page, current);
 
+    page.body.emit("htmx:beforeSwap", { detail });
+    assert.equal(detail.shouldSwap, true);
+    assert.equal(refreshedCommand.open, true);
+    assert.match(detail.serverResponse, /done/);
+
+    page.responses.set("result", createRegion(current.id, "done", null, [{ id: "command-12", open: false }]));
+    const unchanged = buildSwap(page, replacement);
+    page.body.emit("htmx:beforeSwap", { detail: unchanged });
+    assert.equal(unchanged.shouldSwap, false);
+});
+
+test("cancelled swaps do not record stale scroll state", () => {
+    const page = createPage();
+    const target = createRegion("computer-table", "old", { scrollLeft: 50, scrollTop: 0 });
+    const detail = { ...buildSwap(page, target), shouldSwap: false };
+    page.body.emit("htmx:beforeSwap", { detail });
+    const scroller = { scrollLeft: 130, scrollTop: 0 };
+    page.elements.set(target.id, createRegion(target.id, "new", scroller));
+    page.body.emit("htmx:afterSwap", { detail });
+    assert.equal(scroller.scrollLeft, 130);
+});
+
+test("visibility refresh uses only the current page and is harmless without HTMX", () => {
+    const page = createPage("command-live-refresh");
     page.document.hidden = true;
     page.document.emit("visibilitychange");
     assert.equal(page.requests.length, 0);
     page.document.hidden = false;
     page.document.emit("visibilitychange");
     assert.deepEqual(page.requests, [[page.refresh, "computer-refresh"]]);
-    page.elements.delete(page.refresh.id);
+    delete page.window.htmx;
     page.document.emit("visibilitychange");
     assert.equal(page.requests.length, 1);
-});
-
-test("missing JavaScript libraries and unrelated Bootstrap tabs are harmless", () => {
-    const page = createPage("/computers/?tab=commands");
-    delete page.window.bootstrap;
-    delete page.window.htmx;
-
-    page.document.emit("DOMContentLoaded");
-    page.document.emit("visibilitychange");
-    page.body.emit("shown.bs.tab", { target: { dataset: {} } });
-
-    assert.equal(page.shown.length, 0);
-    assert.equal(page.requests.length, 0);
-    assert.equal(new URL(page.window.location.href).searchParams.get("tab"), "commands");
 });

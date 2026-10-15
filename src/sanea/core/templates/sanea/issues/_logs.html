@@ -1,27 +1,25 @@
 {% load i18n %}
-<section class="card" id="diagnostic-logs"
-         hx-get="{{ issues_url }}" hx-target="this" hx-swap="outerHTML" hx-include="#issue-filter"
-         hx-trigger="every 5s [!document.hidden], diagnostic-refresh[!document.hidden]" hx-sync="#issues-content:abort">
+<section class="card" id="diagnostic-logs">
     <div class="card-body p-3 p-lg-4">
-        <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
-            <h2 class="h5 fw-bold mb-0">{% translate "Diagnostic logs" %}</h2>
-            <a class="btn btn-outline-secondary btn-sm" id="diagnostic-refresh"
-               href="{{ issues_url }}{% querystring %}#diagnostic-logs"
-               hx-get="{{ issues_url }}" hx-target="#diagnostic-logs">{% translate "Refresh" %}</a>
+        <div class="d-flex align-items-center justify-content-between gap-3 mb-3">
+            <h3 class="h5 fw-bold mb-0">{% translate "Diagnostic logs" %}</h3>
+            <a class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2" id="diagnostic-refresh"
+               href="{{ issues_url }}{% querystring issues_query %}#diagnostic-logs"
+               hx-get="{{ issues_url }}" hx-target="#diagnostic-logs" hx-swap="outerHTML"
+               hx-include="#issue-filter, #computer-filter select" hx-sync="#issues-content:replace">
+                <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-refresh"></use></svg>
+                {% translate "Refresh" %}
+            </a>
         </div>
-        <p class="text-body-secondary small mb-3">
-            {% translate "Checks for updates every 5 seconds. New logs arrive when sanex synchronizes." %}
-        </p>
         {% if not issue_filter.is_valid %}
             <p class="text-body-secondary mb-0">{% translate "Correct the filters to view issues." %}</p>
         {% elif diagnostic_logs %}
             <input type="hidden" id="diagnostic-computer" name="log" value="{{ active_log_id }}" form="issue-filter">
-            <ul class="nav nav-tabs mb-3" role="tablist"
-                aria-label="{% translate 'Diagnostic logs' %}">
+            <ul class="nav nav-tabs mb-3" role="tablist" aria-label="{% translate 'Diagnostic logs' %}">
                 {% for computer in diagnostic_logs %}
                     <li class="nav-item mw-100" role="presentation">
                         <a class="nav-link text-break{% if computer.pk == active_log_id %} active{% endif %}"
-                           id="log-tab-{{ computer.pk }}" href="{{ issues_url }}{% querystring log=computer.pk period=issue_filter.cleaned_data.period %}#diagnostic-logs"
+                           id="log-tab-{{ computer.pk }}" href="{{ issues_url }}{% querystring issues_query log=computer.pk %}#diagnostic-logs"
                            data-bs-toggle="tab" data-bs-target="#log-panel-{{ computer.pk }}" data-log-computer="{{ computer.pk }}"
                            role="tab" aria-controls="log-panel-{{ computer.pk }}"
                            aria-selected="{% if computer.pk == active_log_id %}true{% else %}false{% endif %}">
@@ -36,12 +34,18 @@
                          id="log-panel-{{ computer.pk }}" role="tabpanel" aria-labelledby="log-tab-{{ computer.pk }}">
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                             <span class="text-body-secondary small" id="log-received-{{ computer.pk }}">
-                                {% blocktranslate with received=computer.log_received|date:"SHORT_DATETIME_FORMAT" %}received {{ received }}{% endblocktranslate %}
+                                {% blocktranslate with received=computer.log_received|date:"Y-m-d H:i" %}received {{ received }}{% endblocktranslate %}
                             </span>
-                            <button type="button" class="btn btn-primary btn-sm" id="log-latest-{{ computer.pk }}"
-                                    data-log-latest="{{ computer.pk }}" hidden>
-                                {% translate "New lines" %}
-                            </button>
+                            <div class="d-flex flex-wrap align-items-center gap-2">
+                                <span class="small text-body-secondary" id="log-copy-status-{{ computer.pk }}" role="status"></span>
+                                <button type="button" class="btn btn-outline-secondary btn-sm sanea-icon-button"
+                                        id="log-copy-{{ computer.pk }}" data-log-copy="{{ computer.pk }}"
+                                        title="{% translate 'Copy' %}" aria-label="{% translate 'Copy' %}"
+                                        data-copy-success="{% translate 'Copied' %}"
+                                        data-copy-error="{% translate 'Could not copy. Select the log text and copy it.' %}">
+                                    <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-copy"></use></svg>
+                                </button>
+                            </div>
                         </div>
                         <pre class="sanea-diagnostic-log mb-0" id="log-text-{{ computer.pk }}"
                              data-log-computer="{{ computer.pk }}" tabindex="0"

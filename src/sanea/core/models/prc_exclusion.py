@@ -63,12 +63,24 @@ class PrcExclusion(TimestampedModel):
     @classmethod
     @transaction.atomic
     def create_and_materialize(cls, prc_name: str) -> "PrcExclusion":
-        """Create a validated exclusion and refresh every computer config."""
-        exclusion = cls(prc_name=prc_name)
-        exclusion.full_clean()
-        exclusion.save()
-        cls._materialize_configs()
-        return exclusion
+        """Add or restore a name and refresh every computer config."""
+        exclusion = cls.objects.filter(prc_name=prc_name, apply=False).first() or cls(prc_name=prc_name)
+        return exclusion.save_and_materialize()
+
+    @transaction.atomic
+    def save_and_materialize(self) -> "PrcExclusion":
+        """Save an active exclusion and refresh every computer config."""
+        previous_name = type(self).objects.filter(pk=self.pk).values_list("prc_name", flat=True).first()
+        self.apply = True
+        self.full_clean()
+        self.save()
+
+        if previous_name in DEFAULT_IGNORED_PRCS and previous_name != self.prc_name:
+            # Keep migrations from reinstalling the old default after a rename.
+            type(self).objects.get_or_create(prc_name=previous_name, defaults={"apply": False})
+
+        type(self)._materialize_configs()
+        return self
 
     @transaction.atomic
     def delete_and_materialize(self) -> None:

@@ -1,0 +1,12 @@
+.sanea-recent-tabs .nav-link {
+    color: var(--sanea-muted);
+}
+
+.sanea-recent-tabs .nav-link.active {
+    color: var(--sanea-terracotta-dark);
+    font-weight: 600;
+}
+
+.sanea-recent-activity {
+    max-height: 16rem;
+}

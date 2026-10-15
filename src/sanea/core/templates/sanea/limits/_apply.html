@@ -1,0 +1,37 @@
+{% extends "sanea/_editor.html" %}
+{% load i18n %}
+
+{% block editor_title %}{% translate "Distribute template" %}{% endblock %}
+
+{% block editor_hidden %}<input type="hidden" name="apply_template" value="1">{% endblock %}
+
+{% block editor_body %}
+<p class="fw-semibold">{{ limits.name }}</p>
+<p class="alert alert-warning">{% translate "This replaces the selected accounts' current limits." %}</p>
+{{ propagation_form }}
+{% endblock %}
+
+{% block editor_submit %}{% translate "Distribute" %}{% endblock %}
+
+{% block editor_panel %}
+{% if propagation_form.fields.accounts.queryset.exists %}
+    {{ block.super }}
+{% else %}
+    <div data-dialog-panel>
+        <div class="modal-body p-4">
+            <p class="fw-semibold">{{ limits.name }}</p>
+            <p class="text-body-secondary mb-0">{% translate "No accounts are linked to this template's people." %}</p>
+        </div>
+        <div class="modal-footer px-4">
+            <a class="btn btn-outline-secondary" href="{% url 'core:limits' %}" data-dialog-close data-dialog-focus>
+                {% translate "Close" %}
+            </a>
+            <a class="btn btn-primary" id="limits-edit-recipients-{{ limits.pk }}"
+               href="{% url 'core:limits' %}?limits={{ limits.pk }}"
+               hx-get="{% url 'core:limits' %}?limits={{ limits.pk }}" hx-target="#limits-editor" hx-swap="innerHTML">
+                {% translate "Edit limits template" %}
+            </a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}

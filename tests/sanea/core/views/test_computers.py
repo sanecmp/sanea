@@ -1,19 +1,18 @@
 """Tests for the registered computers interface."""
 
-from datetime import timedelta
 from urllib.parse import urlencode
 from importlib import import_module
 from collections.abc import Callable
-from typing import Any
 
 from django.urls import reverse
 from time_machine import TimeMachineFixture
-from django.utils.html import escape
 import pytest
 from django.utils import timezone
+from django.utils.formats import date_format
+from django.utils.html import escape
 from django.test import Client
 
-from sanea.core.models import ClientCommand, Computer, GlobalUpdate, User
+from sanea.core.models import ClientCommand, Computer, User
 from sanea.core.services.registration_window import RegistrationWindow
 
 
@@ -50,127 +49,91 @@ def test_computers_requires_management_user(
 
 
 def test_computers_lists_registered_clients(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
-    computer_record: Computer,
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
 ) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
     computer_record.last_seen = timezone.now()
     computer_record.save(update_fields=("last_seen", "updated"))
-    ClientCommand.objects.create(
-        computer=computer_record,
-        type="diagnostic",
-        payload={},
-    )
+    ClientCommand.objects.create(computer=computer_record, type="diagnostic", payload={})
 
-    response = request_client(user=staff_user).get(reverse("core:computers"))
+    response = request_client(user=user_create(attributes={"is_staff": True})).get(reverse("core:computers"))
     content = response.content.decode()
-    command_query = urlencode({"command_computer": computer_record.pk})
-    issues_query = escape(urlencode({"computer": computer_record.pk, "period": "7-days"}))
-    configure_query = escape(urlencode({"computer": computer_record.pk, "edit": 1}))
+    details_query = urlencode({"computer": computer_record.pk})
 
     assert response.status_code == 200
     assert computer_record.name in content
     assert computer_record.hostname in content
     assert computer_record.version in content
-    assert "Synchronization allowed" in content
-    assert "Online" in content
-    assert "Commands" in content
-    assert "<span class=\"badge text-bg-warning\">1</span>" in content
-    assert f"id=\"computer-command-pending-{computer_record.pk}\"" in content
-    assert (
-        f"command_computer={computer_record.pk}&amp;command_status=pending" in content
-    )
-    assert "collecting: 1" in content
-    assert "class=\"table-responsive sanea-mobile-table position-relative\"" in content
+    assert date_format(timezone.localtime(computer_record.last_seen), "Y-m-d H:i") in content
+    assert "title=\"Synchronization: Synchronization allowed\"" in content
+    assert "title=\"Online\"" in content
+    assert "<use href=\"#icon-check\">" in content
+    assert "<use href=\"#icon-online\">" in content
+    assert "<span title=\"Monitored accounts\">1</span>" in content
+    assert "<span title=\"Total accounts\">1</span>" in content
+    assert "title=\"Pending\"" in content
+    assert "title=\"Failed\"" in content
+    assert f"href=\"{reverse("core:computer_commands")}?command_computer={computer_record.pk}&amp;command_status=pending\"" in content
     assert content.count("class=\"sanea-table-item\"") == 1
-    assert "class=\"text-end text-nowrap sanea-table-actions\"" in content
-    assert content.count(f"id=\"computer-actions-{computer_record.pk}\"") == 1
-    assert content.count(f"id=\"computer-configure-open-{computer_record.pk}\"") == 1
-    assert f"href=\"{reverse("core:computers")}?{configure_query}\"" in content
-    assert f"hx-get=\"{reverse("core:computers")}?{configure_query}\"" in content
-    assert content.index(f"id=\"computer-configure-open-{computer_record.pk}\"") < content.index(
-        f"id=\"computer-menu-{computer_record.pk}\"",
-    )
+    assert content.count(f"id=\"computer-details-open-{computer_record.pk}\"") == 1
+    assert f"href=\"{reverse("core:computers")}?{details_query}\"" in content
+    assert "hx-target=\"#computer-editor\"" in content
+    assert "id=\"computer-dialog\"" in content
+    assert "data-editor-dialog" in content
+    assert "data-dialog-editor" in content
+    assert "computer-configure-open-" not in content
+    assert "computer-menu-" not in content
+    assert "computer-actions-" not in content
+    assert "text-bg-success" not in content
+    assert "text-bg-warning" not in content
+    assert "id=\"command-history\"" not in content
+    assert "id=\"sanex-updates\"" not in content
+    assert "role=\"tablist\"" not in content
+    assert content.index("id=\"registration-window\"") < content.index("id=\"computer-list\"")
+    assert "hx-trigger=\"every 5s [!document.hidden], computer-refresh[!document.hidden]\"" in content
+    assert "hx-include=\"#computer-filter select\"" in content
+    assert "hx-target=\"#computer-table\" hx-swap=\"outerHTML\" hx-sync=\"#computers-page:abort\"" in content
+    assert "src=\"/static/sanea/js/computers.js\"" in content
+    assert "src=\"/static/sanea/js/editor-dialog.js\"" in content
 
-    for column in ("Synchronization", "Connection", "Configuration", "Version", "Last contact", "Commands", "Local accounts"):
+    for column in ("Synchronization", "Connection", "Settings", "Version", "Contact", "Commands", "Accounts"):
         assert f"data-label=\"{column}\"" in content
 
-    assert "data-bs-toggle=\"dropdown\"" in content
-    assert "data-bs-config='{\"popperConfig\":{\"strategy\":\"fixed\"}}'" in content
-    assert f"id=\"computer-commands-{computer_record.pk}\"" in content
-    assert f"href=\"{reverse("core:computers")}?tab=commands&amp;{command_query}#command-history\"" in content
-    assert f"href=\"{reverse("core:issues")}?{issues_query}\"" in content
-    assert "hx-swap=\"outerHTML show:top\"" in content
-    assert "id=\"computer-details-" in content
-    assert "id=\"computer-filter\" class=\"sanea-computer-filter\"" in content
-    assert "id=\"command-filter\" class=\"sanea-command-filter\"" in content
-    assert "id=\"computer-live-refresh\"" in content
-    assert "hx-trigger=\"every 5s [!document.hidden], computer-refresh[!document.hidden]\"" in content
-    assert (
-        "hx-include=\"#command-filter select, #computer-filter select, #command-current-page\""
-        in content
-    )
-    assert "hx-target=\"#computer-table\" hx-swap=\"outerHTML\" hx-sync=\"#computers-page:abort\"" in content
-    assert "id=\"computers-page\" hx-sync=\"this:replace\"" in content
-    assert "src=\"/static/sanea/js/computers.js\"" in content
-    assert "class=\"tab-pane active\" id=\"computers-panel\"" in content
-    assert content.index("id=\"computer-list\"") < content.index("id=\"command-history\"")
-    assert content.index("id=\"computer-list\"") < content.index("id=\"registration-window\"")
-    assert content.count(f"id=\"computer-details-{computer_record.pk}\"") == 1
-    assert f"id=\"computer-details-open-{computer_record.pk}\"" in content
-    assert "Add computer" not in content
+    for column in ("Synchronization", "Connection", "Settings"):
+        assert f"<td class=\"text-center\" data-label=\"{column}\">" in content
+
+    assert "class=\"small text-body-secondary text-center\" data-label=\"Commands\"" in content
+    assert "class=\"small text-body-secondary text-nowrap text-center\" data-label=\"Accounts\"" in content
 
 
 @pytest.mark.parametrize(
-    ("query", "active_tab"),
-    [
-        ({"tab": "commands"}, "commands"),
-        ({"tab": "registration"}, "registration"),
-        ({"tab": "updates"}, "updates"),
-        ({"tab": "unknown"}, "computers"),
-        ({"command_status": "pending"}, "commands"),
-        ({"command_page": "2"}, "commands"),
-        ({"tab": "computers", "command_status": "pending"}, "computers"),
-    ],
+    ("route", "title"), [("computer_commands", "Command history"), ("computer_updates", "Updates")],
 )
-def test_computers_select_tab_for_direct_links(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
-    query: dict[str, str],
-    active_tab: str,
+def test_computer_subpages_have_breadcrumbs_and_keep_computers_navigation_active(
+    request_client: Callable[..., Client], user_create: Callable[..., User], route: str, title: str,
 ) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
-
-    response = request_client(user=staff_user).get(reverse("core:computers"), query)
+    response = request_client(user=user_create(attributes={"is_staff": True})).get(reverse(f"core:{route}"))
     content = response.content.decode()
 
     assert response.status_code == 200
-    assert f"class=\"tab-pane active\" id=\"{active_tab}-panel\"" in content
-    assert content.count("class=\"tab-pane active\"") == 1
-    assert content.count("data-bs-toggle=\"tab\"") == 4
-    assert content.count("role=\"tabpanel\"") == 4
-    assert content.count("aria-selected=\"true\"") == 1
+    assert "<nav aria-label=\"Breadcrumbs\">" in content
+    assert f"<li class=\"breadcrumb-item active\" aria-current=\"page\">{title}</li>" in content
+    assert f"class=\"link-secondary\" href=\"{reverse("core:computers")}\"" in content
+    assert "class=\"nav-link d-flex align-items-center gap-3 active\"" in content
+    assert "id=\"computer-table\"" not in content
+    assert "role=\"tablist\"" not in content
 
 
-def test_computers_tab_links_preserve_list_and_command_filters(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
+@pytest.mark.parametrize("route", ["computer_commands", "computer_updates"])
+@pytest.mark.parametrize("method", ["get", "post"])
+def test_computer_subpages_require_management_access(
+    request_client: Callable[..., Client], user_create: Callable[..., User], route: str, method: str,
 ) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
-    query = {"access": "allowed", "command_status": "pending", "command_page": "2"}
+    url = reverse(f"core:{route}")
+    anonymous = getattr(request_client(), method)(url)
+    regular = getattr(request_client(user=user_create()), method)(url)
 
-    response = request_client(user=staff_user).get(reverse("core:computers"), query)
-    content = response.content.decode()
-    filter_query = escape(urlencode(query))
-
-    assert response.status_code == 200
-
-    for tab in ("computers", "commands", "registration", "updates"):
-        assert f"href=\"{reverse("core:computers")}?tab={tab}&amp;{filter_query}\"" in content
-
-    assert "hx-include=\"#command-filter select\"" in content
-    assert "hx-include=\"#computer-filter select\"" in content
+    assert anonymous.status_code == 302
+    assert regular.status_code == 403
 
 
 def test_computer_details_are_loaded_through_siteajax(
@@ -191,8 +154,50 @@ def test_computer_details_are_loaded_through_siteajax(
     assert f"{computer_record.last_ip}" in content
     assert computer_record.timezone in content
     assert computer_record.certificate_fingerprint in content
-    assert "300 seconds" in content
+    assert "form-control-plaintext" in content
+    assert "<form" not in content
+    assert "data-dialog-panel" in content
     assert f"id=\"computer-configure-{computer_record.pk}\"" in content
+
+    groups = content.split("<fieldset")[1:]
+    assert len(groups) == 4
+
+    for group, title in zip(groups, ("Computer", "State", "Intervals", "Technical details"), strict=True):
+        assert f"<legend class=\"h6 fw-semibold mb-3\">{title}</legend>" in group
+        assert "<details" not in group
+
+    assert groups[0].count("col-sm-6") == 4
+    assert groups[1].count("col-sm-4") == 6
+    assert groups[2].count("col-sm-6") == 5
+    assert groups[3].count("col-sm-6") == 4
+    assert "Contact</label>" in groups[1]
+    assert "IP address</label>" in groups[1]
+    assert computer_record.certificate_fingerprint in groups[3]
+
+
+@pytest.mark.parametrize("status, label", [("allowed", "Synchronization allowed"), ("pending", "Pending")])
+def test_computer_readonly_details_escape_reported_text_and_show_pending_access(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer, status: str, label: str,
+) -> None:
+    computer_record.name = "<img src=x onerror=alert(1)>"
+    computer_record.hostname = "<script>synthetic</script>"
+    computer_record.status = status
+    computer_record.save(update_fields=("name", "hostname", "status", "updated"))
+
+    response = request_client(user=user_create(attributes={"is_staff": True})).get(
+        reverse("core:computers"), {"computer": computer_record.pk},
+        HTTP_HX_REQUEST="true", HTTP_HX_TRIGGER=f"computer-details-{computer_record.pk}",
+    )
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert escape(computer_record.name) in content
+    assert escape(computer_record.hostname) in content
+    assert computer_record.name not in content
+    assert computer_record.hostname not in content
+    assert label in content
+    assert "<input" not in content
+    assert "<select" not in content
 
 
 def test_staff_user_opens_registration_with_visible_countdown(
@@ -246,122 +251,18 @@ def test_computers_page_includes_registration_controls_and_countdown_script(
 
     assert response.status_code == 200
     assert "Open registration for 30 seconds" in content
-    assert "The exact sanex command with the current code will appear here" in content
+    assert "Open registration and run the command on the new computer." in content
     assert "src=\"/static/sanea/js/registration-window.js\"" in content
 
 
-def test_computers_activate_replace_and_cancel_global_update(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
-    computer_record: Computer,
-    updates_payload: dict[str, Any],
-    time_machine: TimeMachineFixture,
+def test_computers_refresh_only_the_table_through_siteajax(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
 ) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
-    Computer.objects.create(hostname="blocked-pc", status="blocked")
-    client = request_client(user=staff_user)
-    form_data = {
-        "__submit": "update",
-        **updates_payload["valid"],
-    }
-
-    response = client.post(
-        reverse("core:computers"),
-        form_data,
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER="update-save",
-    )
-    replacement_data = {
-        **form_data,
-        "version": "0.3.1",
-    }
-    time_machine.shift(1)
-    replaced = client.post(
-        reverse("core:computers"),
-        replacement_data,
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER="update-save",
-    )
-    commands = list(ClientCommand.objects.all())
-    content = response.content.decode()
-    replaced_content = replaced.content.decode()
-    updates = list(GlobalUpdate.objects.order_by("created", "pk"))
-
-    assert response.status_code == 200
-    assert len(commands) == 1
-    assert commands[0].computer == computer_record
-    assert commands[0].type == "update"
-    assert commands[0].payload == {
-        **updates_payload["valid"],
-        "version": "0.3.1",
-    }
-    assert commands[0].status is None
-    assert "Update queued for 1 computer." in content
-    assert replaced.status_code == 200
-    assert ClientCommand.objects.count() == 1
-    assert len(updates) == 2
-    assert updates[0].active is False
-    assert updates[0].cancelled == timezone.now()
-    assert updates[1].created == updates[0].created + timedelta(seconds=1)
-    assert updates[1].active is True
-    assert "Active update: sanex 0.3.1" in replaced_content
-
-    time_machine.shift(1)
-    cancelled = client.post(
-        reverse("core:computers"),
-        {"__submit": "update_cancel"},
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER="update-cancel",
-    )
-
-    assert cancelled.status_code == 200
-    assert "The update was cancelled." in cancelled.content.decode()
-    assert GlobalUpdate.get_active() is None
-    assert ClientCommand.objects.count() == 0
-
-
-def test_computers_reject_invalid_global_update(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
-    computer_record: Computer,
-    updates_payload: dict[str, Any],
-) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
-
-    response = request_client(user=staff_user).post(
-        reverse("core:computers"),
-        {"__submit": "update", **updates_payload["invalid"]},
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER="update-save",
-    )
-    content = response.content.decode()
-
-    assert response.status_code == 200
-    assert "version conforming to PEP 440" in content
-    assert "absolute HTTPS URL" in content
-    assert ClientCommand.objects.count() == 0
-
-
-def test_computers_refresh_live_state_through_siteajax(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
-    computer_record: Computer,
-    updates_payload: dict[str, Any],
-) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
     computer_record.last_seen = timezone.now()
     computer_record.save(update_fields=("last_seen", "updated"))
-    command = ClientCommand.objects.create(
-        computer=computer_record,
-        type="update",
-        payload=updates_payload["valid"],
-        status="done",
-    )
 
-    response = request_client(user=staff_user).get(
-        reverse("core:computers"),
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER="computer-live-refresh",
+    response = request_client(user=user_create(attributes={"is_staff": True})).get(
+        reverse("core:computers"), HTTP_HX_REQUEST="true", HTTP_HX_TRIGGER="computer-live-refresh",
     )
     content = response.content.decode()
 
@@ -370,16 +271,12 @@ def test_computers_refresh_live_state_through_siteajax(
     assert f"id=\"computer-last-contact-{computer_record.pk}\"" in content
     assert f"id=\"computer-command-counts-{computer_record.pk}\"" in content
     assert f"id=\"computer-config-status-{computer_record.pk}\"" in content
-    assert "id=\"command-history-results\"" in content
     assert "id=\"computer-table\"" in content
-    assert f"id=\"computer-details-{computer_record.pk}\" hx-preserve" in content
-    assert f"id=\"computer-menu-{computer_record.pk}\" hx-preserve" in content
+    assert "id=\"command-history-results\"" not in content
+    assert "id=\"computer-dialog\"" not in content
     assert "id=\"computer-filter\"" not in content
-    assert "id=\"command-filter\"" not in content
-    assert content.count("hx-swap-oob=\"outerHTML\"") == 1
-    assert "Online" in content
-    assert updates_payload["valid"]["version"] in content
-    assert command.get_status_display() in content
+    assert "hx-swap-oob" not in content
+    assert "title=\"Online\"" in content
     assert "sanea-shell" not in content
 
 
@@ -440,108 +337,24 @@ def test_computers_live_refresh_checks_management_access(
     assert response.status_code == (200 if is_staff else 403)
 
 
-def test_computers_non_javascript_actions_keep_the_relevant_tab(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
+def test_registration_stays_expanded_after_non_javascript_submission(
+    request_client: Callable[..., Client], user_create: Callable[..., User],
     registration_window_state: tuple[RegistrationWindow, list[float]],
-    updates_payload: dict[str, Any],
 ) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
-    client = request_client(user=staff_user)
+    client = request_client(user=user_create(attributes={"is_staff": True}))
 
-    registration_response = client.post(reverse("core:computers"), {"__submit": "registration"}, follow=True)
-    invalid_update = client.post(
-        reverse("core:computers"),
-        {"__submit": "update", **updates_payload["invalid"]},
-    )
-    cancelled_update = client.post(reverse("core:computers"), {"__submit": "update_cancel"}, follow=True)
-
-    assert registration_response.status_code == 200
-    assert "class=\"tab-pane active\" id=\"registration-panel\"" in registration_response.content.decode()
-    assert "Registration is open" in registration_response.content.decode()
-    assert invalid_update.status_code == 200
-    assert "class=\"tab-pane active\" id=\"updates-panel\"" in invalid_update.content.decode()
-    assert "version conforming to PEP 440" in invalid_update.content.decode()
-    assert cancelled_update.status_code == 200
-    assert "class=\"tab-pane active\" id=\"updates-panel\"" in cancelled_update.content.decode()
-
-
-def test_computers_filter_all_command_types_by_status(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
-    computer_record: Computer,
-    updates_payload: dict[str, Any],
-) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
-    completed = timezone.now()
-    other_computer = Computer.objects.create(hostname="other-command-computer")
-    ClientCommand.objects.create(
-        computer=computer_record,
-        type="update",
-        payload=updates_payload["valid"],
-        status="done",
-        completed=completed,
-    )
-    diagnostic_command = ClientCommand.objects.create(
-        computer=computer_record,
-        type="diagnostic",
-        payload={"scope": "network"},
-        status="failed",
-        error="Connection refused",
-        completed=completed,
-    )
-    ClientCommand.objects.create(
-        computer=computer_record,
-        type="inventory",
-        payload={"include": "accounts"},
-    )
-    ClientCommand.objects.create(
-        computer=other_computer,
-        type="diagnostic",
-        payload={"scope": "storage"},
-        status="failed",
-        error="Disk unavailable",
-        completed=completed,
-    )
-
-    response = request_client(user=staff_user).get(
-        reverse("core:computers"),
-        {
-            "command_computer": computer_record.pk,
-            "command_type": "diagnostic",
-            "command_status": "failed",
-        },
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER="command-filter",
-    )
-    content = response.content.decode()
+    response = client.post(reverse("core:computers"), {"__submit": "registration"}, follow=True)
 
     assert response.status_code == 200
-    assert "id=\"command-history\"" in content
-    assert "name=\"command_computer\"" in content
-    assert "name=\"command_type\"" in content
-    assert "name=\"command_status\"" in content
-    assert (
-        f"<details class=\"list-group-item px-4 py-3\" id=\"command-{diagnostic_command.pk}\">"
-        in content
-    )
-    assert "Command ID" in content
-    assert "Last updated" in content
-    assert "Payload" in content
-    assert "diagnostic" in content
-    assert "network" in content
-    assert "Connection refused" in content
-    assert "storage" not in content
-    assert "Disk unavailable" not in content
-    assert updates_payload["valid"]["version"] not in content
-    assert "sanea-shell" not in content
+    assert "class=\"card mb-3 sanea-registration-panel\" open" in response.content.decode()
+    assert "Registration is open" in response.content.decode()
 
 
 @pytest.mark.parametrize(
     "request_headers",
     [pytest.param({}, id="page"), pytest.param({"HTTP_HX_REQUEST": "true"}, id="ajax")],
 )
-def test_computers_open_editor_directly_from_table(
+def test_computers_open_editor_from_details(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],
     computer_record: Computer,
@@ -551,7 +364,7 @@ def test_computers_open_editor_directly_from_table(
 
     response = request_client(user=staff_user).get(
         reverse("core:computers"), {"computer": computer_record.pk, "edit": 1},
-        HTTP_HX_TRIGGER=f"computer-configure-open-{computer_record.pk}",
+        HTTP_HX_TRIGGER=f"computer-configure-{computer_record.pk}",
         **request_headers,
     )
     content = response.content.decode()
@@ -564,10 +377,12 @@ def test_computers_open_editor_directly_from_table(
     assert computer_record.get_display_name() in content
 
 
+@pytest.mark.parametrize("filtered", [False, True], ids=["all", "allowed-only"])
 def test_computers_ajax_edits_access_and_runtime_intervals(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],
     computer_record: Computer,
+    filtered: bool,
 ) -> None:
     staff_user = user_create(attributes={"is_staff": True})
     initial_config = computer_record.materialize_config()
@@ -604,6 +419,7 @@ def test_computers_ajax_edits_access_and_runtime_intervals(
             "computer-walk_interval": "2",
             "computer-save_interval": "10",
             "computer-min_prc_duration": "7",
+            "access": "allowed" if filtered else "",
         },
         HTTP_HX_REQUEST="true",
         HTTP_HX_TRIGGER="computer-save",
@@ -623,10 +439,48 @@ def test_computers_ajax_edits_access_and_runtime_intervals(
     assert computer_record.current_config_id != initial_config.ident
     assert computer_record.applied_config_id == initial_config.ident
     assert "Computer settings saved." in content
-    assert "id=\"computer-access-" in content
     assert "Synchronization blocked" in content
-    assert "Waiting for sync" in content
-    assert content.count("hx-swap-oob=\"outerHTML\"") == 3
+    assert content.count("hx-swap-oob=\"outerHTML\"") == 1
+    assert "Bedroom computer" in content
+    assert "id=\"computer-save\"" not in content
+    assert (f"id=\"computer-details-open-{computer_record.pk}\"" in content) is not filtered
+
+
+def test_computers_save_without_javascript_and_close_without_saving(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
+) -> None:
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+    url = reverse("core:computers")
+    original_name = computer_record.name
+
+    editor = client.get(url, {"computer": computer_record.pk, "edit": 1})
+    closed = client.get(url)
+    computer_record.refresh_from_db()
+
+    assert editor.status_code == 200
+    assert "id=\"computer-save\"" in editor.content.decode()
+    assert "id=\"computer-save\"" not in closed.content.decode()
+    assert computer_record.name == original_name
+
+    saved = client.post(url, {
+        "__submit": "computer",
+        "computer": computer_record.pk,
+        "computer-name": "Synthetic renamed computer",
+        "computer-status": computer_record.status,
+        "computer-timezone": computer_record.timezone,
+        "computer-sync_interval": computer_record.sync_interval,
+        "computer-discovery_interval": computer_record.discovery_interval,
+        "computer-walk_interval": computer_record.walk_interval,
+        "computer-save_interval": computer_record.save_interval,
+        "computer-min_prc_duration": computer_record.min_prc_duration,
+    }, follow=True)
+    computer_record.refresh_from_db()
+
+    assert saved.status_code == 200
+    assert saved.redirect_chain == [(f"{url}?computer={computer_record.pk}", 302)]
+    assert computer_record.name == "Synthetic renamed computer"
+    assert "form-control-plaintext" in saved.content.decode()
+    assert "id=\"computer-save\"" not in saved.content.decode()
 
 
 def test_computers_reject_inconsistent_runtime_intervals(
@@ -697,217 +551,3 @@ def test_computers_filter_access_connection_and_configuration(
     assert other.hostname in content
     assert computer_record.hostname not in content
     assert "sanea-shell" not in content
-
-
-def test_computers_repeat_failed_command_once(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
-    computer_record: Computer,
-) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
-    source = ClientCommand.objects.create(
-        computer=computer_record,
-        type="diagnostic",
-        payload={"scope": "network", "options": {"verbose": True}},
-        status="failed",
-        error="Connection refused",
-        completed=timezone.now(),
-    )
-    client = request_client(user=staff_user)
-    form_data = {
-        "__submit": "command_repeat",
-        "command": source.pk,
-        "command_computer": computer_record.pk,
-        "command_type": "diagnostic",
-        "command_status": "failed",
-    }
-    request_options = {
-        "HTTP_HX_REQUEST": "true",
-        "HTTP_HX_TRIGGER": f"command-repeat-{source.pk}",
-    }
-
-    response = client.post(reverse("core:computers"), form_data, **request_options)
-    repeated_response = client.post(reverse("core:computers"), form_data, **request_options)
-    commands = list(ClientCommand.objects.order_by("pk"))
-    content = response.content.decode()
-    repeated_content = repeated_response.content.decode()
-
-    assert response.status_code == 200
-    assert len(commands) == 2
-    assert commands[0] == source
-    assert commands[0].status == "failed"
-    assert commands[0].error == "Connection refused"
-    assert commands[1].computer == source.computer
-    assert commands[1].type == source.type
-    assert commands[1].payload == source.payload
-    assert commands[1].status is None
-    assert "Command queued again." in content
-    assert f"id=\"command-repeat-{source.pk}\"" in content
-    assert repeated_response.status_code == 200
-    assert "An identical command is already pending." in repeated_content
-
-
-def test_computers_paginate_command_history_with_filters(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
-    computer_record: Computer,
-) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
-    commands = ClientCommand.objects.bulk_create(
-        [
-            ClientCommand(
-                computer=computer_record,
-                type="diagnostic",
-                payload={"position": position},
-                status="failed",
-                error=f"Failure {position}",
-                completed=timezone.now(),
-            )
-            for position in range(101)
-        ]
-    )
-    client = request_client(user=staff_user)
-    filters = {
-        "access": "allowed",
-        "command_computer": computer_record.pk,
-        "command_type": "diagnostic",
-        "command_status": "failed",
-    }
-
-    first_response = client.get(
-        reverse("core:computers"),
-        filters,
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER="command-filter",
-    )
-    first_content = first_response.content.decode()
-    second_response = client.get(
-        reverse("core:computers"),
-        {**filters, "command_page": 2},
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER="command-page-next",
-    )
-    second_content = second_response.content.decode()
-
-    assert first_response.status_code == 200
-    assert first_content.count("<details class=\"list-group-item px-4 py-3\"") == 100
-    assert f"id=\"command-{commands[-1].pk}\"" in first_content
-    assert f"id=\"command-{commands[0].pk}\"" not in first_content
-    assert "id=\"command-page-next\"" in first_content
-    assert "access=allowed" in first_content
-    assert f"command_computer={computer_record.pk}" in first_content
-    assert "command_type=diagnostic" in first_content
-    assert "command_status=failed" in first_content
-    assert "command_page=2" in first_content
-    assert second_response.status_code == 200
-    assert second_content.count("<details class=\"list-group-item px-4 py-3\"") == 1
-    assert f"id=\"command-{commands[0].pk}\"" in second_content
-    assert f"id=\"command-{commands[-1].pk}\"" not in second_content
-    assert (
-        "id=\"command-current-page\" type=\"hidden\" name=\"command_page\" value=\"2\""
-        in second_content
-    )
-    assert "id=\"command-page-previous\"" in second_content
-    assert "id=\"command-page-next\"" not in second_content
-
-
-def test_computers_open_commands_for_selected_computer(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
-    computer_record: Computer,
-) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
-    other_computer = Computer.objects.create(hostname="other-pc")
-    selected_command = ClientCommand.objects.create(
-        computer=computer_record,
-        type="diagnostic",
-        payload={"scope": "selected-command-payload"},
-    )
-    ClientCommand.objects.create(
-        computer=other_computer,
-        type="diagnostic",
-        payload={"scope": "other-command-payload"},
-    )
-
-    response = request_client(user=staff_user).get(
-        reverse("core:computers"),
-        {"command_computer": computer_record.pk},
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER=f"computer-commands-{computer_record.pk}",
-    )
-    content = response.content.decode()
-
-    assert response.status_code == 200
-    assert "id=\"command-history\"" in content
-    assert f"<option value=\"{computer_record.pk}\" selected>" in content
-    assert f"id=\"command-{selected_command.pk}\"" in content
-    assert "selected-command-payload" in content
-    assert "other-command-payload" not in content
-    assert "sanea-shell" not in content
-
-
-def test_computers_open_filtered_commands_from_counts(
-    request_client: Callable[..., Client],
-    user_create: Callable[..., User],
-    computer_record: Computer,
-) -> None:
-    staff_user = user_create(attributes={"is_staff": True})
-    pending_command = ClientCommand.objects.create(
-        computer=computer_record,
-        type="diagnostic",
-        payload={"scope": "pending-command-payload"},
-    )
-    failed_command = ClientCommand.objects.create(
-        computer=computer_record,
-        type="diagnostic",
-        payload={"scope": "failed-command-payload"},
-        status="failed",
-        error="Diagnostic failed",
-        completed=timezone.now(),
-    )
-    client = request_client(user=staff_user)
-
-    list_response = client.get(reverse("core:computers"))
-    response = client.get(
-        reverse("core:computers"),
-        {
-            "command_computer": computer_record.pk,
-            "command_status": "pending",
-        },
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER=f"computer-command-pending-{computer_record.pk}",
-    )
-    content = response.content.decode()
-    list_content = list_response.content.decode()
-
-    assert list_response.status_code == 200
-    assert f"id=\"computer-command-pending-{computer_record.pk}\"" in list_content
-    assert f"id=\"computer-command-failed-{computer_record.pk}\"" in list_content
-    assert "<span class=\"badge text-bg-warning\">1</span>" in list_content
-    assert "<span class=\"badge text-bg-danger\">1</span>" in list_content
-    assert response.status_code == 200
-    assert "id=\"command-history\"" in content
-    assert f"<option value=\"{computer_record.pk}\" selected>" in content
-    assert "<option value=\"pending\" selected>Pending</option>" in content
-    assert f"id=\"command-{pending_command.pk}\"" in content
-    assert "pending-command-payload" in content
-    assert "failed-command-payload" not in content
-    assert "sanea-shell" not in content
-
-    failed_response = client.get(
-        reverse("core:computers"),
-        {
-            "command_computer": computer_record.pk,
-            "command_status": "failed",
-        },
-        HTTP_HX_REQUEST="true",
-        HTTP_HX_TRIGGER=f"computer-command-failed-{computer_record.pk}",
-    )
-    failed_content = failed_response.content.decode()
-
-    assert failed_response.status_code == 200
-    assert "<option value=\"failed\" selected>Failed</option>" in failed_content
-    assert f"id=\"command-{failed_command.pk}\"" in failed_content
-    assert "failed-command-payload" in failed_content
-    assert "pending-command-payload" not in failed_content
-    assert "sanea-shell" not in failed_content

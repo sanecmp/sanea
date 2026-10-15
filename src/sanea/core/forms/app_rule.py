@@ -1,11 +1,12 @@
 """Forms for managing application rules."""
 
-
 from django.db.models import Max, QuerySet
 from django.db.models.functions import Length
+from django.utils.translation import gettext_lazy as _
+from siteforms.composers.base import FORM
 
 from ..models import ActivityEvent, AppRule
-from .base import SaneaModelForm
+from .base import GridModelForm
 
 
 def get_app_suggestions(events: QuerySet[ActivityEvent]) -> dict[str, tuple[str, ...]]:
@@ -26,8 +27,26 @@ def get_app_suggestions(events: QuerySet[ActivityEvent]) -> dict[str, tuple[str,
     return suggestions
 
 
-class AppRuleForm(SaneaModelForm):
+class AppRuleForm(GridModelForm):
     """Edit application quotas and recognition conditions."""
+
+    class Composer(GridModelForm.Composer):
+        wrappers = {
+            "recognition": (
+                "<fieldset class=\"mt-2 pt-3 border-top\"><legend class=\"h6 mb-3\">{title}</legend>{rows}</fieldset>"
+            ),
+        }
+        layout = {FORM: {
+            "enabled": ["apply"],
+            "identity": ["name"],
+            "quotas": [("max_launches", "max_time")],
+            "recognition": [
+                ("prc_name", "prc_name_match"),
+                ("exe", "exe_match"),
+                ("wnd_title", "wnd_title_match"),
+            ],
+        }}
+        groups = {"recognition": _("Recognition conditions")}
 
     def __init__(
         self,
@@ -37,6 +56,11 @@ class AppRuleForm(SaneaModelForm):
     ) -> None:
         super().__init__(*args, **kwargs)
         self.suggestions: dict[str, tuple[str, ...]] = {}
+
+        for field_name in ("prc_name_match", "exe_match", "wnd_title_match"):
+            field = self.fields[field_name]
+            field.widget.attrs["aria-label"] = field.label
+            field.label = _("Comparison")
 
         for field_name, values in (suggestions or {}).items():
 

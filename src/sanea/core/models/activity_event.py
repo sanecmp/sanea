@@ -89,7 +89,10 @@ class ActivityEventQuerySet(models.QuerySet):
         *,
         recent_limit: int = 10,
     ) -> ActivityReport:
-        """Build activity aggregates for local start dates in ``[since, till)``."""
+        """Build aggregates for local start dates in ``[since, till)``.
+
+        Include up to ``recent_limit`` completed runs of each kind.
+        """
 
         if till <= since:
             raise ValueError("till must be later than since")
@@ -424,7 +427,16 @@ class _ActivityReportBuilder:
             )
 
         rows.sort(key=lambda item: (item.started, item.account_id), reverse=True)
-        return tuple(rows[: self.recent_limit])
+        counts: dict[str, int] = defaultdict(int)
+        recent = []
+
+        for item in rows:
+
+            if counts[item.kind] < self.recent_limit:
+                recent.append(item)
+                counts[item.kind] += 1
+
+        return tuple(recent)
 
     @staticmethod
     def _get_local_date(event: ActivityEvent) -> date:

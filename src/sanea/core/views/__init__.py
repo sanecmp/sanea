@@ -6,9 +6,9 @@ from .app_rules import app_rules
 from .authentication import sign_in, sign_out
 from .client import client_events, client_log, client_register, client_register_confirm, client_sync
 from .computers import computers
+from .computer_commands import computer_commands
+from .computer_updates import computer_updates
 from .dashboard import dashboard
-from .issues import issues
-from .ignored_processes import ignored_processes
 from .limits import limits
 from .people import people
 from .ranges import ranges
@@ -27,9 +27,9 @@ __all__ = [
     "client_register_confirm",
     "client_sync",
     "computers",
+    "computer_commands",
+    "computer_updates",
     "dashboard",
-    "issues",
-    "ignored_processes",
     "limits",
     "people",
     "ranges",

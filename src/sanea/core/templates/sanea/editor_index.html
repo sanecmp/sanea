@@ -3,12 +3,8 @@
 
 {% block content %}
 {% include_ "sanea/{{ section }}/_header.html" %}
-
-<div id="{{ editor_id }}" class="mb-4">
-    {% if editor_form %}
-        {% include_ "sanea/{{ section }}/_editor.html" %}
-    {% endif %}
-</div>
-
+<div id="{{ message_id }}" class="mb-3"></div>
+{% include "sanea/_editor_dialog.html" %}
 {% include_ "sanea/{{ section }}/_list.html" %}
+{% block after_editor_list %}{% endblock %}
 {% endblock %}

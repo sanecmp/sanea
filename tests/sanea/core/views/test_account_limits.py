@@ -10,6 +10,7 @@ from django.test import Client
 from django.urls import reverse
 from sanelib.protocol import parse_event_packet
 
+from sanea.core.forms import AppRuleForm, RangeForm, SessionRuleForm
 from sanea.core.forms.account_limits import AccountLimitsForm
 from sanea.core.models import (
     Account, ActivityEvent, AppRule, Computer, ComputerConfig, IdentifierSequence,
@@ -130,9 +131,80 @@ def test_account_limits_get_preserves_graph_and_scopes_choices_and_suggestions(
     assert "id=\"id_sessions-0-max_duration_help\"" in content
     assert "data-delete-field" in content
     assert "data-rule-deletion" in content
+    assert "nav nav-tabs sanea-limits-accounts" in content
+    assert "aria-current=\"page\"" in content
+    assert "d-inline-block text-body-secondary mb-3" not in content
+    assert "sanea-limits-caution" not in content
+    assert "<use href=\"#icon-plus\">" in content
+    assert "<use href=\"#icon-trash\">" in content
+    assert "data-had-allowed-times=\"true\"" in content
+    assert "data-limits-applied=\"false\"" in content
+    assert "Presets" not in content
+    grid_rows = [re.findall(r' name="([^"]+)"', row) for row in content.split('class="sanea-limits-fields"')[1:]]
+    assert ["ranges-0-weekday", "ranges-0-since", "ranges-0-till"] in grid_rows
+    assert ["sessions-0-apply"] in grid_rows
+    assert ["sessions-0-max_sessions", "sessions-0-max_duration", "sessions-0-break_duration"] in grid_rows
+    assert ["apps-0-apply"] in grid_rows
+    assert ["apps-0-prc_name", "apps-0-prc_name_match"] in grid_rows
+    assert ["apps-0-exe", "apps-0-exe_match"] in grid_rows
+    assert ["apps-0-wnd_title", "apps-0-wnd_title_match"] in grid_rows
+    assert content.index('name="sessions-0-apply"') < content.index('name="sessions-0-name"')
+    assert content.index('name="apps-0-apply"') < content.index('name="apps-0-name"')
     assert f"form=\"account-remove-sessions-{account.limits.session_rules.get().pk}\"" in content
-    sessions_markup = content.split("id=\"account-limits-sessions\"", 1)[1].split("id=\"account-limits-apps\"", 1)[0]
-    assert sessions_markup.index("data-add-form") < sessions_markup.index("data-form-rows")
+    formsets_markup = content.split('data-formset="')[1:]
+    assert len(formsets_markup) == 3
+    assert all(markup.index("data-add-form") < markup.index("data-form-rows") for markup in formsets_markup)
+    assert read_limits_state() == before
+
+
+def test_account_limits_reuses_template_form_rows(limits_card_account: Account) -> None:
+    limits = limits_card_account.limits
+    editor = AccountLimitsForm(account=limits_card_account)
+    form_pairs = (
+        (SessionRuleForm(prefix="sessions-0"), editor.sessions.forms[0], {}),
+        (RangeForm(prefix="ranges-0", limits=limits), editor.ranges.forms[0], {"rule": "session_rule"}),
+        (AppRuleForm(prefix="apps-0"), editor.apps.forms[0], {"rule": None}),
+    )
+
+    for template_form, account_form, aliases in form_pairs:
+        rendered_rows = []
+
+        for form in (template_form, account_form):
+            rows = re.split(r'<div\s+class="(?:row gx-3|sanea-limits-fields)">', f"{form}")[1:]
+            field_rows = [
+                [
+                    aliases.get(name, name)
+                    for field in re.findall(r' name="([^"]+)"', row)
+                    if (name := field.removeprefix(f"{form.prefix}-")) not in ("id", "DELETE")
+                    and aliases.get(name, name) is not None
+                ]
+                for row in rows
+            ]
+            rendered_rows.append([row for row in field_rows if row])
+
+        assert rendered_rows[0] == rendered_rows[1], template_form.prefix
+        assert rendered_rows[0][0] == ["apply"]
+        assert all(f'name="{account_form.prefix}-{name}"' in f"{account_form}" for name in ("id", "DELETE"))
+
+
+def test_empty_schedule_shows_no_confirmation_until_unsafe_save(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    computer_record: Computer,
+) -> None:
+    account = computer_record.accounts.get()
+    before = read_limits_state()
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+
+    response = client.get(reverse("core:account_limits", args=(account.pk,)))
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert "sanea-limits-caution" not in content
+    assert 'type="hidden" name="limits-confirm_empty_schedule"' in content
+    assert 'type="checkbox" name="limits-confirm_empty_schedule"' not in content
+    assert 'data-had-allowed-times="false"' in content
+    assert 'data-empty-schedule-confirmation="There are no allowed intervals.' in content
     assert read_limits_state() == before
 
 
@@ -491,3 +563,5 @@ def test_account_limits_requires_explicit_confirmation_before_blocking_all_sessi
 
     else:
         assert read_limits_state() == before
+        assert 'type="checkbox" name="limits-confirm_empty_schedule"' in response.content.decode()
+        assert "Add allowed times to the schedule or explicitly confirm blocking all sessions." in response.content.decode()

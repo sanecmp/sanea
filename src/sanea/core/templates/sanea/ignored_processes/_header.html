@@ -1,15 +1,16 @@
 {% load i18n %}
-<div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
-    <div>
-        <h1 class="display-6 fw-bold mb-1">{% translate "Ignored processes" %}</h1>
-        <p class="text-body-secondary mb-0">
-            {% translate "Processes on this list are not included in activity reports on any computer." %}
-        </p>
+<div class="mb-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-2">
+        <h2 class="h4 fw-bold mb-0">{% translate "Ignored processes" %}</h2>
+        <a class="btn btn-primary d-inline-flex align-items-center gap-2 ms-auto" id="ignored-process-add"
+           href="{{ ignored_processes_url }}?exclusion=new#ignored-processes"
+           hx-get="{{ ignored_processes_url }}?exclusion=new"
+           hx-target="#ignored-process-editor" hx-swap="innerHTML">
+            <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-plus"></use></svg>
+            {% translate "Add process" %}
+        </a>
     </div>
-    <a class="btn btn-primary" id="ignored-process-add"
-       href="{{ ignored_processes_url }}?exclusion=new"
-       hx-get="{{ ignored_processes_url }}?exclusion=new"
-       hx-target="#ignored-process-editor" hx-swap="innerHTML">
-        {% translate "Add process" %}
-    </a>
+    <p class="text-body-secondary mb-0">
+        {% translate "Processes on this list are not included in activity reports on any computer." %}
+    </p>
 </div>

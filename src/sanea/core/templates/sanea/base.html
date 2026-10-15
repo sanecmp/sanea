@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'vendor/tom-select/tom-select.bootstrap5.min.css' %}">
     <link rel="stylesheet" href="{% static 'sanea/css/app.css' %}">
+    <link rel="stylesheet" href="{% static 'sanea/css/tables.css' %}">
+    <link rel="stylesheet" href="{% static 'sanea/css/forms.css' %}">
+    <link rel="stylesheet" href="{% static 'sanea/css/dialogs.css' %}">
     {% block extra_head %}{% endblock %}
 </head>
 <body data-select-search="{% translate 'Search' %}" data-select-empty="{% translate 'No matches' %}">
@@ -34,15 +37,47 @@
         <path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5"/>
         <circle cx="16" cy="6" r="2"/><circle cx="8" cy="12" r="2"/><circle cx="13" cy="18" r="2"/>
     </symbol>
-    <symbol id="icon-issues" viewBox="0 0 24 24">
-        <path d="M12 3 2.5 20h19z"/><path d="M12 9v5M12 17.5v.5"/>
-    </symbol>
-    <symbol id="icon-settings" viewBox="0 0 24 24">
-        <circle cx="12" cy="12" r="3"/>
-        <path d="M19 13.5v-3l-2.1-.7-.7-1.7 1-2-2.1-2.1-2 1-1.7-.7L10.5 2h-3l-.7 2.1-1.7.7-2-1L1 5.9l1 2-.7 1.7L0 10.5v3l2.1.7.7 1.7-1 2L3.9 20l2-1 1.7.7.9 2.3h3l.7-2.1 1.7-.7 2 1 2.1-2.1-1-2 .7-1.7z"/>
-    </symbol>
     <symbol id="icon-menu" viewBox="0 0 24 24">
         <path d="M4 7h16M4 12h16M4 17h16"/>
+    </symbol>
+    <symbol id="icon-edit" viewBox="0 0 24 24">
+        <path d="m15 5 4 4M4 20l5-1L20 8a2.8 2.8 0 0 0-4-4L5 15z"/>
+    </symbol>
+    <symbol id="icon-plus" viewBox="0 0 24 24">
+        <path d="M12 5v14M5 12h14"/>
+    </symbol>
+    <symbol id="icon-minus" viewBox="0 0 24 24">
+        <path d="M5 12h14"/>
+    </symbol>
+    <symbol id="icon-trash" viewBox="0 0 24 24">
+        <path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7M14 10v7"/>
+    </symbol>
+    <symbol id="icon-copy" viewBox="0 0 24 24">
+        <rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>
+    </symbol>
+    <symbol id="icon-distribute" viewBox="0 0 24 24">
+        <path d="M12 20v-8M5 4v4a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4V4M2 7l3-3 3 3M16 7l3-3 3 3"/>
+    </symbol>
+    <symbol id="icon-refresh" viewBox="0 0 24 24">
+        <path d="M20 7v5h-5M4 17v-5h5M20 12a8 8 0 0 0-14-5M4 12a8 8 0 0 0 14 5"/>
+    </symbol>
+    <symbol id="icon-info" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7v1"/>
+    </symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24">
+        <path d="m5 12 4 4L19 6"/>
+    </symbol>
+    <symbol id="icon-ban" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"/><path d="m6 6 12 12"/>
+    </symbol>
+    <symbol id="icon-clock" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>
+    </symbol>
+    <symbol id="icon-online" viewBox="0 0 24 24">
+        <path d="M3 8a14 14 0 0 1 18 0M6 12a9 9 0 0 1 12 0M9 16a4 4 0 0 1 6 0M12 20h.01"/>
+    </symbol>
+    <symbol id="icon-offline" viewBox="0 0 24 24">
+        <path d="m3 3 18 18M3 8a14 14 0 0 1 3-2M10 5a14 14 0 0 1 11 3M6 12a9 9 0 0 1 4-2M16 10a9 9 0 0 1 2 2M9 16a4 4 0 0 1 6 0M12 20h.01"/>
     </symbol>
 </svg>
 
@@ -83,6 +118,7 @@
         </header>
 
         <main class="container-fluid sanea-main px-3 px-lg-4 py-4 py-lg-5">
+            {% sitetree_breadcrumbs from "main" template "sanea/_breadcrumbs.html" %}
             {% block content %}{% endblock %}
         </main>
     </div>
@@ -110,6 +146,7 @@
 <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
 <script src="{% static 'vendor/tom-select/tom-select.complete.min.js' %}"></script>
 <script src="{% static 'sanea/js/searchable-selects.js' %}"></script>
+<script src="{% static 'sanea/js/editor-dialog.js' %}"></script>
 {% block extra_body %}{% endblock %}
 </body>
 </html>

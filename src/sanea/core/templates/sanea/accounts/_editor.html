@@ -1,63 +1,11 @@
+{% extends "sanea/_editor.html" %}
 {% load i18n %}
-<section class="card sanea-editor-card">
-    <div class="card-body p-4">
-        <h2 class="h5 fw-bold mb-1">{% translate "Configure account" %}</h2>
-        <p class="text-body-secondary mb-3">
-            {{ account.name|default:account.login }} · {{ account.computer.get_display_name }} · UID {{ account.uid }}
-        </p>
-        <form id="account-save" method="post" action="{% url 'core:accounts' %}"
-              hx-post="{% url 'core:accounts' %}" hx-target="#account-editor" hx-swap="innerHTML">
-            {% csrf_token %}
-            <input type="hidden" name="account" value="{{ account.pk }}">
-            {{ account_form }}
-            <p>
-                <a class="btn btn-outline-primary" href="{% url 'core:account_limits' account.pk %}">
-                    {% translate "Schedule, sessions and applications" %}
-                </a>
-            </p>
-            {% if not account.limits_id %}
-                <div class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    <span>{% translate "Configure limits before enabling them for this account." %}</span>
-                    <button class="btn btn-sm btn-outline-secondary" type="submit"
-                            id="account-limits-customize-{{ account.pk }}" name="customize_limits" value="1"
-                            hx-post="{% url 'core:accounts' %}" hx-target="#account-editor" hx-swap="innerHTML">
-                        {% translate "Create empty limits set" %}
-                    </button>
-                </div>
-            {% else %}
-                {% with scope=account.limits.get_editing_scope %}
-                {% include "sanea/limits/_scope.html" %}
-                <div class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
-                    <span>
-                        {% blocktranslate with limits=account.limits %}Limits: {{ limits }}{% endblocktranslate %}
-                    </span>
-                    <span class="d-flex flex-wrap gap-2">
-                        {% if scope.template or not scope.shared %}
-                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:session_rules' account.limits_id %}">
-                            {% if scope.template %}{% translate "Template session rules" %}{% else %}{% translate "Session rules" %}{% endif %}
-                        </a>
-                        <a class="btn btn-sm btn-outline-secondary" href="{% url 'core:ranges' account.limits_id %}">
-                            {% if scope.template %}{% translate "Template schedule" %}{% else %}{% translate "Schedule" %}{% endif %}
-                        </a>
-                        {% endif %}
-                        <button class="btn btn-sm btn-outline-secondary" type="submit"
-                                id="account-limits-customize-{{ account.pk }}" name="customize_limits" value="1"
-                                hx-post="{% url 'core:accounts' %}" hx-target="#account-editor" hx-swap="innerHTML">
-                            {% translate "Customize separately" %}
-                        </button>
-                    </span>
-                </div>
-                {% endwith %}
-            {% endif %}
-            <div class="d-flex gap-2">
-                <button class="btn btn-primary" type="submit" name="__submit" value="account">
-                    {% translate "Save" %}
-                </button>
-                <a class="btn btn-outline-secondary" id="account-cancel" href="{% url 'core:accounts' %}"
-                   hx-get="{% url 'core:accounts' %}" hx-target="#account-editor" hx-swap="innerHTML">
-                    {% translate "Cancel" %}
-                </a>
-            </div>
-        </form>
-    </div>
-</section>
+
+{% block editor_title %}{% translate "Configure account" %}{% endblock %}
+
+{% block editor_body %}
+<p class="small text-body-secondary mb-4">
+    {{ account.name|default:account.login }} · {{ account.computer.get_display_name }} · UID {{ account.uid }}
+</p>
+{{ account_form }}
+{% endblock %}

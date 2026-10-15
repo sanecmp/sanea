@@ -6,10 +6,10 @@
             {% for command in command_rows %}
                 <details class="list-group-item px-4 py-3" id="command-{{ command.pk }}">
                     <summary class="sanea-command-summary">
-                        <span class="fw-semibold text-break">{{ command.computer.get_display_name }}</span>
+                        <span class="text-break">{{ command.computer.get_display_name }}</span>
                         <code class="text-break">{{ command.type }}</code>
                         <span class="text-body-secondary text-nowrap">
-                            {{ command.created|date:"SHORT_DATETIME_FORMAT" }}
+                            {{ command.created|date:"Y-m-d H:i" }}
                         </span>
                         <span>
                             {% if command.status == "done" %}
@@ -26,11 +26,11 @@
                             <dt class="col-sm-3">{% translate "Command ID" %}</dt>
                             <dd class="col-sm-9 mb-0"><code>#{{ command.pk }}</code></dd>
                             <dt class="col-sm-3">{% translate "Queued" %}</dt>
-                            <dd class="col-sm-9 mb-0">{{ command.created|date:"SHORT_DATETIME_FORMAT" }}</dd>
+                            <dd class="col-sm-9 mb-0">{{ command.created|date:"Y-m-d H:i" }}</dd>
                             <dt class="col-sm-3">{% translate "Completed" %}</dt>
-                            <dd class="col-sm-9 mb-0">{{ command.completed|date:"SHORT_DATETIME_FORMAT"|default:"—" }}</dd>
+                            <dd class="col-sm-9 mb-0">{{ command.completed|date:"Y-m-d H:i"|default:"—" }}</dd>
                             <dt class="col-sm-3">{% translate "Last updated" %}</dt>
-                            <dd class="col-sm-9 mb-0">{{ command.updated|date:"SHORT_DATETIME_FORMAT" }}</dd>
+                            <dd class="col-sm-9 mb-0">{{ command.updated|date:"Y-m-d H:i" }}</dd>
                             <dt class="col-sm-3">{% translate "Result" %}</dt>
                             <dd class="col-sm-9 mb-0">{{ command.get_status_display|default:_('Pending') }}</dd>
                             <dt class="col-sm-3">{% translate "Error" %}</dt>
@@ -39,11 +39,14 @@
                         <div class="small fw-semibold mb-2">{% translate "Payload" %}</div>
                         <pre class="sanea-command-payload mb-0">{{ command.format_payload_details }}</pre>
                         {% if command.status == "failed" %}
-                            <form class="mt-3" method="post" action="{{ computers_url }}"
-                                  hx-post="{{ computers_url }}" hx-target="#command-history" hx-swap="outerHTML"
-                                  hx-include="#command-filter, #computer-filter select, #command-current-page">
+                            <form class="mt-3" method="post" action="{{ commands_url }}"
+                                  hx-post="{{ commands_url }}" hx-target="#command-history" hx-swap="outerHTML">
                                 {% csrf_token %}
                                 <input type="hidden" name="command" value="{{ command.pk }}">
+                                {% for field in command_filter %}
+                                    <input type="hidden" name="{{ field.name }}" value="{{ field.value|default_if_none:'' }}">
+                                {% endfor %}
+                                <input type="hidden" name="command_page" value="{{ command_page.number }}">
                                 <button class="btn btn-outline-primary btn-sm" id="command-repeat-{{ command.pk }}"
                                         type="submit" name="__submit" value="command_repeat">
                                     {% translate "Repeat command" %}
@@ -63,16 +66,16 @@
                 <div class="btn-group" role="group">
                     {% if command_page.has_previous %}
                         <a class="btn btn-outline-secondary btn-sm" id="command-page-previous"
-                           href="{{ computers_url }}?tab=commands&amp;{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.previous_page_number }}#command-history"
-                           hx-get="{{ computers_url }}?tab=commands&amp;{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.previous_page_number }}"
+                           href="{{ commands_url }}?{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.previous_page_number }}#command-history"
+                           hx-get="{{ commands_url }}?{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.previous_page_number }}"
                            hx-target="#command-history" hx-swap="outerHTML" hx-push-url="true">
                             {% translate "Previous" %}
                         </a>
                     {% endif %}
                     {% if command_page.has_next %}
                         <a class="btn btn-outline-secondary btn-sm" id="command-page-next"
-                           href="{{ computers_url }}?tab=commands&amp;{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.next_page_number }}#command-history"
-                           hx-get="{{ computers_url }}?tab=commands&amp;{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.next_page_number }}"
+                           href="{{ commands_url }}?{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.next_page_number }}#command-history"
+                           hx-get="{{ commands_url }}?{% if command_filter_query %}{{ command_filter_query }}&amp;{% endif %}command_page={{ command_page.next_page_number }}"
                            hx-target="#command-history" hx-swap="outerHTML" hx-push-url="true">
                             {% translate "Next" %}
                         </a>

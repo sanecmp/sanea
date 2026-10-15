@@ -3,11 +3,11 @@
 from typing import TYPE_CHECKING, Self
 
 from sanelib.protocol import SessionRule as ClientSessionRule
-from django.db import models, transaction
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from .base import TimestampedModel
-from .identifier_sequence import IdentifierSequence
+from .rule_editing import save_limits_form
 from .validation import NON_NEGATIVE
 
 if TYPE_CHECKING:
@@ -77,29 +77,9 @@ class SessionRule(TimestampedModel):
         return self.name
 
     @classmethod
-    @transaction.atomic
     def save_form(cls, form: "SessionRuleForm", limits: "Limits") -> Self:
         """Save a rule, forking an assigned snapshot when required."""
-        target_limits = limits.checkout_for_edit()
-        manager = cls.objects
-        source = form.save(commit=False)
-
-        if source.pk and target_limits.pk != limits.pk:
-            rule = manager.get(limits=target_limits, ident=source.ident)
-            rule.apply_form(form)
-
-        else:
-            rule = source
-
-        rule.limits = target_limits
-
-        if not rule.pk:
-            rule.ident = IdentifierSequence.allocate(cls)
-
-        rule.full_clean()
-        rule.save()
-        target_limits.materialize_computer_configs()
-        return rule
+        return save_limits_form(cls, form, limits, get_relations=lambda target: {"limits": target})
 
     def build_client_config(self) -> ClientSessionRule:
         """Build this rule in the shared sanex configuration format."""

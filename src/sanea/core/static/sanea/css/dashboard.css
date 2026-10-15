@@ -1,0 +1,16 @@
+.sanea-dashboard-filter {
+    align-items: end;
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: minmax(10rem, 1fr) minmax(12rem, 2fr) auto;
+}
+
+.sanea-dashboard-filter > div {
+    margin-bottom: 0 !important;
+}
+
+@media (max-width: 575.98px) {
+    .sanea-dashboard-filter {
+        grid-template-columns: 1fr;
+    }
+}

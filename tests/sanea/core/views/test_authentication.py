@@ -5,7 +5,7 @@ from collections.abc import Callable
 from django.urls import reverse
 from django.test import Client
 
-from sanea.core.models import User
+from sanea.core.models import Computer, User
 
 
 def test_sign_in_uses_sitegate_form(request_client: Callable[..., Client]) -> None:
@@ -37,7 +37,9 @@ def test_sign_in_uses_browser_language(request_client: Callable[..., Client]) ->
     assert "Sign in" in english.content.decode()
 
 
-def test_sitegate_signs_management_user_in(request_client: Callable[..., Client], user_create: Callable[..., User]) -> None:
+def test_sitegate_signs_management_user_in(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
+) -> None:
     user = user_create(attributes={"is_staff": True})
     client = request_client()
 
@@ -53,6 +55,11 @@ def test_sitegate_signs_management_user_in(request_client: Callable[..., Client]
     assert response.status_code == 302
     assert response.url == reverse("core:dashboard")
     assert client.get(reverse("core:dashboard")).status_code == 200
+
+    limits_response = client.get(reverse("core:account_limits", args=(computer_record.accounts.get().pk,)))
+
+    assert limits_response.status_code == 200
+    assert "name=\"sessions-TOTAL_FORMS\"" in limits_response.content.decode()
 
 
 def test_sign_out_requires_post(request_client: Callable[..., Client], user_create: Callable[..., User]) -> None:

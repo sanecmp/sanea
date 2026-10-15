@@ -1,139 +1,77 @@
 """Registered computer views."""
 
-from collections.abc import Callable, Mapping
-from urllib.parse import urlencode
+from collections.abc import Callable
 
-from django.core.paginator import Paginator
 from django.db.models import Count, Q, QuerySet
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, HttpResponseBadRequest
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
-from django.utils.translation import gettext_lazy as _
 from django.utils.functional import Promise
+from django.utils.translation import gettext_lazy as _
 
-from ..forms import CommandFilterForm, ComputerFilterForm, ComputerForm, SanexUpdateForm
-from ..models import ClientCommand, CommandStatus, Computer, GlobalUpdate
+from ..forms import ComputerDetailsForm, ComputerFilterForm, ComputerForm
+from ..models import CommandStatus, Computer
 from ..services.registration_window import registration_window
 from .base import ManagedView
-from ..models.client_command import CommandRepeatResult
-from ..models.global_update import UpdateActivationResult
-
-
-COMMAND_PAGE_SIZE = 100
-COMPUTER_TABS = (
-    ("computers", _("Computer list")),
-    ("commands", _("Command history")),
-    ("registration", _("Registration")),
-    ("updates", _("Updates")),
-)
+from .issues import IssuePanel
 
 
 class ComputersView(ManagedView):
-    """List computers, register clients, and manage client commands."""
+    """List registered computers and inspect or edit them in a dialog."""
 
     def get_ajax_handlers(self) -> dict[str, Callable[..., HttpResponse]]:
-        """Return computer, registration, update, and history handlers."""
+        """Return computer dialog, registration and list handlers."""
         return {
             "computer-details-*": self.render_details,
             "computer-configure-*": self.render_editor,
             "computer-cancel-*": self.render_details,
             "computer-save": self.save_computer,
-            "computer-close-*": self.close_details,
-            "computer-commands-*": self.render_command_history,
-            "computer-command-pending-*": self.render_command_history,
-            "computer-command-failed-*": self.render_command_history,
             "registration-open": self.open_registration,
             "registration-refresh": self.render_registration,
-            "update-save": self.queue_update,
-            "update-cancel": self.cancel_update,
             "computer-live-refresh": self.render_live_refresh,
-            "command-filter": self.render_command_history,
-            "command-page-*": self.render_command_history,
-            "command-repeat-*": self.repeat_command,
             "computer-filter": self.render_computer_list,
+            "issue-filter": self.render_issues,
+            "diagnostic-refresh": self.render_logs,
         }
 
     def dispatch(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Render the complete page and handle non-JavaScript actions."""
-        update_context = self.build_update_context()
-        computer = None
-        computer_form = None
-        request_data = request.POST
+        """Render the overview and handle forms without JavaScript."""
+        details_context = {}
 
         if request.method == "POST":
-            submit = request_data.get("__submit")
+            submit = request.POST.get("__submit")
 
-            if submit == "update":
-                update_context = self.process_update(request)
-
-            elif submit == "update_cancel":
-                self.cancel_active_update()
-                url = reverse("core:computers")
-                return redirect(f"{url}?tab=updates#sanex-updates")
-
-            elif submit == "command_repeat":
-                self.repeat_requested_command(request)
-                url = reverse("core:computers")
-                return redirect(f"{url}?tab=commands#command-history")
-
-            elif submit == "computer":
-                computer, computer_form = self.build_computer_form(request)
-
-                if computer_form.is_submitted and computer_form.is_valid():
-                    saved = Computer.save_form(computer_form)
-                    url = reverse("core:computers")
-                    return redirect(f"{url}?computer={saved.pk}")
-
-            else:
+            if submit == "registration":
                 registration_window.open()
-                url = reverse("core:computers")
-                return redirect(f"{url}?tab=registration#registration-window")
+                return redirect(f"{reverse('core:computers')}?registration=1#registration-window")
+
+            if submit != "computer":
+                return HttpResponseBadRequest()
+
+            computer, form = self.build_computer_form(request)
+
+            if form.is_submitted and form.is_valid():
+                saved = Computer.save_form(form)
+                return redirect(f"{reverse('core:computers')}?computer={saved.pk}")
+
+            details_context = self.build_editor_context(computer, form)
 
         elif request.GET.get("computer"):
             computer = self.get_requested_computer(request)
-
-            if request.GET.get("edit"):
-                computer_form = self.build_unbound_computer_form(computer)
+            details_context = (
+                self.build_editor_context(computer, self.build_unbound_computer_form(computer))
+                if request.GET.get("edit") else self.build_details_context(computer)
+            )
 
         context = {
             "page_title": _("Computers"),
-            **self.build_tab_context(request),
             **self.build_computer_list_context(request),
-            "computer": computer,
-            "computer_form": computer_form,
             **self.build_registration_context(),
-            **update_context,
-            **self.build_command_history_context(request),
+            **IssuePanel(request).build_context(),
+            **details_context,
+            "registration_expanded": bool(request.GET.get("registration")) or bool(registration_window.get_snapshot()),
         }
         return render(request, "sanea/computers/index.html", context)
-
-    def build_tab_context(self, request: HttpRequest) -> dict[str, object]:
-        """Keep direct links and non-JavaScript actions on the relevant tab."""
-        data = request.POST if request.method == "POST" else request.GET
-        active_tab = data.get("tab")
-        submit = data.get("__submit")
-
-        if submit == "update":
-            active_tab = "updates"
-
-        elif submit == "computer":
-            active_tab = "computers"
-
-        if active_tab not in dict(COMPUTER_TABS):
-            command_fields = (*CommandFilterForm.base_fields, "command_page")
-            active_tab = "commands" if any(data.get(field) for field in command_fields) else "computers"
-
-        query = self.build_command_filter_query(data)
-
-        if command_page := data.get("command_page"):
-            page_query = urlencode({"command_page": command_page})
-            query = f"{query}&{page_query}" if query else page_query
-
-        return {
-            "active_tab": active_tab,
-            "computer_tabs": COMPUTER_TABS,
-            "tab_filter_query": query,
-        }
 
     def get_computers(self, **filters: str | None) -> QuerySet[Computer]:
         """Return computers with all overview counters and configurations."""
@@ -180,7 +118,9 @@ class ComputersView(ManagedView):
             "computer": computer,
             "computers_url": reverse("core:computers"),
             "message": message,
-            "list_oob": list_oob,
+            "table_oob": list_oob,
+            "computer_form": ComputerDetailsForm(instance=computer, readonly_fields="__all__", render_form_tag=False),
+            "read_only": True,
         }
 
     def render_details(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
@@ -221,6 +161,7 @@ class ComputersView(ManagedView):
         return {
             "computer": computer,
             "computer_form": form,
+            "read_only": False,
             "computers_url": reverse("core:computers"),
         }
 
@@ -246,11 +187,8 @@ class ComputersView(ManagedView):
             message=_("Computer settings saved."),
             list_oob=True,
         )
+        context.update(self.build_computer_list_context(request))
         return render(request, "sanea/computers/_details.html", context)
-
-    def close_details(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Close the computer detail panel."""
-        return HttpResponse()
 
     def build_registration_context(self) -> dict[str, object]:
         """Build the current registration-window context."""
@@ -269,25 +207,12 @@ class ComputersView(ManagedView):
         registration_window.open()
         return self.render_registration(request)
 
-    def build_update_context(
-        self,
-        form: SanexUpdateForm | None = None,
-        result: UpdateActivationResult | dict[str, int] | None=None,
-    ) -> dict[str, object]:
-        """Build the global sanex update form context."""
-        return {
-            "update_form": form or SanexUpdateForm(render_form_tag=False),
-            "update_result": result,
-            "active_update": GlobalUpdate.get_active(),
-            "computers_url": reverse("core:computers"),
-        }
-
     def build_computer_list_context(
         self,
         request: HttpRequest,
     ) -> dict[str, object]:
         """Validate overview filters and build the computer list context."""
-        data = request.GET or {}
+        data = (request.POST if request.method == "POST" else request.GET) or {}
         form = ComputerFilterForm(data, render_form_tag=False)
         computers = self.get_computers()
 
@@ -300,89 +225,6 @@ class ComputersView(ManagedView):
             "computers_url": reverse("core:computers"),
         }
 
-    def build_command_filter_query(self, data: Mapping[str, str]) -> str:
-        """Preserve list and command filters across history pages."""
-        field_names = (*ComputerFilterForm.base_fields, *CommandFilterForm.base_fields)
-        return urlencode(
-            [
-                (field_name, value)
-                for field_name in field_names
-                if (value := data.get(field_name))
-            ]
-        )
-
-    def build_command_history_context(
-        self,
-        request: HttpRequest,
-        *,
-        message: str | Promise | None=None,
-    ) -> dict[str, object]:
-        """Build filtered and paginated command history context."""
-        request_data = request.POST if request.method == "POST" else request.GET
-        data = request_data or {"command_status": ""}
-        form = CommandFilterForm(data, render_form_tag=False)
-        commands = ()
-
-        if form.is_valid():
-            commands = ClientCommand.get_recent(**form.get_filters())
-
-        command_page = Paginator(commands, COMMAND_PAGE_SIZE).get_page(
-            data.get("command_page")
-        )
-        return {
-            "command_filter": form,
-            "command_filter_query": self.build_command_filter_query(data),
-            "command_page": command_page,
-            "command_rows": command_page.object_list,
-            "computers_url": reverse("core:computers"),
-            "message": message,
-        }
-
-    def repeat_requested_command(self, request: HttpRequest) -> CommandRepeatResult:
-        """Repeat the failed command named by the request."""
-        command = get_object_or_404(
-            ClientCommand,
-            pk=request.POST.get("command"),
-            status=CommandStatus.FAILED,
-        )
-        return command.repeat()
-
-    def process_update(self, request: HttpRequest) -> dict[str, object]:
-        """Validate a global update request and queue its command."""
-        form = SanexUpdateForm(
-            request=request,
-            src="POST",
-            submit_marker="update",
-            render_form_tag=False,
-        )
-        result = None
-
-        if form.is_submitted and form.is_valid():
-            result = GlobalUpdate.activate(form.get_payload())
-            form = SanexUpdateForm(render_form_tag=False)
-
-        return self.build_update_context(form, result)
-
-    def queue_update(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Queue a validated update and refresh the update fragment."""
-        context = self.process_update(request)
-        return render(request, "sanea/computers/_updates.html", context)
-
-    def cancel_active_update(self) -> int:
-        """Cancel the active global update, if one exists."""
-        update = GlobalUpdate.get_active()
-
-        if update is None:
-            return 0
-
-        return update.cancel()
-
-    def cancel_update(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Cancel the active global update and refresh its fragment."""
-        cancelled = self.cancel_active_update()
-        context = self.build_update_context(result={"cancelled": cancelled})
-        return render(request, "sanea/computers/_updates.html", context)
-
     def render_computer_list(
         self,
         request: HttpRequest,
@@ -392,36 +234,18 @@ class ComputersView(ManagedView):
         context = self.build_computer_list_context(request)
         return render(request, "sanea/computers/_list.html", context)
 
-    def render_command_history(
-        self,
-        request: HttpRequest,
-        **kwargs: object,
-    ) -> HttpResponse:
-        """Render filtered command history."""
-        context = self.build_command_history_context(request)
-        return render(request, "sanea/computers/_command_history.html", context)
-
-    def repeat_command(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Repeat one failed command and refresh command history."""
-        result = self.repeat_requested_command(request)
-
-        if result.created:
-            message = _("Command queued again.")
-
-        else:
-            message = _("An identical command is already pending.")
-
-        context = self.build_command_history_context(request, message=message)
-        return render(request, "sanea/computers/_command_history.html", context)
-
     def render_live_refresh(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Refresh all computer rows without replacing filters or open editors."""
-        context = {
-            **self.build_computer_list_context(request),
-            **self.build_command_history_context(request),
-            "preserve_details": True,
-        }
-        return render(request, "sanea/computers/_live_refresh.html", context)
+        """Refresh the overview without replacing filters or the dialog."""
+        context = self.build_computer_list_context(request)
+        return render(request, "sanea/computers/_table.html", context)
+
+    def render_issues(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
+        """Filter issues without replacing the computer list."""
+        return IssuePanel(request).render_content()
+
+    def render_logs(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
+        """Refresh diagnostic logs only when requested."""
+        return IssuePanel(request).render_logs()
 
 
 computers = ComputersView().as_view()

@@ -77,15 +77,21 @@ def test_statistics_filters_and_renders_received_activity(
     assert "id=\"system-status\"" not in content
     assert "sanea-summary-card" not in content
     assert "vendor/chartjs/chart.umd.min.js" in content
-    assert "sanea/js/activity-chart.js" in content
+    assert "sanea/js/activity-charts.js" in content
+    assert "sanea/js/statistics.js" in content
+    assert "sanea/css/tables.css" in content
+    assert "sanea/css/statistics.css" in content
     assert "id=\"activity-chart\"" in content
     assert "50:17" in content
     assert "yandex_browser" in content
     assert "Launches" in content
     assert "Application usage" in content
+    assert "col-xl-7" not in content
+    assert "col-xl-5" not in content
     assert "3,137" not in content
-    assert "Time totals include only completed sessions and application runs" in content
-    assert "Other accounts in this selection may have older data." in content
+    assert "Time totals include only completed sessions and application runs" not in content
+    assert "Other accounts in this selection may have older data." not in content
+    assert "class=\"table-responsive sanea-table-wrap\"" in content
     assert ajax_response.status_code == 200
     assert "id=\"activity-area\"" in ajax_content
     assert "yandex_browser" in ajax_content
@@ -93,15 +99,18 @@ def test_statistics_filters_and_renders_received_activity(
 
     for rendered in (content, ajax_content):
         assert (
-            f"Last activity data received for the selected accounts: {date_format(received, "SHORT_DATETIME_FORMAT")}."
+            f"Last received: {date_format(received, "SHORT_DATETIME_FORMAT")}"
             in rendered
         )
-        assert f"<div>{date_format(local_start, "SHORT_DATETIME_FORMAT")}</div>" in rendered
-        assert "Times are shown in sanea's timezone: America/New_York." in rendered
+        assert f"<div>{date_format(local_start, "Y-m-d H:i")}</div>" in rendered
+        assert "America/New_York" in rendered
         assert "Asia/Novosibirsk" not in rendered
         assert "(UTC)" not in rendered
         assert "Last used" in rendered
-        assert f"<td>{date_format(local_last_used, "SHORT_DATETIME_FORMAT")}</td>" in rendered
+        assert (
+            "<td class=\"small text-body-secondary text-end text-nowrap\">"
+            f"{date_format(local_last_used, "Y-m-d H:i")}</td>"
+        ) in rendered
 
 
 @pytest.mark.parametrize(
@@ -112,8 +121,8 @@ def test_statistics_filters_and_renders_received_activity(
 @pytest.mark.parametrize(
     ("language", "explanation"),
     [
-        ("en", "A dash means no final duration has been received yet."),
-        ("ru", "Прочерк означает, что итоговая длительность ещё не получена."),
+        ("en", "No duration yet"),
+        ("ru", "Длительности пока нет"),
     ],
 )
 def test_statistics_shows_a_dash_until_application_end_is_received(
@@ -139,9 +148,8 @@ def test_statistics_shows_a_dash_until_application_end_is_received(
 
     assert response.status_code == 200
     assert "yandex_browser" in rendered
-    assert "<td>—</td>" in rendered
-    assert "<td>0:00</td>" not in rendered
-    assert explanation in rendered
+    assert f"title=\"{explanation}\">—</td>" in rendered
+    assert ">0:00</td>" not in rendered
 
     ending_content = lines[3]
     ending_packet = parse_event_packet(ending_content, hashlib.sha256(ending_content).hexdigest())
@@ -153,8 +161,8 @@ def test_statistics_shows_a_dash_until_application_end_is_received(
     completed = completed_response.content.decode()
 
     assert completed_response.status_code == 200
-    assert "<td>52:17</td>" in completed
-    assert "<td>—</td>" not in completed
+    assert ">52:17</td>" in completed
+    assert ">—</td>" not in completed
 
 
 def test_statistics_today_chart_uses_the_sanea_day_instead_of_the_computer_day(
@@ -223,7 +231,7 @@ def test_statistics_distinguishes_missing_events_from_no_activity_in_the_period(
     pending_content = pending_response.content.decode()
 
     assert "No activity events have been received for these accounts yet." in pending_content
-    assert "Last activity data received" not in pending_content
+    assert "Last received:" not in pending_content
     assert "Screen time" not in pending_content
 
     packet = parse_event_packet(client_events_content, hashlib.sha256(client_events_content).hexdigest())
@@ -233,7 +241,7 @@ def test_statistics_distinguishes_missing_events_from_no_activity_in_the_period(
     received_content = received_response.content.decode()
 
     assert "No activity events have been received" not in received_content
-    assert "Last activity data received" in received_content
+    assert "Last received:" in received_content
     assert "No screen time was recorded for this period." in received_content
     assert "No application use was recorded for this period." in received_content
 
@@ -258,3 +266,81 @@ def test_statistics_rejects_invalid_filters(
     assert response.status_code == 200
     assert "Correct the filters to view activity." in content
     assert "id=\"activity-chart\"" not in content
+
+
+@pytest.mark.parametrize(
+    "request_options",
+    [{}, {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "activity-filter"}],
+    ids=["page", "filter"],
+)
+@pytest.mark.parametrize("kind", ["application", "session", "invalid"])
+def test_statistics_separates_recent_kinds_and_retains_the_tab_with_filters(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    computer_record: Computer,
+    activity_run_create: Callable[..., None],
+    request_options: dict[str, str],
+    kind: str,
+) -> None:
+    account = computer_record.accounts.get()
+    started = int(timezone.now().timestamp()) - 7_200
+    activity_run_create(account, started=started, finished=started + 60, duration=60)
+
+    for index in range(12):
+        moment = started + (index + 1) * 120
+        activity_run_create(
+            account, kind="prc", started=moment, finished=moment + 60,
+            duration=60, prc_name=f"synthetic-app-{index}",
+        )
+
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+    selected_kind = kind if kind != "invalid" else "application"
+
+    response = client.get(
+        reverse("core:statistics"), {"period": "7-days", "account": account.pk, "activity_kind": kind},
+        **request_options,
+    )
+    content = response.content.decode()
+    applications = content.split("id=\"recent-application-panel\"", 1)[1].split("id=\"recent-session-panel\"", 1)[0]
+    sessions = content.split("id=\"recent-session-panel\"", 1)[1].split("<section class=\"card\">", 1)[0]
+
+    assert response.status_code == 200
+    assert applications.count("role=\"listitem\"") == 10
+    assert sessions.count("role=\"listitem\"") == 1
+    assert "synthetic-app-11" in applications
+    assert "synthetic-app-0<" not in applications
+    assert "synthetic-app-" not in sessions
+    assert account.name in sessions
+    assert f"id=\"recent-activity-kind\" name=\"activity_kind\" value=\"{selected_kind}\"" in content
+    assert f"class=\"nav-link active\" id=\"recent-{selected_kind}-tab\"" in content
+    assert f"?period=7-days&amp;account={account.pk}&amp;activity_kind=session" in content
+    assert f"?period=7-days&amp;account={account.pk}&amp;activity_kind=application" in content
+
+
+@pytest.mark.parametrize(
+    ("kind", "missing_kind", "empty_message"),
+    [
+        ("session", "application", "No completed application runs for this period."),
+        ("prc", "session", "No completed sessions for this period."),
+    ],
+)
+def test_statistics_has_a_separate_empty_state_for_each_recent_kind(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    computer_record: Computer,
+    activity_run_create: Callable[..., None],
+    kind: str,
+    missing_kind: str,
+    empty_message: str,
+) -> None:
+    started = int(timezone.now().timestamp()) - 3_600
+    account = computer_record.accounts.get()
+    activity_run_create(account, kind=kind, started=started, finished=started + 600, duration=600)
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+
+    response = client.get(reverse("core:statistics"), {"activity_kind": missing_kind, "period": "today"})
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert empty_message in content
+    assert f"class=\"nav-link active\" id=\"recent-{missing_kind}-tab\"" in content

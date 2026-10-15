@@ -18,7 +18,7 @@ class AccountForm(SaneaModelForm):
 
     class Meta:
         model = Account
-        fields = ("person", "collect", "apply")
+        fields = ("collect", "apply", "person")
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         super().__init__(*args, **kwargs)

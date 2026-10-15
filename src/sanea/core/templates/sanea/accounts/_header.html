@@ -1,13 +1,7 @@
 {% load i18n %}
 <div class="mb-4">
-    <h1 class="display-6 fw-bold mb-1">{% translate "Accounts" %}</h1>
+    <h1 class="display-6 fw-bold mb-1" id="accounts-heading" tabindex="-1">{% translate "Accounts" %}</h1>
     <p class="text-body-secondary mb-0">
         {% translate "Local accounts are reported by sanex; monitoring is disabled for newly discovered accounts." %}
     </p>
-    <details class="text-body-secondary small mt-2">
-        <summary>{% translate "Statuses" %}</summary>
-        <p class="mt-2 mb-1">{% translate "Account presence reflects the last list received from the computer, not an active session." %}</p>
-        <p class="mb-1">{% translate "Unconfirmed means sanex on this computer has not acknowledged the latest settings." %}</p>
-        <p class="mb-0">{% translate "Confirmed means the computer accepted the settings, not that every restriction succeeded." %}</p>
-    </details>
 </div>

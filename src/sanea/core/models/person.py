@@ -57,16 +57,5 @@ class Person(TimestampedModel):
             )
 
         account_ids = [account.pk for account in accounts]
-        selected = person.accounts.select_for_update().filter(pk__in=account_ids)
-        computer_ids = set()
-        count = 0
-
-        for account in selected:
-            account.limits = person.limits_tpl.current_limits
-            account.save(update_fields=("limits", "updated"))
-            computer_ids.add(account.computer_id)
-            count += 1
-
-        computer_model = self._meta.apps.get_model("core", "Computer")
-        computer_model.materialize_configs(computer_ids)
-        return count
+        selected = person.accounts.filter(pk__in=account_ids)
+        return person.limits_tpl.apply_to_accounts(selected)

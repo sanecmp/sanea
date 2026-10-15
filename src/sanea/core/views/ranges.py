@@ -16,6 +16,7 @@ class RangesView(ModelEditorView[Limits, Range, RangeForm]):
 
     page_title = _("Schedule ranges")
     section = "ranges"
+    large_editor = True
     editor_id = "range-editor"
     editor_template = "sanea/ranges/_editor.html"
     reference_name = "range"

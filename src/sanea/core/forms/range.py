@@ -2,10 +2,11 @@
 
 from django import forms
 from django.utils.translation import gettext_lazy as _
+from siteforms.composers.base import FORM
 
 from ...utils.schedule import WEEKDAY_CHOICES, format_clock, parse_clock
 from ..models import Limits, Range
-from .base import SaneaModelForm
+from .base import GridModelForm
 
 
 class ClockField(forms.CharField):
@@ -50,7 +51,7 @@ class ClockField(forms.CharField):
         return value
 
 
-class RangeForm(SaneaModelForm):
+class RangeForm(GridModelForm):
     """Edit one within-day weekly schedule interval."""
 
     weekday = forms.TypedChoiceField(
@@ -67,6 +68,12 @@ class RangeForm(SaneaModelForm):
         help_text=_("Exclusive end in HH:MM format; 24:00 is allowed."),
         allow_24=True,
     )
+
+    class Composer(GridModelForm.Composer):
+        layout = {FORM: {
+            "range": ["apply", ("weekday", "since", "till")],
+            "session": ["session_rule"],
+        }}
 
     class Meta:
         model = Range

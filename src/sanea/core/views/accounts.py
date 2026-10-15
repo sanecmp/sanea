@@ -1,10 +1,8 @@
 """Local account management views."""
 
-from collections.abc import Callable
-
 from django.db.models import QuerySet
-from django.http import HttpRequest, HttpResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.http import HttpRequest
+from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 
@@ -18,6 +16,7 @@ class AccountsView(ModelEditorView[None, Account, AccountForm]):
 
     page_title = _("Accounts")
     section = "accounts"
+    dialog_fallback = "accounts-heading"
     editor_id = "account-editor"
     editor_template = "sanea/accounts/_editor.html"
     reference_name = "account"
@@ -28,32 +27,6 @@ class AccountsView(ModelEditorView[None, Account, AccountForm]):
     edit_trigger = "account-edit-*"
     save_trigger = "account-save"
     cancel_trigger = "account-cancel"
-
-    def dispatch(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Handle account editing and non-JavaScript limit customization."""
-
-        if request.method == "POST" and request.POST.get("customize_limits"):
-            account = self.get_requested_account(request)
-            account.customize_limits()
-            return redirect(f"{reverse("core:accounts")}?account={account.pk}")
-
-        return super().dispatch(request, **kwargs)
-
-    def get_extra_ajax_handlers(self) -> dict[str, Callable[..., HttpResponse]]:
-        """Add the account-specific limit customization action."""
-        return {"account-limits-customize-*": self.customize_limits}
-
-    def customize_limits(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Create an editable limits snapshot and refresh the account editor."""
-        account = self.get_requested_account(request)
-        account.customize_limits()
-        refreshed = self.get_accounts().get(pk=account.pk)
-        form = AccountForm(
-            prefix="account",
-            instance=refreshed,
-            render_form_tag=False,
-        )
-        return self.render_editor_response(request, None, refreshed, form)
 
     def get_scope(self, **kwargs: object) -> None:
         """Return the empty top-level scope."""

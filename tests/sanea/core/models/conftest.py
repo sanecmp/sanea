@@ -22,6 +22,7 @@ from sanea.core.models import (
     SessionRule,
 )
 from sanea.core.models.base import TimestampedModel
+from sanea.core.forms import AppRuleForm, RangeForm, SessionRuleForm
 
 
 @pytest.fixture
@@ -187,3 +188,30 @@ def limits_snapshot_graph(
         "session_rule": session_rule,
         "template": limits_template,
     }
+
+
+@pytest.fixture(params=["session_rule", "range", "app_rule"])
+def limits_rule_form(
+    limits_snapshot_graph: dict[str, Any], request: pytest.FixtureRequest, new_rule: bool,
+) -> tuple[SessionRuleForm | RangeForm | AppRuleForm, Limits | SessionRule, TimestampedModel]:
+    graph = limits_snapshot_graph
+    limits = graph["limits"]
+    session_rule = graph["session_rule"]
+    form_type, data, keywords, parent = {
+        "session_rule": (
+            SessionRuleForm, {"name": "Changed session", "apply": True, "break_duration": 0}, {}, limits,
+        ),
+        "range": (
+            RangeForm,
+            {"weekday": 1, "since": "15:00", "till": "16:00", "session_rule": session_rule.pk, "apply": True},
+            {"limits": limits}, limits,
+        ),
+        "app_rule": (
+            AppRuleForm,
+            {"name": "Changed app", "max_time": 60, "prc_name": "browser", "prc_name_match": "exact", "apply": True},
+            {}, session_rule,
+        ),
+    }[request.param]
+    source = graph[request.param]
+    form = form_type(data=data, instance=None if new_rule else source, **keywords)
+    return form, parent, source

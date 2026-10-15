@@ -1,7 +1,7 @@
 """Reported client issues and diagnostic logs."""
 
 import json
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from datetime import datetime
 
 from django.http import HttpRequest, HttpResponse
@@ -13,14 +13,13 @@ from django.utils.translation import gettext_lazy as _
 from ...utils.periods import ReportingPeriod
 from ..forms import IssueFilterForm
 from ..models import ActivityEvent, Computer
-from .base import ManagedView
 
 
 _ISSUE_LIMIT = 100
 
 
-class _IssuePresenter:
-    """Build one filtered issue-list presentation."""
+class IssuePanel:
+    """Build the issues and logs shown below the computer list."""
 
     def __init__(self, request: HttpRequest) -> None:
         self.request = request
@@ -28,11 +27,20 @@ class _IssuePresenter:
     def build_context(self, *, logs_only: bool = False) -> dict[str, object]:
         """Build filter, enforcement-failure, and diagnostic-log context."""
         request = self.request
-        data = request.GET or {"period": ReportingPeriod.DAYS_7}
-        form = IssueFilterForm(data)
+        data = request.GET.copy()
+        data.setdefault("issues-period", ReportingPeriod.DAYS_7)
+        form = IssueFilterForm(data, prefix="issues")
+        query = data.copy()
+
+        for name in tuple(query):
+
+            if name not in {"issues-computer", "issues-period", "log", "access", "connection", "config_delivery"}:
+                del query[name]
+
         context: dict[str, object] = {
             "issue_filter": form,
-            "issues_url": reverse("core:issues"),
+            "issues_url": reverse("core:computers"),
+            "issues_query": query,
             "issue_rows": (),
             "diagnostic_logs": (),
             "issue_count": 0,
@@ -86,8 +94,6 @@ class _IssuePresenter:
                         timezone.get_current_timezone(),
                     ),
                     "reason": cls.format_reason(failure.reason),
-                    "rule_ident": failure.rule_ident,
-                    "wnd_ident": failure.wnd_ident,
                     "meta": cls.format_meta(failure.meta),
                 }
             )
@@ -113,35 +119,10 @@ class _IssuePresenter:
 
         return json.dumps(meta, ensure_ascii=False, indent=2, sort_keys=True)
 
+    def render_content(self) -> HttpResponse:
+        """Render only the filtered issue panel."""
+        return render(self.request, "sanea/issues/_content.html", self.build_context())
 
-class IssuesView(ManagedView):
-    """Display enforcement failures and the latest diagnostic logs."""
-
-    def get_ajax_handlers(self) -> dict[str, Callable[..., HttpResponse]]:
-        """Return the independently refreshable issue handler."""
-        return {
-            "issue-filter": self.render_issues,
-            "diagnostic-logs": self.render_logs,
-            "diagnostic-refresh": self.render_logs,
-        }
-
-    def dispatch(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Render the complete issues page."""
-        context = {
-            "page_title": _("Issues"),
-            **_IssuePresenter(request).build_context(),
-        }
-        return render(request, "sanea/issues/index.html", context)
-
-    def render_issues(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
-        """Render the independently refreshable issue fragment."""
-        context = _IssuePresenter(request).build_context()
-        return render(request, "sanea/issues/_content.html", context)
-
-    def render_logs(self, request: HttpRequest, **kwargs: object) -> HttpResponse:
+    def render_logs(self) -> HttpResponse:
         """Refresh log snapshots without querying or replacing the failure list."""
-        context = _IssuePresenter(request).build_context(logs_only=True)
-        return render(request, "sanea/issues/_logs.html", context)
-
-
-issues = IssuesView().as_view()
+        return render(self.request, "sanea/issues/_logs.html", self.build_context(logs_only=True))

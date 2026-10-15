@@ -38,21 +38,70 @@ node --test tests/javascript/*.mjs
 
 ## Browser interface
 
-**Dashboard** shows domain totals and operational state. **Statistics**, the next
-navigation item, shows activity charts, recent activity and the top 10 applications
-by recorded usage time, with user, computer, account and period filters.
+**Dashboard** shows screen time by person across their computers and the 10 most
+used applications. Both charts share period and person filters: the last 24 hours,
+48 hours (default), 7 days or 30 days, and all people or one person selected by name.
+Short periods use hourly bars; 7 and 30 days use 24-hour bars.
+It refreshes every minute while visible, retaining the selected filters.
+Usage within chart intervals and runs crossing the window boundary are estimated by
+distributing each final duration proportionally over its start-to-end interval.
+Simultaneous activity on different accounts or in different applications is added
+together, not deduplicated.
+
+**Statistics**, the next navigation item, shows activity charts, recent activity
+and the top 10 applications by recorded usage time, with user, computer, account
+and period filters. Recent applications and sessions have separate tabs, with up
+to 10 completed runs in each. Changing filters keeps the selected tab.
 
 Time totals include only completed sessions and application runs. A dash in
 application usage means no final duration has been received yet.
 Dates and times use sanea's timezone, including the days selected in statistics.
+Tables use the `YYYY-MM-DD HH:MM` format and regular-weight values; headings remain bold.
 By default this is the system timezone of the computer running sanea;
 `SANEA_TIME_ZONE` overrides it with an IANA name such as `Europe/Berlin`.
 UTC is used if no valid system timezone name is available.
 Children's schedule timezones remain configured separately for each computer.
 
-**Computers** opens with the computer list. Command history, registration and sanex
-updates have separate tabs. While the browser page is visible, the table refreshes
-every five seconds without resetting filters or open computer settings.
+**Computers** lists registered computers. Its information button opens details in a
+dialog; choose **Edit** there to change settings. Closing the dialog discards unsaved
+changes. Registration expands above the table. Command history and sanex updates
+have separate pages with breadcrumbs back to the list.
+While visible, the list and command history refresh every five seconds. Unchanged
+tables stay in place; changed rows keep the table's scroll position. Refreshing
+pauses while computer details or settings are open.
+
+Issues and diagnostic logs appear below the computer list, with their own computer
+and period filters. Logs only refresh when **Refresh** is clicked. Use the copy
+icon to copy the displayed log text.
+
+**People** adds and renames people in a dialog. A person's template links to its
+settings in **Limits**. Choose the template's default recipients there; saving
+does not change existing account limits.
+
+**Limits** adds and edits templates in the same dialog. Each row lists the people
+using the template and the accounts with its latest version, alongside that
+version's session-rule and schedule-range counts. The **Distribute template** icon
+opens a warning and the recipient list; only confirming the selected accounts
+replaces their limits with the latest template version.
+
+Schedule ranges are added and edited in a dialog. The **In schedule** icon shows
+whether an interval is included in the saved schedule, not whether it is active now.
+
+Session rules use the same add and edit dialog, with session count, duration and
+break duration in one row. The **Limits** icon shows whether the rule's session
+quotas and nested application rules are applied.
+
+Application rules also use a dialog. Quotas share a row; each recognition condition
+shares a row with its matching method. Process-name and executable-path suggestions
+remain available. The **Applied** icon reflects the rule's **Apply limits** checkbox,
+which appears first on its own row.
+
+The account limits editor reuses the forms and layouts for session rules, schedule
+ranges and application rules. It adds session selection and row removal, and shows
+durations in minutes instead of seconds.
+
+Ignored processes appear below the templates. The add button and edit icons open
+the same dialog. Removing a process takes it off the list; adding the same name restores it.
 
 ## Development server
 

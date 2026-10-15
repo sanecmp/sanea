@@ -11,9 +11,15 @@
     {% endif %}
     <div class="sanea-limits-actions mt-3">
         {% if form.instance.pk %}
-            <button class="btn btn-outline-danger" type="submit" form="account-remove-{{ kind }}-{{ form.instance.pk }}">{% translate "Remove" %}</button>
+            <button class="btn btn-outline-danger d-inline-flex align-items-center gap-2" type="submit" form="account-remove-{{ kind }}-{{ form.instance.pk }}">
+                <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-trash"></use></svg>
+                {% translate "Remove" %}
+            </button>
         {% else %}
-            <button class="btn btn-outline-danger" type="button" data-discard-form hidden>{% translate "Remove" %}</button>
+            <button class="btn btn-outline-danger d-inline-flex align-items-center gap-2" type="button" data-discard-form hidden>
+                <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-trash"></use></svg>
+                {% translate "Remove" %}
+            </button>
         {% endif %}
     </div>
 </fieldset>

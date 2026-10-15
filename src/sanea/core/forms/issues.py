@@ -17,7 +17,7 @@ class IssueFilterForm(SaneaForm):
         label=_("Computer"),
         queryset=Computer.objects.none(),
         required=False,
-        empty_label=_("All computers"),
+        empty_label=_("All"),
     )
     period = forms.ChoiceField(
         label=_("Period"),

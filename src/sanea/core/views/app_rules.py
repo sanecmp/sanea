@@ -27,6 +27,7 @@ class AppRulesView(ModelEditorView[AppRuleScope, AppRule, AppRuleForm]):
 
     page_title = _("Application rules")
     section = "app_rules"
+    large_editor = True
     editor_id = "app-rule-editor"
     editor_template = "sanea/app_rules/_editor.html"
     reference_name = "app_rule"

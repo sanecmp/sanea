@@ -1,0 +1,23 @@
+{% load i18n %}
+<div class="modal-header px-4">
+    <h2 class="modal-title h5 fw-bold" id="{{ editor.dialog_id }}-title">{% block editor_title %}{% endblock %}</h2>
+    <a class="btn-close" href="{{ editor.url }}" data-dialog-close aria-label="{% translate "Close" %}"></a>
+</div>
+{% block editor_panel %}
+<form id="{{ editor.save_id }}" data-dialog-panel method="post" action="{{ editor.url }}"
+      hx-post="{{ editor.post_url }}" hx-target="#{{ editor.id }}" hx-swap="innerHTML"
+      hx-disabled-elt="find button[type='submit']">
+    {% csrf_token %}
+    <input type="hidden" name="{{ editor.reference_name }}" value="{{ editor.selected.pk|default:"new" }}">
+    {% block editor_hidden %}{% endblock %}
+    <div class="modal-body p-4">{% block editor_body %}{{ editor.form }}{% endblock %}</div>
+    <div class="modal-footer px-4">
+        <a class="btn btn-outline-secondary" id="{{ editor.cancel_id }}" href="{{ editor.url }}" data-dialog-close>
+            {% translate "Cancel" %}
+        </a>
+        <button class="btn btn-primary" type="submit" name="__submit" value="{{ editor.submit_name }}">
+            {% block editor_submit %}{% translate "Save" %}{% endblock %}
+        </button>
+    </div>
+</form>
+{% endblock %}

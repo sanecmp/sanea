@@ -1,0 +1,68 @@
+{% load activity i18n %}
+<div id="dashboard-usage" hx-get="{{ dashboard_url }}" hx-trigger="every 60s [!document.hidden]"
+     hx-target="this" hx-swap="outerHTML" hx-include="#dashboard-filter">
+    {% if usage_valid %}
+    <div class="mb-4">
+        <p class="small text-body-secondary mb-0">
+            {{ usage_since|date:"SHORT_DATETIME_FORMAT" }} — {{ usage_till|date:"SHORT_DATETIME_FORMAT" }} · {{ usage_timezone }}
+        </p>
+    </div>
+
+    {% if not usage_has_accounts %}
+        <div class="alert alert-info" role="status">
+            {% translate "No activity collection for this selection." %}
+        </div>
+    {% endif %}
+
+    <section class="card mb-4" aria-labelledby="people-usage-heading">
+        <div class="card-body p-3 p-lg-4">
+            <h2 class="h5 fw-bold mb-1" id="people-usage-heading">{% translate "Time spent" %}</h2>
+            <p class="small text-body-secondary mb-3">{{ usage_granularity }}</p>
+            {% if usage_has_screen_time %}
+                <div class="sanea-chart-container">
+                    <canvas id="dashboard-people-chart" data-activity-chart="dashboard-people-data" role="img"
+                            aria-label="{% translate 'Time spent' %}" aria-describedby="people-usage-totals"></canvas>
+                </div>
+                {{ people_chart|json_script:"dashboard-people-data" }}
+            {% else %}
+                <div class="sanea-empty-state">
+                    <p class="mb-0 text-body-secondary">{% translate "No completed sessions for this period." %}</p>
+                </div>
+            {% endif %}
+            {% if usage_people %}
+                <ul class="list-unstyled d-flex flex-wrap gap-3 mt-3 mb-0 small" id="people-usage-totals">
+                    {% for person in usage_people %}
+                        <li><span class="fw-semibold">{{ person.name }}</span> · {{ person.duration|activity_duration }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="card mb-3" aria-labelledby="application-usage-heading">
+        <div class="card-body p-3 p-lg-4">
+            <h2 class="h5 fw-bold mb-1" id="application-usage-heading">{% translate "Application usage" %}</h2>
+            <p class="small text-body-secondary mb-3">{% translate "10 most used applications" %}</p>
+            {% if usage_applications %}
+                <div class="sanea-chart-container">
+                    <canvas id="dashboard-applications-chart" data-activity-chart="dashboard-applications-data" role="img"
+                            aria-label="{% translate 'Application usage' %}" aria-describedby="application-usage-totals"></canvas>
+                </div>
+                {{ applications_chart|json_script:"dashboard-applications-data" }}
+                <ul class="visually-hidden" id="application-usage-totals">
+                    {% for application in usage_applications %}
+                        <li>{{ application.name }} ({{ application.exe }}) · {{ application.duration|activity_duration }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="sanea-empty-state">
+                    <p class="mb-0 text-body-secondary">{% translate "No completed application runs for this period." %}</p>
+                </div>
+            {% endif %}
+        </div>
+    </section>
+
+    {% else %}
+        <div class="alert alert-warning" role="alert">{% translate "Check the selected filters." %}</div>
+    {% endif %}
+</div>

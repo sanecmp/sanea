@@ -1,31 +1,20 @@
 {% load i18n %}
-<section class="sanea-computer-details border-top p-4" aria-label="{% translate 'Configure computer' %}">
-    <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
-        <div>
-            <h2 class="h5 fw-bold mb-1">{% translate "Configure computer" %}</h2>
-            <p class="text-body-secondary mb-0">{{ computer.get_display_name }} · {{ computer.hostname }}</p>
-        </div>
-        <a class="btn-close" id="computer-cancel-{{ computer.pk }}"
-           href="{{ computers_url }}?computer={{ computer.pk }}"
-           hx-get="{{ computers_url }}?computer={{ computer.pk }}"
-           hx-target="#computer-details-{{ computer.pk }}" hx-swap="innerHTML"
-           aria-label="{% translate 'Cancel' %}"></a>
-    </div>
-    <form id="computer-save" method="post" action="{{ computers_url }}"
-          hx-post="{{ computers_url }}" hx-target="#computer-details-{{ computer.pk }}" hx-swap="innerHTML">
-        {% csrf_token %}
-        <input type="hidden" name="computer" value="{{ computer.pk }}">
+<div class="modal-header px-4">
+    <h2 class="modal-title h5 fw-bold" id="computer-dialog-title">{{ computer.get_display_name }}</h2>
+    <a class="btn-close" href="{{ computers_url }}" data-dialog-close aria-label="{% translate 'Close' %}"></a>
+</div>
+<form id="computer-save" data-dialog-panel method="post" action="{{ computers_url }}"
+      hx-post="{{ computers_url }}" hx-target="#computer-editor" hx-swap="innerHTML"
+      hx-include="#computer-filter select" hx-disabled-elt="find button[type='submit']">
+    {% csrf_token %}
+    <input type="hidden" name="computer" value="{{ computer.pk }}">
+    <div class="modal-body p-4">
         {{ computer_form }}
-        <div class="d-flex gap-2">
-            <button class="btn btn-primary" type="submit" name="__submit" value="computer">
-                {% translate "Save" %}
-            </button>
-            <a class="btn btn-outline-secondary" id="computer-cancel-{{ computer.pk }}-button"
-               href="{{ computers_url }}?computer={{ computer.pk }}"
-               hx-get="{{ computers_url }}?computer={{ computer.pk }}"
-               hx-target="#computer-details-{{ computer.pk }}" hx-swap="innerHTML">
-                {% translate "Cancel" %}
-            </a>
-        </div>
-    </form>
-</section>
+    </div>
+    <div class="modal-footer px-4">
+        <a class="btn btn-outline-secondary" id="computer-cancel-{{ computer.pk }}" href="{{ computers_url }}" data-dialog-close>
+            {% translate "Cancel" %}
+        </a>
+        <button class="btn btn-primary" type="submit" name="__submit" value="computer">{% translate "Save" %}</button>
+    </div>
+</form>

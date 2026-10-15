@@ -19,9 +19,9 @@ from sanea.core.models import Computer, User
 def test_issues_require_management_user(
     request_client: Callable[..., Client], user_create: Callable[..., User], ajax: bool,
 ) -> None:
-    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "diagnostic-logs"} if ajax else {}
-    anonymous_response = request_client().get(reverse("core:issues"), **headers)
-    regular_response = request_client(user=user_create()).get(reverse("core:issues"), **headers)
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "diagnostic-refresh"} if ajax else {}
+    anonymous_response = request_client().get(reverse("core:computers"), **headers)
+    regular_response = request_client(user=user_create()).get(reverse("core:computers"), **headers)
 
     assert anonymous_response.status_code == 302
     assert anonymous_response.url.startswith(reverse("core:sign_in"))
@@ -43,10 +43,10 @@ def test_issues_show_enforcement_failures_and_escaped_log_tail(
     client = request_client(user=staff_user)
 
     with timezone.override("America/New_York"):
-        response = client.get(reverse("core:issues"), {"period": "30-days"})
+        response = client.get(reverse("core:computers"), {"issues-period": "30-days"})
         ajax_response = client.get(
-            reverse("core:issues"),
-            {"period": "30-days", "computer": computer_record.pk},
+            reverse("core:computers"),
+            {"issues-period": "30-days", "issues-computer": computer_record.pk},
             HTTP_HX_REQUEST="true",
             HTTP_HX_TRIGGER="issue-filter",
         )
@@ -55,11 +55,11 @@ def test_issues_show_enforcement_failures_and_escaped_log_tail(
     ajax_content = ajax_response.content.decode()
     failure = packet.events[-1]
     local_timestamp = datetime.fromtimestamp(failure.timestamp, ZoneInfo("America/New_York"))
-    formatted_timestamp = date_format(local_timestamp, "SHORT_DATETIME_FORMAT")
+    formatted_timestamp = date_format(local_timestamp, "Y-m-d H:i")
 
     assert response.status_code == 200
-    assert "id=\"icon-issues\"" in content
-    assert f"href=\"{reverse("core:issues")}\"" in content
+    assert "#icon-issues" not in content
+    assert content.index("id=\"computer-list\"") < content.index("id=\"issues-content\"")
     assert "Close unsupported" in content
     assert computer_record.name in content
     assert "UID 1001" in content
@@ -67,30 +67,38 @@ def test_issues_show_enforcement_failures_and_escaped_log_tail(
     assert "failed <script>" not in content
     assert "sanea/js/diagnostic-logs.js" in content
     assert f"id=\"log-tab-{computer_record.pk}\"" in content
-    assert "<details" not in content
-    assert "every 5s [!document.hidden], diagnostic-refresh[!document.hidden]" in content
+    logs_content = content.split("id=\"diagnostic-logs\"", 1)[1]
+    assert "every 5s" not in logs_content
+    assert "id=\"diagnostic-refresh\"" in logs_content
+    assert "<use href=\"#icon-refresh\">" in logs_content
+    assert "<use href=\"#icon-copy\">" in logs_content
+    assert f"data-log-copy=\"{computer_record.pk}\"" in logs_content
+    assert "title=\"Copy\" aria-label=\"Copy\"" in logs_content
+    assert "<th scope=\"col\">Rule</th>" not in content
+    assert "<th scope=\"col\">Window</th>" not in content
+    assert f"<td class=\"small text-body-secondary\">{computer_record.name}</td>" in content
+    assert "<td class=\"small text-body-secondary\">\n                                    <div>Close unsupported</div>" in content
     assert ajax_response.status_code == 200
     assert "id=\"issues-content\"" in ajax_content
     assert "sanea-shell" not in ajax_content
-    assert f"<td class=\"text-nowrap\">{formatted_timestamp}</td>" in content
-    assert f"<td class=\"text-nowrap\">{formatted_timestamp}</td>" in ajax_content
+    assert f"<td class=\"small text-body-secondary text-nowrap\">{formatted_timestamp}</td>" in content
+    assert f"<td class=\"small text-body-secondary text-nowrap\">{formatted_timestamp}</td>" in ajax_content
 
 
-@pytest.mark.parametrize("trigger", ["diagnostic-logs", "diagnostic-refresh"])
 def test_diagnostic_refresh_returns_latest_snapshot_and_respects_filters(
-    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer, trigger: str,
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
 ) -> None:
     older = Computer.objects.create(
         hostname="older-computer", log_tail="older log", log_received=datetime(2026, 9, 28, tzinfo=UTC),
     )
     computer_record.replace_log_tail("original log", None)
     client = request_client(user=user_create(attributes={"is_staff": True}))
-    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": trigger}
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "diagnostic-refresh"}
 
-    initial = client.get(reverse("core:issues"), {"period": "all", "log": older.pk}, **headers)
+    initial = client.get(reverse("core:computers"), {"issues-period": "all", "log": older.pk}, **headers)
     computer_record.replace_log_tail("updated <script>alert(1)</script>", None)
-    refreshed = client.get(reverse("core:issues"), {"period": "7-days"}, **headers)
-    selected = client.get(reverse("core:issues"), {"period": "all", "computer": older.pk}, **headers)
+    refreshed = client.get(reverse("core:computers"), {"issues-period": "7-days"}, **headers)
+    selected = client.get(reverse("core:computers"), {"issues-period": "all", "issues-computer": older.pk}, **headers)
     initial_content = initial.content.decode()
     refreshed_content = refreshed.content.decode()
     selected_content = selected.content.decode()
@@ -117,12 +125,12 @@ def test_log_tabs_have_native_links_with_default_period_and_invalid_selection_fa
     computer_record.replace_log_tail("synthetic log", None)
     client = request_client(user=user_create(attributes={"is_staff": True}))
 
-    response = client.get(reverse("core:issues"))
-    fallback = client.get(reverse("core:issues"), {"period": "all", "log": "missing"})
+    response = client.get(reverse("core:computers"))
+    fallback = client.get(reverse("core:computers"), {"issues-period": "all", "log": "missing"})
     content = response.content.decode()
 
     assert response.status_code == fallback.status_code == 200
-    assert f"?log={computer_record.pk}&amp;period=7-days#diagnostic-logs" in content
+    assert f"?issues-period=7-days&amp;log={computer_record.pk}#diagnostic-logs" in content
     assert f"id=\"diagnostic-computer\" name=\"log\" value=\"{computer_record.pk}\"" in fallback.content.decode()
 
 
@@ -131,10 +139,10 @@ def test_diagnostic_refresh_handles_empty_logs_and_invalid_filters(
     request_client: Callable[..., Client], user_create: Callable[..., User], invalid: bool,
 ) -> None:
     client = request_client(user=user_create(attributes={"is_staff": True}))
-    data = {"period": "invalid" if invalid else "7-days"}
+    data = {"issues-period": "invalid" if invalid else "7-days"}
 
     response = client.get(
-        reverse("core:issues"), data, HTTP_HX_REQUEST="true", HTTP_HX_TRIGGER="diagnostic-logs",
+        reverse("core:computers"), data, HTTP_HX_REQUEST="true", HTTP_HX_TRIGGER="diagnostic-refresh",
     )
     content = response.content.decode()
 
@@ -142,3 +150,42 @@ def test_diagnostic_refresh_handles_empty_logs_and_invalid_filters(
     assert "Correct the filters" in content if invalid else "No diagnostic logs" in content
     assert "id=\"diagnostic-logs\"" in content
     assert "id=\"diagnostic-log-count\" hx-swap-oob=\"innerHTML\">0" in content
+
+
+@pytest.mark.parametrize("ajax", [False, True])
+def test_issue_filters_do_not_open_a_computer_dialog_or_change_overview_filters(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer, ajax: bool,
+) -> None:
+    computer_record.replace_log_tail("synthetic selected log", None)
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "issue-filter"} if ajax else {}
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+
+    response = client.get(
+        reverse("core:computers"),
+        {"issues-computer": computer_record.pk, "access": "blocked", "connection": "offline"},
+        **headers,
+    )
+    content = response.content.decode()
+
+    assert response.status_code == 200
+    assert "synthetic selected log" in content
+    assert "name=\"issues-computer\"" in content
+    assert "name=\"issues-period\"" in content
+    assert "id=\"computer-dialog-title\"" not in content
+    assert "issues-period=7-days" in content
+    assert "access=blocked" in content
+    assert "connection=offline" in content
+
+
+def test_live_computer_refresh_does_not_replace_logs(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
+) -> None:
+    computer_record.replace_log_tail("synthetic stationary log", None)
+
+    response = request_client(user=user_create(attributes={"is_staff": True})).get(
+        reverse("core:computers"), HTTP_HX_REQUEST="true", HTTP_HX_TRIGGER="computer-live-refresh",
+    )
+
+    assert response.status_code == 200
+    assert "id=\"diagnostic-logs\"" not in response.content.decode()
+    assert "synthetic stationary log" not in response.content.decode()

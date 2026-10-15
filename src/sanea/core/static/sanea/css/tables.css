@@ -1,0 +1,22 @@
+.sanea-table-wrap {
+    margin: 0 1rem 1rem;
+}
+
+.sanea-table-wrap:first-child {
+    margin-top: 1rem;
+}
+
+.sanea-table-wrap td {
+    font-variant-numeric: tabular-nums;
+}
+
+.table td .badge,
+.sanea-command-summary .badge {
+    font-weight: 400;
+}
+
+@media (max-width: 767.98px) {
+    .sanea-table-wrap.sanea-mobile-table {
+        margin: 0.5rem;
+    }
+}

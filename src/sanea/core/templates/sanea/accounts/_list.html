@@ -1,16 +1,16 @@
 {% load i18n %}
 <div id="accounts-list"{% if list_oob %} hx-swap-oob="outerHTML"{% endif %}>
     <section class="card">
-        <div class="table-responsive sanea-mobile-table">
+        <div class="table-responsive sanea-table-wrap sanea-mobile-table">
             <table class="table align-middle mb-0">
                 <thead>
                 <tr>
-                    <th scope="col">{% translate "Account" %}</th>
+                    <th scope="col">{% translate "Account" context "table heading" %}</th>
                     <th scope="col">{% translate "Computer" %}</th>
                     <th scope="col">{% translate "Person" %}</th>
-                    <th scope="col">{% translate "Monitoring" %}</th>
-                    <th scope="col">{% translate "Limits" %}</th>
-                    <th scope="col">{% translate "On computer" %}</th>
+                    <th scope="col" class="text-center">{% translate "Monitoring" %}</th>
+                    <th scope="col" class="text-center">{% translate "Limits" %}</th>
+                    <th scope="col" class="text-center">{% translate "On computer" %}</th>
                     <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
                 </tr>
                 </thead>
@@ -18,48 +18,62 @@
                 {% for item in accounts %}
                     <tr class="sanea-table-item">
                         <td>
-                            <span class="fw-semibold">{{ item.name|default:item.login }}</span>
-                            <span class="d-block text-body-secondary">{{ item.login }} · UID {{ item.uid }}</span>
+                            <span>{{ item.name|default:item.login }}</span>
+                            <span class="d-block small text-body-secondary">{{ item.login }} · UID {{ item.uid }}</span>
                         </td>
-                        <td data-label="{% translate 'Computer' %}">{{ item.computer.get_display_name }}</td>
-                        <td data-label="{% translate 'Person' %}">{{ item.person|default:_('Not assigned') }}</td>
-                        <td data-label="{% translate 'Monitoring' %}">
-                            {% if item.collect %}
-                                <span class="badge text-bg-success">{% translate "Enabled" %}</span>
-                            {% else %}
-                                <span class="badge text-bg-secondary">{% translate "Disabled" %}</span>
-                            {% endif %}
+                        <td class="small text-body-secondary" data-label="{% translate 'Computer' %}">{{ item.computer.get_display_name }}</td>
+                        <td class="small text-body-secondary" data-label="{% translate 'Person' %}">{{ item.person|default:"—" }}</td>
+                        <td class="text-center" data-label="{% translate 'Monitoring' %}">
+                            {% if item.collect %}{% translate "Enabled" as monitoring %}{% else %}{% translate "Disabled" as monitoring %}{% endif %}
+                            <span class="sanea-status-icon" role="img"
+                                  title="{% translate 'Monitoring' %}: {{ monitoring }}"
+                                  aria-label="{% translate 'Monitoring' %}: {{ monitoring }}">
+                                <svg class="sanea-action-icon" aria-hidden="true"><use href="{% if item.collect %}#icon-check{% else %}#icon-ban{% endif %}"></use></svg>
+                            </span>
                         </td>
-                        <td data-label="{% translate 'Limits' %}">
+                        <td class="text-center" data-label="{% translate 'Limits' %}">
+                            {% with delivery=item.computer.get_config_delivery_status %}
                             {% if item.apply %}
-                                {% if item.computer.get_config_delivery_status == 'applied' %}
-                                    <span class="badge text-bg-success" title="{% translate 'Confirmed means the computer accepted the settings, not that every restriction succeeded.' %}">{% translate "Settings confirmed" %}</span>
+                                {% if delivery == 'applied' %}
+                                    {% translate "Settings confirmed" as limits_status %}
+                                    {% translate "Confirmed means the computer accepted the settings, not that every restriction succeeded." as limits_description %}
                                 {% else %}
-                                    <span class="badge text-bg-warning" title="{% translate 'Unconfirmed means sanex on this computer has not acknowledged the latest settings.' %}">{% translate "Waiting for confirmation" %}</span>
+                                    {% translate "Waiting for confirmation" as limits_status %}
+                                    {% translate "Unconfirmed means sanex on this computer has not acknowledged the latest settings." as limits_description %}
                                 {% endif %}
                             {% elif item.limits_id %}
-                                <span class="badge text-bg-secondary">{% translate "Not applied" %}</span>
+                                {% translate "Not applied" as limits_status %}
                             {% else %}
-                                {% translate "Not configured" %}
+                                {% translate "Not configured" as limits_status %}
                             {% endif %}
+                            <span class="sanea-status-icon" role="img"
+                                  title="{% translate 'Limits' %}: {{ limits_status }}{% if item.apply %}. {{ limits_description }}{% endif %}"
+                                  aria-label="{% translate 'Limits' %}: {{ limits_status }}">
+                                <svg class="sanea-action-icon" aria-hidden="true"><use href="{% if item.apply and delivery == 'applied' %}#icon-check{% elif item.apply %}#icon-clock{% elif item.limits_id %}#icon-ban{% else %}#icon-minus{% endif %}"></use></svg>
+                            </span>
+                            {% endwith %}
                         </td>
-                        <td data-label="{% translate 'On computer' %}" title="{% translate 'Account presence reflects the last list received from the computer, not an active session.' %}">
-                            {% if item.present %}
-                                {% translate "Exists" %}
-                            {% else %}
-                                <span class="text-body-secondary">{% translate "Missing" %}</span>
-                            {% endif %}
+                        <td class="text-center" data-label="{% translate 'On computer' %}">
+                            {% if item.present %}{% translate "Exists" as presence %}{% else %}{% translate "Missing" as presence %}{% endif %}
+                            <span class="sanea-status-icon" role="img" aria-label="{{ presence }}"
+                                  title="{{ presence }}. {% translate 'Account presence reflects the last list received from the computer, not an active session.' %}">
+                                <svg class="sanea-action-icon" aria-hidden="true"><use href="{% if item.present %}#icon-check{% else %}#icon-ban{% endif %}"></use></svg>
+                            </span>
                         </td>
                         <td class="text-end sanea-table-actions">
-                            <a class="btn btn-sm btn-outline-primary" href="{% url 'core:account_limits' item.pk %}">
-                                {% translate "Limits" %}
+                            <div class="d-inline-flex gap-1">
+                            <a class="btn btn-sm btn-outline-secondary sanea-icon-button" href="{% url 'core:account_limits' item.pk %}"
+                               title="{% translate 'Limits' %}" aria-label="{% translate 'Limits' %}: {{ item.login }} · {{ item.computer.get_display_name }}">
+                                <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-limits"></use></svg>
                             </a>
-                            <a class="btn btn-sm btn-outline-secondary" id="account-edit-{{ item.pk }}"
+                            <a class="btn btn-sm btn-outline-secondary sanea-icon-button" id="account-edit-{{ item.pk }}"
                                href="{% url 'core:accounts' %}?account={{ item.pk }}"
                                hx-get="{% url 'core:accounts' %}?account={{ item.pk }}"
-                               hx-target="#account-editor" hx-swap="innerHTML">
-                                {% translate "Configure" %}
+                               hx-target="#account-editor" hx-swap="innerHTML"
+                               title="{% translate 'Configure' %}" aria-label="{% translate 'Configure' %}: {{ item.login }} · {{ item.computer.get_display_name }}">
+                                <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-edit"></use></svg>
                             </a>
+                            </div>
                         </td>
                     </tr>
                 {% empty %}

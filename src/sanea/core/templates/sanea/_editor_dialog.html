@@ -1,0 +1,8 @@
+<div id="{{ editor.dialog_id }}" class="sanea-editor-dialog" data-editor-dialog data-dialog-fallback="{{ editor.fallback }}"
+     tabindex="-1" aria-labelledby="{{ editor.dialog_id }}-title"{% if not editor.form %} hidden{% endif %}>
+    <div class="modal-dialog{% if editor.large %} modal-lg{% endif %} modal-dialog-centered modal-dialog-scrollable">
+        <div id="{{ editor.id }}" class="modal-content" data-dialog-editor>
+            {% if editor.form %}{% include editor.template %}{% endif %}
+        </div>
+    </div>
+</div>

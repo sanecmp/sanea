@@ -5,12 +5,12 @@ from typing import TYPE_CHECKING, Self
 
 from sanelib.protocol import AppRule as ClientAppRule, MatchType as ClientMatchType
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
-from django.db import models, transaction
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from .base import TimestampedModel
 from .choices import MatchType
-from .identifier_sequence import IdentifierSequence
+from .rule_editing import save_limits_form
 from .validation import NON_NEGATIVE
 
 if TYPE_CHECKING:
@@ -119,37 +119,15 @@ class AppRule(TimestampedModel):
         return self.name
 
     @classmethod
-    @transaction.atomic
     def save_form(cls, form: "AppRuleForm", session_rule: "SessionRule") -> Self:
         """Save a rule, forking an assigned snapshot when required."""
-        target_limits = session_rule.limits.checkout_for_edit()
-        manager = cls.objects
-        session_rule_model = cls._meta.get_field("session_rule").remote_field.model
-        target_rule = session_rule_model.objects.get(
-            limits=target_limits,
-            ident=session_rule.ident,
+        return save_limits_form(
+            cls, form, session_rule.limits,
+            limits_lookup="session_rule__limits",
+            get_relations=lambda target: {
+                "session_rule": target.session_rules.get(ident=session_rule.ident),
+            },
         )
-        source = form.save(commit=False)
-
-        if source.pk and target_limits.pk != session_rule.limits_id:
-            rule = manager.get(
-                session_rule__limits=target_limits,
-                ident=source.ident,
-            )
-            rule.apply_form(form)
-
-        else:
-            rule = source
-
-        rule.session_rule = target_rule
-
-        if not rule.pk:
-            rule.ident = IdentifierSequence.allocate(cls)
-
-        rule.full_clean()
-        rule.save()
-        target_limits.materialize_computer_configs()
-        return rule
 
     def build_client_config(self) -> ClientAppRule:
         """Build this rule in the shared sanex configuration format."""

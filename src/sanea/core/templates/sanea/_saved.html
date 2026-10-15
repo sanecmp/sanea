@@ -1,3 +1,5 @@
 {% load etc_misc %}
-{% include "sanea/_message.html" %}
+<div id="{{ message_id }}" class="mb-3" hx-swap-oob="outerHTML">
+    {% include "sanea/_message.html" %}
+</div>
 {% include_ "sanea/{{ section }}/_list.html" %}

@@ -1,0 +1,14 @@
+{% load i18n sitetree %}
+{% if sitetree_items|length > 1 %}
+<nav aria-label="{% translate 'Breadcrumbs' %}">
+    <ol class="breadcrumb small mb-3">
+        {% for item in sitetree_items %}
+            {% if forloop.last %}
+                <li class="breadcrumb-item active" aria-current="page">{{ item.title_resolved }}</li>
+            {% else %}
+                <li class="breadcrumb-item"><a class="link-secondary" href="{% sitetree_url for item %}">{{ item.title_resolved }}</a></li>
+            {% endif %}
+        {% endfor %}
+    </ol>
+</nav>
+{% endif %}

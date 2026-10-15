@@ -1,10 +1,11 @@
 {% load i18n %}
-<div id="issues-content" hx-sync="this:replace">
+<div id="issues-content" class="mt-5" hx-sync="this:replace">
+    <h2 class="h4 fw-bold mb-3">{% translate "Issues" %}</h2>
     <section class="card mb-4">
         <div class="card-body p-3 p-lg-4">
             <form id="issue-filter" class="sanea-issue-filter" method="get" action="{{ issues_url }}"
                   hx-get="{{ issues_url }}" hx-target="#issues-content" hx-swap="outerHTML"
-                  hx-push-url="true" hx-trigger="change delay:150ms">
+                  hx-push-url="true" hx-trigger="change delay:150ms" hx-include="#computer-filter select">
                 {{ issue_filter }}
                 <button class="btn btn-primary align-self-end" type="submit">{% translate "Apply" %}</button>
             </form>
@@ -16,7 +17,7 @@
             <div class="col-12 col-md-6">
                 <section class="card h-100">
                     <div class="card-body p-4">
-                        <h2 class="h6 text-body-secondary mb-2">{% translate "Enforcement failures" %}</h2>
+                        <h3 class="h6 text-body-secondary mb-2">{% translate "Enforcement failures" %}</h3>
                         <p class="h3 fw-semibold mb-0">{{ issue_count }}</p>
                     </div>
                 </section>
@@ -24,7 +25,7 @@
             <div class="col-12 col-md-6">
                 <section class="card h-100">
                     <div class="card-body p-4">
-                        <h2 class="h6 text-body-secondary mb-2">{% translate "Computers with diagnostic logs" %}</h2>
+                        <h3 class="h6 text-body-secondary mb-2">{% translate "Computers with diagnostic logs" %}</h3>
                         <p class="h3 fw-semibold mb-0" id="diagnostic-log-count">{{ log_count }}</p>
                     </div>
                 </section>
@@ -33,10 +34,10 @@
 
         <section class="card mb-4">
             <div class="card-body p-4 pb-2">
-                <h2 class="h5 fw-bold mb-0">{% translate "Enforcement failures" %}</h2>
+                <h3 class="h5 fw-bold mb-0">{% translate "Enforcement failures" %}</h3>
             </div>
             {% if issue_rows %}
-                <div class="table-responsive">
+                <div class="table-responsive sanea-table-wrap">
                     <table class="table align-middle mb-0">
                         <thead>
                         <tr>
@@ -44,25 +45,21 @@
                             <th scope="col">{% translate "Computer" %}</th>
                             <th scope="col">{% translate "Account" %}</th>
                             <th scope="col">{% translate "Reason" %}</th>
-                            <th scope="col">{% translate "Rule" %}</th>
-                            <th scope="col">{% translate "Window" %}</th>
                         </tr>
                         </thead>
                         <tbody>
                         {% for item in issue_rows %}
                             <tr>
-                                <td class="text-nowrap">{{ item.timestamp|date:"SHORT_DATETIME_FORMAT" }}</td>
-                                <td>{{ item.computer.get_display_name }}</td>
+                                <td class="small text-body-secondary text-nowrap">{{ item.timestamp|date:"Y-m-d H:i" }}</td>
+                                <td class="small text-body-secondary">{{ item.computer.get_display_name }}</td>
                                 <td>
                                     <div>{{ item.account.name|default:item.account.login }}</div>
                                     <div class="small text-body-secondary">UID {{ item.account.uid }}</div>
                                 </td>
-                                <td>
+                                <td class="small text-body-secondary">
                                     <div>{{ item.reason }}</div>
                                     {% if item.meta %}<pre class="sanea-issue-meta mt-2 mb-0">{{ item.meta }}</pre>{% endif %}
                                 </td>
-                                <td>{{ item.rule_ident|default:"—" }}</td>
-                                <td>{{ item.wnd_ident|default:"—" }}</td>
                             </tr>
                         {% endfor %}
                         </tbody>

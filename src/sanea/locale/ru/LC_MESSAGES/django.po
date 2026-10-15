@@ -19,6 +19,70 @@ msgstr ""
 "n%10<=4 && (n%100<12 || n%100>14) ? 1 : n%10==0 || (n%10>=5 && n%10<=9) || "
 "(n%100>=11 && n%100<=14)? 2 : 3);\n"
 
+msgid "24 hours"
+msgstr "24 часа"
+
+msgid "48 hours"
+msgstr "48 часов"
+
+msgid "7 days"
+msgstr "7 дней"
+
+msgid "30 days"
+msgstr "30 дней"
+
+msgid "All"
+msgstr "Все"
+
+#. Django 6.1's default empty choice is not translated in its Russian catalog.
+msgid "- Select an option -"
+msgstr "—"
+
+msgid "Contact"
+msgstr "Контакт"
+
+msgid "State"
+msgstr "Состояние"
+
+msgid "Intervals"
+msgstr "Интервалы"
+
+msgid "Technical details"
+msgstr "Технические сведения"
+
+msgid "IP address"
+msgstr "IP-адрес"
+
+msgid "Time spent"
+msgstr "Затраченное время"
+
+msgid "Completed sessions by hour"
+msgstr "Завершённые сеансы по часам"
+
+msgid "Completed sessions by day"
+msgstr "Завершённые сеансы по дням"
+
+msgid "10 most used applications"
+msgstr "10 самых используемых приложений"
+
+msgid "No activity collection for this selection."
+msgstr "Сбор активности не включён."
+
+msgid "No completed sessions for this period."
+msgstr "За этот период нет завершённых сеансов."
+
+msgid "No completed application runs for this period."
+msgstr "За этот период нет завершённых запусков."
+
+msgid "Check the selected filters."
+msgstr "Проверьте выбранные фильтры."
+
+msgid "Last received: %(received)s"
+msgstr "Последние данные: %(received)s"
+
+msgid "No duration yet"
+msgstr "Длительности пока нет"
+
 msgid "Sanea"
 msgstr "Sanea"
 
@@ -101,8 +165,8 @@ msgstr "Суммарно за разрешённый интервал. Пуст�
 msgid "Launches per interval"
 msgstr "Запусков"
 
-msgid "Exact process name unless another matching method is chosen below."
-msgstr "Точное имя. Способ сравнения можно изменить ниже."
+msgid "Exact process name unless another matching method is selected."
+msgstr "Точное имя, если не выбран другой способ сравнения."
 
 msgid "Remove"
 msgstr "Удалить"
@@ -131,20 +195,15 @@ msgstr "Выберите заполненный режим, не помечен�
 msgid "User"
 msgstr "Пользователь"
 
-msgid "All users"
-msgstr "Все пользователи"
-
 msgid "Computer"
 msgstr "Компьютер"
-
-msgid "All computers"
-msgstr "Все компьютеры"
 
 msgid "Account"
 msgstr "Учётная запись"
 
-msgid "All accounts"
-msgstr "Все учётные записи"
+msgctxt "table heading"
+msgid "Account"
+msgstr "Учётка"
 
 msgid "Period"
 msgstr "Период"
@@ -158,14 +217,11 @@ msgstr "Учётная запись не принадлежит этому ко�
 msgid "Type"
 msgstr "Тип"
 
-msgid "All command types"
-msgstr "Все типы команд"
+msgid "Command"
+msgstr "Команда"
 
 msgid "Command status"
 msgstr "Состояние команды"
-
-msgid "All statuses"
-msgstr "Все состояния"
 
 msgid "Pending"
 msgstr "Ожидание"
@@ -191,23 +247,18 @@ msgstr "Часовой пояс"
 msgid "IANA timezone used to evaluate weekly schedules."
 msgstr "Часовой пояс IANA для расчёта недельных расписаний."
 
-msgid "All access states"
-msgstr "Любой доступ"
-
 msgid "Connection"
 msgstr "Связь"
-
-msgid "All connection states"
-msgstr "Любое соединение"
 
 msgid "Configuration"
 msgstr "Настройки"
 
-msgid "All configuration states"
-msgstr "Любое состояние конфигурации"
-
 msgid "Accounts"
 msgstr "Учётные записи"
+
+msgctxt "table heading"
+msgid "Accounts"
+msgstr "Учётки"
 
 msgid "Selected accounts will receive the template limits."
 msgstr ""
@@ -409,6 +460,10 @@ msgstr "Стабильный идентификатор бюджета учёт�
 
 msgid "Name"
 msgstr "Название"
+
+msgctxt "person"
+msgid "Name"
+msgstr "Имя"
 
 msgid "Parent-facing application name; it is not a recognition condition."
 msgstr ""
@@ -1059,7 +1114,7 @@ msgstr "Интервалы"
 msgid ""
 "Outside enabled intervals, computer use is blocked. Session rules are "
 "configured on the Sessions tab."
-msgstr "Вне разрешённых интервалов использование компьютера запрещено. Режимы — во вкладке «Сеансы»."
+msgstr "Вне разрешённых интервалов использование компьютера запрещено. Правила сеансов — во вкладке «Сеансы»."
 
 msgid "Interval"
 msgstr "Интервал"
@@ -1078,7 +1133,7 @@ msgstr "Включение ограничений без разрешённых 
 msgid ""
 "Name each rule and set session duration, session count per allowed interval "
 "and the break between sessions. Durations are in minutes."
-msgstr "Режим задаёт длительность сеанса, число сеансов за интервал и перерыв между ними. Время — в минутах."
+msgstr "Укажите длительность и число сеансов за интервал, а также перерыв между ними. Время — в минутах."
 
 msgid "Session"
 msgstr "Сеанс"
@@ -1092,7 +1147,7 @@ msgstr "Лимиты"
 msgid ""
 "Choose a session rule, enter an application process name and set its limits. "
 "Suggestions come from recorded activity; you can also enter a value manually."
-msgstr "Выберите режим и задайте лимиты. Имя процесса можно выбрать из статистики или ввести вручную."
+msgstr "Выберите правило сеанса и задайте лимиты. Имя процесса можно выбрать из статистики или ввести вручную."
 
 msgid "Application"
 msgstr "Приложение"
@@ -1288,7 +1343,7 @@ msgid "Commands"
 msgstr "Команды"
 
 msgid "Local accounts"
-msgstr "Локальные учётные записи"
+msgstr "Локальные учётки"
 
 #, python-format
 msgid "collecting: %(count)s"
@@ -1550,6 +1605,33 @@ msgstr "Не задано"
 msgid "Distribute template"
 msgstr "Распространить шаблон"
 
+msgid "Apply limits template"
+msgstr "Применить шаблон"
+
+msgid "This replaces the selected accounts' current limits."
+msgstr "Текущие ограничения выбранных учётных записей будут заменены."
+
+msgid "Default template for"
+msgstr "Шаблон по умолчанию для"
+
+msgid "Existing accounts"
+msgstr "Существующие учётные записи"
+
+msgid "Edit limits template"
+msgstr "Изменить шаблон"
+
+msgid "Apply template…"
+msgstr "Применить шаблон…"
+
+msgid "Existing accounts are updated separately."
+msgstr "Существующие учётные записи обновляются отдельно."
+
+msgid "No accounts are linked to this template's people."
+msgstr "У людей с этим шаблоном пока нет учётных записей."
+
+msgid "Accounts updated:"
+msgstr "Обновлено учётных записей:"
+
 msgid "No people have been added."
 msgstr "Люди ещё не добавлены."
 
@@ -1747,9 +1829,6 @@ msgstr "Последние 7 дней"
 msgid "Last 30 days"
 msgstr "Последние 30 дней"
 
-msgid "All time"
-msgstr "Всё время"
-
 msgid "Monday"
 msgstr "Понедельник"
 
@@ -1802,3 +1881,105 @@ msgstr "Поиск"
 
 msgid "No matches"
 msgstr "Нет совпадений"
+
+msgid "Access"
+msgstr "Доступ"
+
+msgid "Monitored accounts"
+msgstr "Отслеживаем"
+
+msgid "Total accounts"
+msgstr "Всего учётных записей"
+
+msgid "Offered settings"
+msgstr "Отправленные настройки"
+
+msgid "Confirmed settings"
+msgstr "Принятые настройки"
+
+msgid "Breadcrumbs"
+msgstr "Путь к странице"
+
+msgid "Sync interval, sec"
+msgstr "Синхронизация, с"
+
+msgid "Discovery interval, sec"
+msgstr "Поиск сервера, с"
+
+msgid "Scan interval, sec"
+msgstr "Проверка активности, с"
+
+msgid "Save interval, sec"
+msgstr "Сохранение, с"
+
+msgid "Minimum app duration, sec"
+msgstr "Мин. время приложения, с"
+
+msgid "Open registration and run the command on the new computer."
+msgstr "Откройте регистрацию и выполните команду на новом компьютере."
+
+msgid "The selected version will be offered to all allowed computers."
+msgstr "Эту версию получат компьютеры с разрешённой синхронизацией."
+
+msgctxt "computer"
+msgid "Edit"
+msgstr "Редактировать"
+
+msgid "Choose session rule"
+msgstr "Выберите правило сеанса"
+
+msgid "New session rule"
+msgstr "Новое правило сеанса"
+
+msgid "Choose a session rule that is not empty or removed."
+msgstr "Выберите заполненное правило сеанса."
+
+msgid "There are no allowed intervals. Save and block all sessions for this account?"
+msgstr "Нет разрешённых интервалов. Сохранить и запретить все сеансы этой учётной записи?"
+
+#, python-format
+msgid "Remove session rule “%(title)s” and its %(ranges)s intervals and %(apps)s application rules?"
+msgstr "Удалить правило сеанса «%(title)s» и связанные ограничения: интервалы — %(ranges)s, приложения — %(apps)s?"
+
+msgid "Copy"
+msgstr "Копировать"
+
+msgid "Copied"
+msgstr "Скопировано"
+
+msgid "Could not copy. Select the log text and copy it."
+msgstr "Не удалось скопировать. Выделите текст журнала и скопируйте его."
+
+msgid "Ignored process saved."
+msgstr "Процесс сохранён."
+
+msgid "Edit ignored process"
+msgstr "Изменить процесс"
+
+msgid "To update accounts, use “Distribute template” in Limits."
+msgstr "Для обновления учётных записей используйте «Распространить шаблон» в разделе «Ограничения»."
+
+msgid "In schedule"
+msgstr "В расписании"
+
+msgid "Included in schedule"
+msgstr "Включён в расписание"
+
+msgid "Not included in schedule"
+msgstr "Не включён в расписание"
+
+msgid "Limits applied"
+msgstr "Ограничения применяются"
+
+msgid "Limits not applied"
+msgstr "Ограничения не применяются"
+
+msgctxt "rule status"
+msgid "Applied"
+msgstr "Применяется"
+
+msgid "Comparison"
+msgstr "Сравнение"
+
+msgid "Ranges"
+msgstr "Диапазоны"

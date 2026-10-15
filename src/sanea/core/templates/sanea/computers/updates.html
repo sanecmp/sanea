@@ -1,0 +1,9 @@
+{% extends "sanea/base.html" %}
+{% load i18n %}
+
+{% block content %}
+<h1 class="display-6 fw-bold mb-4">{% translate "Updates" %}</h1>
+<section class="card" id="sanex-updates">
+    {% include "sanea/computers/_updates.html" %}
+</section>
+{% endblock %}

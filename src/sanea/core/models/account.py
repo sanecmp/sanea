@@ -97,6 +97,10 @@ class Account(TimestampedModel):
     def __str__(self) -> str:
         return f"{self.login} ({self.uid}@{self.computer_id})"
 
+    def get_display_name(self) -> str:
+        """Return the reported name or login for browser labels."""
+        return self.name or self.login
+
     def update_report(self, login: str, name: str) -> None:
         """Apply mutable identity fields from one sanex account report."""
         changed_fields = []

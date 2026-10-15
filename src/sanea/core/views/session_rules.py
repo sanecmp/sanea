@@ -16,6 +16,7 @@ class SessionRulesView(ModelEditorView[Limits, SessionRule, SessionRuleForm]):
 
     page_title = _("Session rules")
     section = "session_rules"
+    large_editor = True
     editor_id = "session-rule-editor"
     editor_template = "sanea/session_rules/_editor.html"
     reference_name = "rule"

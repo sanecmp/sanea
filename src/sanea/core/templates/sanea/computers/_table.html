@@ -1,17 +1,17 @@
 {% load i18n %}
-<section class="card" id="computer-table">
-    <div class="table-responsive sanea-mobile-table position-relative">
+<section class="card" id="computer-table"{% if table_oob %} hx-swap-oob="outerHTML"{% endif %}>
+    <div class="table-responsive sanea-table-wrap sanea-mobile-table">
         <table class="table align-middle mb-0">
             <thead>
             <tr>
                 <th scope="col">{% translate "Computer" %}</th>
-                <th scope="col">{% translate "Synchronization" %}</th>
-                <th scope="col">{% translate "Connection" %}</th>
-                <th scope="col">{% translate "Configuration" %}</th>
+                <th scope="col" class="text-center">{% translate "Synchronization" %}</th>
+                <th scope="col" class="text-center">{% translate "Connection" %}</th>
+                <th scope="col" class="text-center">{% translate "Settings" %}</th>
                 <th scope="col">{% translate "Version" %}</th>
-                <th scope="col">{% translate "Last contact" %}</th>
-                <th scope="col">{% translate "Commands" %}</th>
-                <th scope="col">{% translate "Local accounts" %}</th>
+                <th scope="col">{% translate "Contact" %}</th>
+                <th scope="col" class="text-center">{% translate "Commands" %}</th>
+                <th scope="col" class="text-center">{% translate "Accounts" context "table heading" %}</th>
                 <th scope="col"><span class="visually-hidden">{% translate "Actions" %}</span></th>
             </tr>
             </thead>
@@ -19,77 +19,28 @@
             {% for item in computers %}
                 <tr class="sanea-table-item">
                     <td>
-                        <div class="fw-semibold">{{ item.get_display_name }}</div>
+                        <div>{{ item.get_display_name }}</div>
                         {% if item.name %}<div class="small text-body-secondary">{{ item.hostname }}</div>{% endif %}
                     </td>
-                    <td data-label="{% translate 'Synchronization' %}">{% include "sanea/computers/_access.html" %}</td>
-                    <td data-label="{% translate 'Connection' %}">{% include "sanea/computers/_connection.html" %}</td>
-                    <td data-label="{% translate 'Configuration' %}">{% include "sanea/computers/_config_status.html" %}</td>
-                    <td data-label="{% translate 'Version' %}">{{ item.version|default:_('Unknown') }}</td>
-                    <td class="text-nowrap" data-label="{% translate 'Last contact' %}">{% include "sanea/computers/_last_contact.html" %}</td>
-                    <td data-label="{% translate 'Commands' %}">{% include "sanea/computers/_command_counts.html" %}</td>
-                    <td data-label="{% translate 'Local accounts' %}">
-                        {{ item.account_count }}
-                        <span class="text-body-secondary">({% blocktranslate with count=item.collecting_count %}collecting: {{ count }}{% endblocktranslate %})</span>
+                    <td class="text-center" data-label="{% translate 'Synchronization' %}">{% include "sanea/computers/_access.html" %}</td>
+                    <td class="text-center" data-label="{% translate 'Connection' %}">{% include "sanea/computers/_connection.html" %}</td>
+                    <td class="text-center" data-label="{% translate 'Settings' %}">{% include "sanea/computers/_config_status.html" %}</td>
+                    <td class="small text-body-secondary" data-label="{% translate 'Version' %}">{{ item.version|default:_('Unknown') }}</td>
+                    <td class="small text-body-secondary text-nowrap" data-label="{% translate 'Contact' %}">{% include "sanea/computers/_last_contact.html" %}</td>
+                    <td class="small text-body-secondary text-center" data-label="{% translate 'Commands' %}">{% include "sanea/computers/_command_counts.html" %}</td>
+                    <td class="small text-body-secondary text-nowrap text-center" data-label="{% translate 'Accounts' context 'table heading' %}">
+                        <span title="{% translate 'Monitored accounts' %}">{{ item.collecting_count }}</span>
+                        <span aria-hidden="true"> / </span>
+                        <span title="{% translate 'Total accounts' %}">{{ item.account_count }}</span>
                     </td>
                     <td class="text-end text-nowrap sanea-table-actions">
-                        <div class="mb-2">
-                            <a class="btn btn-sm btn-outline-primary" id="computer-configure-open-{{ item.pk }}"
-                               href="{{ computers_url }}?computer={{ item.pk }}&amp;edit=1"
-                               hx-get="{{ computers_url }}?computer={{ item.pk }}&amp;edit=1"
-                               hx-target="#computer-details-{{ item.pk }}" hx-swap="innerHTML">
-                                {% translate "Configure" %}
-                            </a>
-                        </div>
-                        <div class="dropdown" id="computer-menu-{{ item.pk }}"{% if preserve_details %} hx-preserve{% endif %}>
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
-                                    id="computer-actions-{{ item.pk }}" type="button"
-                                    data-bs-toggle="dropdown" data-bs-boundary="viewport"
-                                    data-bs-config='{"popperConfig":{"strategy":"fixed"}}'
-                                    aria-expanded="false">
-                                {% translate "Actions" %}
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end"
-                                aria-labelledby="computer-actions-{{ item.pk }}">
-                                <li>
-                                    <a class="dropdown-item" id="computer-commands-{{ item.pk }}"
-                                       href="{{ computers_url }}?tab=commands&amp;command_computer={{ item.pk }}#command-history"
-                                       hx-get="{{ computers_url }}?tab=commands&amp;command_computer={{ item.pk }}"
-                                       hx-target="#command-history" hx-swap="outerHTML show:top"
-                                       hx-push-url="{{ computers_url }}?tab=commands&amp;command_computer={{ item.pk }}#command-history">
-                                        {% translate "View commands" %}
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item"
-                                       href="{% url 'core:issues' %}?computer={{ item.pk }}&amp;period=7-days">
-                                        {% translate "View issues" %}
-                                    </a>
-                                </li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li>
-                                    <a class="dropdown-item" id="computer-details-open-{{ item.pk }}"
-                                       href="{{ computers_url }}?computer={{ item.pk }}"
-                                       hx-get="{{ computers_url }}?computer={{ item.pk }}"
-                                       hx-target="#computer-details-{{ item.pk }}" hx-swap="innerHTML">
-                                        {% translate "Details" %}
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-                    </td>
-                </tr>
-                <tr>
-                    <td class="border-0 p-0" colspan="9">
-                        <div id="computer-details-{{ item.pk }}"{% if preserve_details %} hx-preserve{% endif %}>
-                            {% if computer.pk == item.pk %}
-                                {% if computer_form %}
-                                    {% include "sanea/computers/_editor.html" with computer=item %}
-                                {% else %}
-                                    {% include "sanea/computers/_details.html" with computer=item %}
-                                {% endif %}
-                            {% endif %}
-                        </div>
+                        <a class="btn btn-sm btn-outline-secondary sanea-icon-button" id="computer-details-open-{{ item.pk }}"
+                           href="{{ computers_url }}?computer={{ item.pk }}"
+                           hx-get="{{ computers_url }}?computer={{ item.pk }}"
+                           hx-target="#computer-editor" hx-swap="innerHTML"
+                           title="{% translate 'Details' %}" aria-label="{% translate 'Details' %}: {{ item.get_display_name }}">
+                            <svg class="sanea-action-icon" aria-hidden="true"><use href="#icon-info"></use></svg>
+                        </a>
                     </td>
                 </tr>
             {% empty %}

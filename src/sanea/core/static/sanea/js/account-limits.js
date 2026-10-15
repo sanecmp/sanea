@@ -11,7 +11,7 @@
             const choices = sessions.filter((row) => !row.hidden && !row.querySelector('input[name$="-DELETE"]').checked)
                 .map((row) => ({
                     value: row.dataset.formPrefix.slice("sessions-".length),
-                    label: row.querySelector('input[name$="-name"]').value.trim() || form.dataset.newPresetLabel,
+                    label: row.querySelector('input[name$="-name"]').value.trim() || form.dataset.newRuleLabel,
                 }));
 
             form.querySelectorAll('select[name$="-rule"]').forEach((select) => {
@@ -51,6 +51,29 @@
         });
         form.querySelectorAll("[data-add-form]").forEach((button) => { button.hidden = false; });
         synchronizeRules();
+
+        form.addEventListener("submit", (event) => {
+            const confirmation = form.querySelector('input[name="limits-confirm_empty_schedule"]');
+            confirmation.value = "";
+            confirmation.checked = false;
+            const hasAllowedTimes = Array.from(form.querySelectorAll('[data-formset="ranges"] [data-form-row]'))
+                .some((row) => !row.hidden && !row.querySelector('input[name$="-DELETE"]').checked
+                    && row.querySelector('input[name$="-apply"]').checked
+                    && ["weekday", "since", "till", "rule"].every((name) => row.querySelector(`[name$="-${name}"]`).value !== ""));
+            const needsConfirmation = form.querySelector('input[name="limits-apply"]').checked
+                && !hasAllowedTimes
+                && (form.dataset.limitsApplied !== "true" || form.dataset.hadAllowedTimes === "true");
+            if (needsConfirmation) {
+                if (!window.confirm(form.dataset.emptyScheduleConfirmation)) {
+                    event.preventDefault();
+                    return;
+                }
+                confirmation.value = "on";
+                if (confirmation.type === "checkbox") {
+                    confirmation.checked = true;
+                }
+            }
+        });
 
         document.querySelectorAll("[data-rule-deletion]").forEach((removal) => {
             removal.addEventListener("submit", (event) => {
