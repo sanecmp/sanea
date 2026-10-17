@@ -7,12 +7,14 @@ export PATH
 usage() {
     cat <<'USAGE'
 Usage: install.sh [--uv PATH] [--python PATH] [--index-url URL] [PACKAGE]
-                  [--from-github]
+                  [--from-github] [--no-autostart]
 
 Install sanea as a system service. PACKAGE defaults to "sanecmp-sanea" and may be an
 exact requirement or a local wheel path.
 --from-github installs sanea and sanelib from the main branches of their GitHub
 repositories and requires git. PACKAGE cannot be combined with this mode.
+--no-autostart leaves the service stopped and disables startup at boot.
+Run manually with sudo sanea serve. Updates preserve the service's autostart state.
 USAGE
 }
 
@@ -56,6 +58,8 @@ index_url=https://pypi.org/simple
 package=sanecmp-sanea
 package_set=0
 from_github=0
+no_autostart=0
+autostart=1
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
@@ -76,6 +80,10 @@ while [ "$#" -gt 0 ]; do
             ;;
         --from-github)
             from_github=1
+            shift
+            ;;
+        --no-autostart)
+            no_autostart=1
             shift
             ;;
         --help|-h)
@@ -161,6 +169,12 @@ if ! getent group sanea >/dev/null 2>&1; then
 fi
 if ! getent passwd sanea >/dev/null 2>&1; then
     useradd --system --gid sanea --home-dir "$app_dir" --shell /usr/sbin/nologin sanea
+fi
+
+if [ "$no_autostart" -eq 1 ]; then
+    autostart=0
+elif [ -f "$unit_target" ] && ! systemctl is-enabled --quiet sanea.service; then
+    autostart=0
 fi
 
 install -d -o root -g root -m 0755 "$app_dir" "$bundle_dir" "$bin_dir"
@@ -254,12 +268,29 @@ install -o root -g root -m 0644 "$unit_source" "$unit_target"
 systemctl daemon-reload
 "$wrapper_target" migrate --noinput
 "$wrapper_target" collectstatic --noinput
-systemctl enable --now sanea.service
+service_started=0
+if [ "$autostart" -eq 1 ]; then
+    systemctl enable --now sanea.service
+    service_started=1
+elif [ "$no_autostart" -eq 1 ]; then
+    systemctl disable sanea.service
+elif [ "$was_active" -eq 1 ]; then
+    systemctl start sanea.service
+    service_started=1
+fi
 was_active=0
 
 trap - EXIT
 cleanup
 
-printf '%s\n' 'sanea installed and started successfully.'
+if [ "$service_started" -eq 1 ]; then
+    printf '%s\n' 'sanea installed and started successfully.'
+else
+    printf '%s\n' 'sanea installed successfully.'
+    printf '%s\n' 'Start manually with: sudo sanea serve'
+fi
+if [ "$autostart" -eq 0 ]; then
+    printf '%s\n' 'Service autostart is disabled.'
+fi
 printf '%s\n' 'Create the first administrator with: sudo sanea createsuperuser'
 printf 'Open: https://%s:8443/\n' "$(hostname 2>/dev/null || printf localhost)"

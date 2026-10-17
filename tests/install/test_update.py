@@ -23,7 +23,9 @@ def run_installer(tmp_path: Path) -> Callable[..., subprocess.CompletedProcess[s
     state.parent.mkdir(parents=True)
     state.write_bytes(b"existing statistics\n")
     (root / "usr/local/sbin").mkdir(parents=True)
-    (root / "etc/systemd/system").mkdir(parents=True)
+    unit = root / "etc/systemd/system/sanea.service"
+    unit.parent.mkdir(parents=True)
+    unit.write_text("existing service\n")
     fake_uv = tmp_path / "uv"
     fake_uv.write_text("""#!/bin/sh
 set -eu
@@ -74,9 +76,10 @@ install() {
 }
 systemctl() {
     printf 'systemctl %s\\n' "$*" >> "$SANEA_TEST_CALLS"
-    if [ "$1" = is-active ]; then
-        [ "$SANEA_TEST_ACTIVE" -eq 1 ]
-    fi
+    case "$1" in
+        is-active) [ "$SANEA_TEST_ACTIVE" -eq 1 ] ;;
+        is-enabled) [ "$SANEA_TEST_ENABLED" -eq 1 ] ;;
+    esac
 }
 hostname() {
     if [ "$#" -eq 0 ]; then
@@ -93,11 +96,18 @@ hostname() {
     def execute(
         *, active: bool, from_github: bool = False, fail_install: bool = False,
         existing_config: bool = True, addresses: str = "192.168.1.10", address_failure: bool = False,
+        existing_unit: bool = True, enabled: bool = True, no_autostart: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         arguments = ["--from-github"] if from_github else []
 
+        if no_autostart:
+            arguments.append("--no-autostart")
+
         if not existing_config:
             config.unlink()
+
+        if not existing_unit:
+            unit.unlink()
 
         return subprocess.run(
             ["bash", "-c", harness, f"{INSTALLER}", "--uv", f"{fake_uv}", "--python", f"{sys.executable}", *arguments],
@@ -107,6 +117,7 @@ hostname() {
                 "SANEA_TEST_CALLS": f"{tmp_path / "calls.txt"}",
                 "SANEA_TEST_UV_ARGS": f"{tmp_path / "uv-args.txt"}",
                 "SANEA_TEST_ACTIVE": f"{int(active)}",
+                "SANEA_TEST_ENABLED": f"{int(enabled)}",
                 "SANEA_TEST_FAIL": f"{int(fail_install)}",
                 "SANEA_TEST_ADDRESSES": addresses,
                 "SANEA_TEST_ADDRESS_FAILURE": f"{int(address_failure)}",
@@ -135,7 +146,8 @@ def test_update_preserves_data_and_restarts_service_after_migrations(
     events = (tmp_path / "calls.txt").read_text().splitlines()
     stop = ["systemctl stop sanea.service"] if active else []
     assert events == [
-        "systemctl is-active --quiet sanea.service", *stop, "uv install", "systemctl daemon-reload",
+        "systemctl is-enabled --quiet sanea.service", "systemctl is-active --quiet sanea.service",
+        *stop, "uv install", "systemctl daemon-reload",
         "manage migrate --noinput", "manage collectstatic --noinput", "systemctl enable --now sanea.service",
     ]
     arguments = (tmp_path / "uv-args.txt").read_text().splitlines()
@@ -146,17 +158,67 @@ def test_update_preserves_data_and_restarts_service_after_migrations(
 
 
 @pytest.mark.parametrize("active", [True, False])
+@pytest.mark.parametrize("no_autostart", [True, False])
 def test_failed_update_restarts_only_a_previously_active_service(
-    tmp_path: Path, run_installer: Callable[..., subprocess.CompletedProcess[str]], active: bool,
+    tmp_path: Path, run_installer: Callable[..., subprocess.CompletedProcess[str]], active: bool, no_autostart: bool,
 ) -> None:
-    result = run_installer(active=active, fail_install=True)
+    result = run_installer(active=active, fail_install=True, no_autostart=no_autostart)
 
     assert result.returncode == 42
     events = (tmp_path / "calls.txt").read_text().splitlines()
-    assert events == ([
-        "systemctl is-active --quiet sanea.service", "systemctl stop sanea.service",
-        "uv install", "systemctl start sanea.service",
-    ] if active else ["systemctl is-active --quiet sanea.service", "uv install"])
+    check_enabled = [] if no_autostart else ["systemctl is-enabled --quiet sanea.service"]
+    stop = ["systemctl stop sanea.service"] if active else []
+    restart = ["systemctl start sanea.service"] if active else []
+    assert events == [
+        *check_enabled, "systemctl is-active --quiet sanea.service", *stop, "uv install", *restart,
+    ]
+
+
+@pytest.mark.parametrize(("existing_unit", "active"), [
+    pytest.param(False, False, id="first-installation"),
+    pytest.param(True, False, id="stopped-service"),
+    pytest.param(True, True, id="running-service"),
+])
+def test_no_autostart_leaves_service_installed_stopped_and_disabled(
+    tmp_path: Path, run_installer: Callable[..., subprocess.CompletedProcess[str]], existing_unit: bool, active: bool,
+) -> None:
+    result = run_installer(
+        active=active, existing_unit=existing_unit, existing_config=existing_unit, no_autostart=True,
+    )
+
+    assert result.returncode == 0, result.stderr
+    stop = ["systemctl stop sanea.service"] if active else []
+    assert (tmp_path / "calls.txt").read_text().splitlines() == [
+        "systemctl is-active --quiet sanea.service", *stop, "uv install", "systemctl daemon-reload",
+        "manage migrate --noinput", "manage collectstatic --noinput", "systemctl disable sanea.service",
+    ]
+    assert "Start manually with: sudo sanea serve" in result.stdout
+    assert "Service autostart is disabled." in result.stdout
+    assert "installed and started" not in result.stdout
+    assert "ExecStart=/opt/sanea/bin/sanea serve" in (tmp_path / "root/etc/systemd/system/sanea.service").read_text()
+    assert (tmp_path / "root/usr/local/sbin/sanea").is_file()
+    assert (tmp_path / "root/etc/sanea/sanea.env").is_file()
+    assert (tmp_path / "root/opt/sanea/state/sanea.sqlite3").read_bytes() == b"existing statistics\n"
+
+
+@pytest.mark.parametrize("active", [True, False])
+def test_update_preserves_disabled_autostart_and_previous_running_state(
+    tmp_path: Path, run_installer: Callable[..., subprocess.CompletedProcess[str]], active: bool,
+) -> None:
+    result = run_installer(active=active, enabled=False)
+
+    assert result.returncode == 0, result.stderr
+    stop = ["systemctl stop sanea.service"] if active else []
+    restart = ["systemctl start sanea.service"] if active else []
+    assert (tmp_path / "calls.txt").read_text().splitlines() == [
+        "systemctl is-enabled --quiet sanea.service", "systemctl is-active --quiet sanea.service",
+        *stop, "uv install", "systemctl daemon-reload",
+        "manage migrate --noinput", "manage collectstatic --noinput", *restart,
+    ]
+    assert "Service autostart is disabled." in result.stdout
+    assert ("Start manually with: sudo sanea serve" in result.stdout) == (not active)
+    assert (tmp_path / "root/etc/sanea/sanea.env").read_text() == "SANEA_KEEP=existing\n"
+    assert (tmp_path / "root/opt/sanea/state/sanea.sqlite3").read_bytes() == b"existing statistics\n"
 
 
 @pytest.mark.parametrize(("addresses", "expected"), [
@@ -169,7 +231,7 @@ def test_failed_update_restarts_only_a_previously_active_service(
 def test_first_installation_configures_local_hosts_without_wildcard(
     tmp_path: Path, run_installer: Callable[..., subprocess.CompletedProcess[str]], addresses: str, expected: list[str],
 ) -> None:
-    result = run_installer(active=False, existing_config=False, addresses=addresses)
+    result = run_installer(active=False, existing_config=False, existing_unit=False, addresses=addresses)
 
     assert result.returncode == 0, result.stderr
     config = (tmp_path / "root/etc/sanea/sanea.env").read_text()
@@ -177,6 +239,8 @@ def test_first_installation_configures_local_hosts_without_wildcard(
     hosts = json.loads(line.split("=", 1)[1].strip("'"))
     assert hosts == ["localhost", "127.0.0.1", "[::1]", "sanea", "sanea-box", *expected]
     assert "*" not in hosts
+    assert (tmp_path / "calls.txt").read_text().splitlines()[-1] == "systemctl enable --now sanea.service"
+    assert "installed and started successfully" in result.stdout
     assert (tmp_path / "root/opt/sanea/state/sanea.sqlite3").read_bytes() == b"existing statistics\n"
 
 

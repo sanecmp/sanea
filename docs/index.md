@@ -163,7 +163,8 @@ Do not supply `PACKAGE` together with `--from-github`. Third-party dependencies
 still come from PyPI, or the HTTPS index selected with `--index-url`.
 
 The installer creates the dedicated `sanea` OS user, database, random secret,
-configuration and systemd service. It runs migrations and starts the service.
+configuration and systemd service. It runs migrations and, by default, starts
+the service and enables startup at boot.
 It also collects static assets, which the embedded server serves through
 WhiteNoise without a separate web server.
 Use the administrator's credentials to sign in at <http://127.0.0.1:8000/> on
@@ -172,15 +173,45 @@ login over the network.
 
 Application code lives in `/opt/sanea/bundle/sanecmp-sanea`; persistent state
 is in `/opt/sanea/state` and configuration in `/etc/sanea/sanea.env`.
-Management commands use the root-owned wrapper `sudo sanea` to load that
-configuration and execute as the dedicated service user.
+The installer adds `/usr/local/sbin/sanea`. Management commands use this root-owned
+wrapper as `sudo sanea` to load the configuration and execute as the dedicated service user.
+
+### Manual startup
+
+To run sanea only when needed, install it with `--no-autostart`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sanecmp/sanea/main/install.sh \
+    | sudo sh -s -- --no-autostart 'sanecmp-sanea==0.1.0'
+sudo sanea createsuperuser
+sudo sanea serve
+```
+
+Files and permissions stay the same, so installation and startup still require
+`sudo`. The systemd unit remains installed, but the service is stopped and disabled,
+including when applying this option to an existing installation. The foreground
+server runs until you press `Ctrl+C`; open its interface in the browser as usual.
+Do not run it alongside the systemd service.
+
+To enable service autostart later, stop the foreground server first, then run:
+
+```bash
+sudo systemctl enable --now sanea.service
+```
 
 ### Updating sanea
+
+Stop any foreground `sanea serve` process before updating:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sanecmp/sanea/main/install.sh \
     | sudo sh
 ```
+
+Updates preserve the service's enabled or disabled autostart state. A disabled
+service is restarted only if it was already running; `--no-autostart` always
+leaves it stopped and disabled. After a manual installation, run `sudo sanea serve`
+again when needed; there is no need to repeat `--no-autostart` on each update.
 
 ### Home-network access
 
@@ -199,6 +230,8 @@ After changing the configuration:
 ```bash
 sudo systemctl restart sanea.service
 ```
+
+For manual startup, stop the foreground server and run `sudo sanea serve` again instead.
 
 Allow inbound TCP 8443 and UDP 62117 from your home network. UDP discovery
 requires the devices to share a reachable local broadcast network; guest-network
