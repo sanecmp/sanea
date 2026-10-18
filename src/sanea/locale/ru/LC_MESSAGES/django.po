@@ -1983,3 +1983,36 @@ msgstr "Сравнение"
 
 msgid "Ranges"
 msgstr "Диапазоны"
+
+msgid "Application identifier"
+msgstr "Идентификатор приложения"
+
+msgid "Application name"
+msgstr "Название приложения"
+
+msgid "Recognized application identity, independent of its executable."
+msgstr "Определённый идентификатор приложения, не зависящий от исполняемого файла."
+
+msgid "Recognized application display name."
+msgstr "Определённое название приложения."
+
+msgid "Optional exact application identity from recorded activity."
+msgstr "Необязательный точный идентификатор приложения из собранной статистики."
+
+msgid "Not selected"
+msgstr "Не выбрано"
+
+msgid "From recorded activity. Optional."
+msgstr "Из статистики. Можно не выбирать."
+
+msgid "No applications in statistics yet. Use the conditions below."
+msgstr "В статистике пока нет приложений. Можно задать условия ниже."
+
+msgid "Use:"
+msgstr "Использовать:"
+
+msgid "Choose or enter a name"
+msgstr "Выберите или введите имя"
+
+msgid "From recorded activity or enter manually. Case-sensitive, up to 15 characters."
+msgstr "Из статистики или вручную. С учётом регистра, до 15 символов."

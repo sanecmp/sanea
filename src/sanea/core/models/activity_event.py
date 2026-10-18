@@ -52,6 +52,13 @@ class ApplicationUsage:
     duration: int | None
     launches: int
     last_used: int
+    app_id: str | None = None
+    app_name: str | None = None
+
+    @property
+    def name(self) -> str:
+        """Prefer the application label without losing technical process fields."""
+        return self.app_name or self.prc_name or self.exe
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +73,7 @@ class RecentActivity:
     duration: int
     prc_name: str | None = None
     exe: str | None = None
+    app_name: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,6 +197,14 @@ class ActivityEvent(TimestampedModel):
         blank=True,
         help_text=_("Resolved executable path without command-line arguments."),
     )
+    app_id = models.CharField(
+        verbose_name=_("Application identifier"), max_length=4096, null=True, blank=True,
+        help_text=_("Recognized application identity, independent of its executable."),
+    )
+    app_name = models.CharField(
+        verbose_name=_("Application name"), max_length=512, null=True, blank=True,
+        help_text=_("Recognized application display name."),
+    )
     rule_ident = models.PositiveBigIntegerField(
         verbose_name=_("Rule identifier"),
         null=True,
@@ -240,6 +256,10 @@ class ActivityEvent(TimestampedModel):
     def __str__(self) -> str:
         return f"{self.type} #{self.seq} ({self.account_id})"
 
+    def get_application_key(self) -> tuple[str, ...]:
+        """Group recognized applications by ID and unknown ones by raw name/path."""
+        return (self.app_id,) if self.app_id else (self.prc_name or "", self.exe or "")
+
     @classmethod
     def build_from_client_event(
         cls,
@@ -248,6 +268,7 @@ class ActivityEvent(TimestampedModel):
         event: ClientEvent,
     ) -> Self:
         """Build an unsaved database event from one validated protocol event."""
+        application = getattr(event, "application", None)
         return cls(
             account=account,
             packet=packet,
@@ -259,6 +280,8 @@ class ActivityEvent(TimestampedModel):
             duration=getattr(event, "duration", None),
             prc_name=getattr(event, "prc_name", None),
             exe=getattr(event, "exe", None),
+            app_id=application.ident if application else None,
+            app_name=application.name if application else None,
             rule_ident=getattr(event, "rule_ident", None),
             wnd_ident=getattr(event, "wnd_ident", None),
             reason=getattr(event, "reason", None),
@@ -303,10 +326,12 @@ class _ActivityReportBuilder:
             day = self._get_local_date(event)
             daily_totals[(day, event.account.person_id)] += end.duration or 0
 
-        applications: dict[tuple[str, str], dict[str, int]] = {}
+        applications: dict[tuple[str, ...], dict[str, int]] = {}
+        representatives: dict[tuple[str, ...], ActivityEvent] = {}
 
         for event in process_starts:
-            key = (event.prc_name or "", event.exe or "")
+            key = event.get_application_key()
+            representatives[key] = event
             usage = applications.setdefault(
                 key,
                 {"duration": 0, "launches": 0, "completed_launches": 0, "last_used": 0},
@@ -328,13 +353,15 @@ class _ActivityReportBuilder:
             sorted(
                 (
                     ApplicationUsage(
-                        prc_name,
-                        exe,
+                        representatives[key].prc_name or "",
+                        representatives[key].exe or "",
                         values["duration"] if values["completed_launches"] else None,
                         values["launches"],
                         values["last_used"],
+                        representatives[key].app_id,
+                        representatives[key].app_name,
                     )
-                    for (prc_name, exe), values in applications.items()
+                    for key, values in applications.items()
                 ),
                 key=lambda item: (-(item.duration or 0), -item.launches, item.prc_name, item.exe),
             )
@@ -423,6 +450,7 @@ class _ActivityReportBuilder:
                     duration=end.duration or 0,
                     prc_name=None if is_session else event.prc_name,
                     exe=None if is_session else event.exe,
+                    app_name=None if is_session else event.app_name,
                 )
             )
 

@@ -99,10 +99,16 @@ def test_account_limits_get_preserves_graph_and_scopes_choices_and_suggestions(
     )
     packet = parse_event_packet(client_events_content, hashlib.sha256(client_events_content).hexdigest())
     account.store_event_packet(packet, len(client_events_content), None)
+    ActivityEvent.objects.filter(account=account, type="prc_start").update(
+        app_id="desktop:org.example.Browser", app_name="Synthetic browser",
+    )
     ActivityEvent.objects.filter(account=account, type="enforcement_failed").update(prc_name="synthetic_non_start")
     sibling_content = client_events_content.replace(b"yandex_browser", b"sibling_application")
     sibling_packet = parse_event_packet(sibling_content, hashlib.sha256(sibling_content).hexdigest())
     sibling.store_event_packet(sibling_packet, len(sibling_content), None)
+    ActivityEvent.objects.filter(account=sibling, type="prc_start").update(
+        app_id="desktop:org.example.Sibling", app_name="Sibling app",
+    )
     staff_user = user_create(attributes={"is_staff": True})
     before = read_limits_state()
 
@@ -115,6 +121,12 @@ def test_account_limits_get_preserves_graph_and_scopes_choices_and_suggestions(
     assert "yandex_browser" in content
     assert "sibling_application" not in content
     assert "synthetic_non_start" not in content
+    assert "<option value=\"desktop:org.example.Browser\">Synthetic browser</option>" in content
+    assert "desktop:org.example.Sibling" not in content
+    assert "<select name=\"apps-0-app_id\"" in content
+    assert "app_id-suggestions" not in content
+    assert "aria-describedby=\"id_apps-0-app_id_help\"" in content
+    assert "From recorded activity. Optional." in content
     assert "name=\"limits-limits_version\"" in content
     assert "name=\"sessions-0-id\"" in content
     assert "name=\"ranges-0-id\"" in content

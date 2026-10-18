@@ -126,6 +126,7 @@
             initializeRow(row);
             hasDraftChanges = true;
             synchronizeRules();
+            row.dispatchEvent(new CustomEvent("sanea:form-added", { bubbles: true }));
             row.querySelector('input:not([type="hidden"]):not([type="checkbox"]), select')?.focus();
         });
 

@@ -10,7 +10,8 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.functional import Promise
 
 from ..forms import PrcExclusionForm
-from ..models import PrcExclusion
+from ..forms.activity_suggestions import get_activity_suggestions
+from ..models import ActivityEvent, PrcExclusion
 from .editor import ModelEditorView
 
 
@@ -63,12 +64,19 @@ class IgnoredProcessesEditor(ModelEditorView[None, PrcExclusion, PrcExclusionFor
         """Build the same form for adding and editing an exclusion."""
         reference = request.POST.get("exclusion", request.GET.get("exclusion", "new"))
         exclusion = None if reference == "new" else self.get_requested_exclusion(request)
+        events = ActivityEvent.objects.filter(type="prc_start").exclude(
+            prc_name__in=PrcExclusion.objects.filter(apply=True).values("prc_name"),
+        )
+        suggestions = get_activity_suggestions(
+            events, "prc_name", max_length=PrcExclusion._meta.get_field("prc_name").max_length,
+        )
         form = PrcExclusionForm(
             request=request,
             src="POST",
             prefix="exclusion",
             instance=exclusion,
             render_form_tag=False,
+            suggestions=tuple(suggestion.value for suggestion in suggestions),
         )
         return exclusion, form
 

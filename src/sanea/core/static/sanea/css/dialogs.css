@@ -14,3 +14,8 @@
     min-height: 0;
     overflow: hidden;
 }
+
+/* Keep suggestions visible and Save stationary when the input loses focus. */
+.sanea-editor-dialog .modal-body:has(input[data-select-suggestions]) {
+    min-height: min(20rem, 50vh);
+}

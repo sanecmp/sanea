@@ -2,13 +2,17 @@
 
 from typing import Any
 from collections.abc import Callable
+from html import unescape
+import json
 import re
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.test import Client
 
-from sanea.core.models import Computer, LimitsTemplate, PrcExclusion, User
+from sanea.core.models import Account, ActivityEvent, Computer, EventPacket, LimitsTemplate, PrcExclusion, User
 
 
 @pytest.mark.parametrize("ajax", [False, True], ids=["ordinary", "ajax"])
@@ -71,8 +75,91 @@ def test_ignored_processes_lists_names_and_add_form(
     assert "data-dialog-panel" in editor_response.content.decode()
     assert "data-dialog-close" in editor_response.content.decode()
     assert "name=\"exclusion-prc_name\"" in editor_response.content.decode()
+    assert "data-select-suggestions=\"[]\"" in editor_response.content.decode()
+    assert "<input type=\"text\"" in editor_response.content.decode()
     assert "id=\"limits-list\"" not in editor_response.content.decode()
     assert "id=\"limits-save\"" not in editor_response.content.decode()
+
+
+@pytest.mark.parametrize("ajax", [False, True], ids=["ordinary", "ajax"])
+def test_ignored_process_suggestions_use_recent_global_process_names(
+    request_client: Callable[..., Client], user_create: Callable[..., User],
+    computer_record: Computer, ignored_process_record: PrcExclusion, ajax: bool,
+) -> None:
+    account = computer_record.accounts.get()
+    PrcExclusion.objects.create(prc_name="released-tool", apply=False)
+    values = [
+        (f"synthetic-{index}", index, "prc_start") for index in range(100, 155)
+    ] + [
+        ("synthetic-154", 900, "prc_start"),
+        ("a" * 15, 996, "prc_start"),
+        ("released-tool", 997, "prc_start"),
+        ('qa&"<x>', 998, "prc_start"),
+        (ignored_process_record.prc_name, 2000, "prc_start"),
+        ("x" * 16, 2000, "prc_start"),
+        ("not-a-start", 2000, "prc_end"),
+        (None, 1, "prc_start"), ("", 1, "prc_start"), ("   ", 1, "prc_start"),
+    ]
+    packet = EventPacket.objects.create(
+        account=account, sha256="a" * 64, first_seq=1, last_seq=len(values), event_count=len(values), byte_size=100,
+    )
+    ActivityEvent.objects.bulk_create(
+        ActivityEvent(account=account, packet=packet, seq=index, timestamp=timestamp, type=kind, prc_name=name)
+        for index, (name, timestamp, kind) in enumerate(values, start=1)
+    )
+    other_computer = Computer.objects.create(hostname="synthetic-other", name="Synthetic other")
+    other_account = Account.objects.create(computer=other_computer, uid=1002, login="synthetic")
+    other_packet = EventPacket.objects.create(
+        account=other_account, sha256="b" * 64, first_seq=1, last_seq=1, event_count=1, byte_size=100,
+    )
+    ActivityEvent.objects.create(
+        account=other_account, packet=other_packet, seq=1, timestamp=999, type="prc_start", prc_name="remote-tool",
+        app_id="desktop:synthetic.Other", app_name="Synthetic application name",
+    )
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "ignored-process-add"} if ajax else {}
+
+    with CaptureQueriesContext(connection) as queries:
+        response = client.get(reverse("core:limits"), {"exclusion": "new"}, **headers)
+
+    content = response.content.decode()
+    input_tag = re.search(r'<input\b[^>]*name="exclusion-prc_name"[^>]*>', content).group()
+    encoded_values = re.search(r'data-select-suggestions="([^"]*)"', input_tag).group(1)
+    suggestions = json.loads(unescape(encoded_values))
+    activity_queries = [query for query in queries if 'FROM "core_activityevent"' in query["sql"]]
+
+    assert response.status_code == 200
+    assert len(activity_queries) == 1
+    assert len(suggestions) == 50
+    assert suggestions[:5] == ["remote-tool", 'qa&"<x>', "released-tool", "a" * 15, "synthetic-154"]
+    assert suggestions.count("synthetic-154") == 1
+    assert "synthetic-109" in suggestions
+    assert "synthetic-108" not in suggestions
+    assert ignored_process_record.prc_name not in suggestions
+    assert "x" * 16 not in suggestions
+    assert "not-a-start" not in suggestions
+    assert "Synthetic application name" not in suggestions
+    assert 'qa&"<x>' not in input_tag
+
+
+@pytest.mark.parametrize("ajax", [False, True], ids=["ordinary", "ajax"])
+def test_ignored_process_suggestion_saves_the_exact_recorded_name(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
+    activity_run_create: Callable[..., None], ajax: bool,
+) -> None:
+    activity_run_create(
+        computer_record.accounts.get(), started=100, finished=None, kind="prc", prc_name="SteamWebHelper",
+        application={"ident": "steam:client", "name": "Steam"},
+    )
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "ignored-process-save"} if ajax else {}
+
+    response = client.post(reverse("core:limits"), {
+        "__submit": "exclusion", "exclusion": "new", "exclusion-prc_name": "SteamWebHelper",
+    }, **headers)
+
+    assert response.status_code == (200 if ajax else 302)
+    assert PrcExclusion.objects.get(prc_name="SteamWebHelper").apply
 
 
 @pytest.mark.parametrize("ajax", [False, True], ids=["ordinary", "ajax"])

@@ -1,8 +1,8 @@
 [
-  {"prc_name": "reader&\"<app>", "exe": "/opt/reader&\"/<app>"},
-  {"prc_name": "reader&\"<app>", "exe": "/opt/reader&\"/<app>"},
-  {"prc_name": "browser", "exe": "/usr/bin/browser"},
-  {"prc_name": "", "exe": ""},
-  {"prc_name": null, "exe": null},
-  {"prc_name": "   ", "exe": "   "}
+  {"prc_name": "reader&\"<app>", "exe": "/opt/reader&\"/<app>", "app_id": "desktop:org.example.Reader", "app_name": "Old reader"},
+  {"prc_name": "reader&\"<app>", "exe": "/opt/reader&\"/<app>", "app_id": "desktop:org.example.Reader", "app_name": "Reader &\"<app>"},
+  {"prc_name": "browser", "exe": "/usr/bin/browser", "app_id": "desktop:org.example.Browser", "app_name": "Browser"},
+  {"prc_name": "", "exe": "", "app_id": "", "app_name": ""},
+  {"prc_name": null, "exe": null, "app_id": null, "app_name": null},
+  {"prc_name": "   ", "exe": "   ", "app_id": "   ", "app_name": "   "}
 ]

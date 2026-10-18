@@ -19,7 +19,8 @@ const createClassList = () => {
 const createRow = (prefix, index, { name = "", extra = false, deleted = false, persisted = false } = {}) => {
     const row = {
         dataset: { formPrefix: `${prefix}-${index}` },
-        classList: createClassList(), hidden: false, extra, focused: false,
+        classList: createClassList(), hidden: false, extra, focused: false, events: [],
+        dispatchEvent(event) { this.events.push({ type: event.type, bubbles: event.bubbles }); },
     };
     row.name = { name: `${prefix}-${index}-name`, value: name, focus: () => { row.focused = true; } };
     row.deletion = { name: `${prefix}-${index}-DELETE`, checked: deleted, closest: () => row };
@@ -183,6 +184,7 @@ test("Add reveals the existing extra row before cloning, and new presets can be 
     page.form.emit("click", { target: page.formsets.sessions.button });
     assert.equal(page.formsets.sessions.rows[1].hidden, false);
     assert.equal(page.formsets.sessions.total.value, "2");
+    assert.deepEqual(page.formsets.sessions.rows[1].events, [{ type: "sanea:form-added", bubbles: true }]);
     page.form.emit("click", { target: page.formsets.sessions.button });
     const added = page.formsets.sessions.rows[2];
     const selection = page.formsets.ranges.rows[0].rule;
@@ -195,6 +197,7 @@ test("Add reveals the existing extra row before cloning, and new presets can be 
     assert.equal(added.markup.includes("__prefix__"), false);
     assert.equal(added.markup.includes('list="id_sessions-2-suggestions"'), true);
     assert.equal(added.focused, true);
+    assert.deepEqual(added.events, [{ type: "sanea:form-added", bubbles: true }]);
     assert.equal(added.discardButton.hidden, false);
     assert.equal(selection.value, "2");
     assert.deepEqual(selection.options.map((option) => option.textContent), ["Choose session rule", "Everyday", "New session rule", "After school <script>"]);

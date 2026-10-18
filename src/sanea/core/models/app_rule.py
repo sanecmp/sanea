@@ -65,6 +65,10 @@ class AppRule(TimestampedModel):
         blank=True,
         help_text=_("Optional process-name recognition condition."),
     )
+    app_id = models.CharField(
+        verbose_name=_("Application identifier"), max_length=4096, null=True, blank=True,
+        help_text=_("Optional exact application identity from recorded activity."),
+    )
     prc_name_match = models.CharField(
         verbose_name=_("Process name match"),
         max_length=16,
@@ -137,6 +141,7 @@ class AppRule(TimestampedModel):
             apply=self.apply,
             max_launches=self.max_launches,
             max_time=self.max_time,
+            app_id=self.app_id,
             prc_name=self.prc_name,
             prc_name_match=(
                 ClientMatchType(self.prc_name_match)
@@ -173,7 +178,7 @@ class AppRule(TimestampedModel):
             ("wnd_title", self.wnd_title, self.wnd_title_match),
         )
 
-        if not any(value for _, value, _ in conditions):
+        if not self.app_id and not any(value for _, value, _ in conditions):
             add_general_error(_("Set at least one application recognition condition."))
 
         for name, value, match_type in conditions:

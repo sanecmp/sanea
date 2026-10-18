@@ -170,7 +170,7 @@ class _StatisticsPresenter:
             is_session = item.kind == "session"
             rows[item.kind].append(
                 {
-                    "name": account_name if is_session else item.prc_name or item.exe,
+                    "name": account_name if is_session else item.app_name or item.prc_name or item.exe,
                     "details": computer.get_display_name() if is_session else f"{account_name} · {computer.get_display_name()}",
                     "started": datetime.fromtimestamp(item.started, zone),
                     "duration": item.duration,

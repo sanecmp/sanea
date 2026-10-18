@@ -82,6 +82,23 @@ test("initial people lists stay unobstructed, while ordinary editor links open a
     assert.equal(editor.editor.field.focused, 1);
 });
 
+test("dialog focus uses the enhanced input, including after a validation error", () => {
+    const page = createPage();
+    page.editor.form = {};
+    page.editor.field.tomselect = createField();
+
+    swapEditor(page);
+
+    assert.ok(page.editor.field.tomselect.focused > 0);
+    assert.equal(page.editor.field.focused, 0);
+
+    page.editor.invalid = { ...createField(), tomselect: createField() };
+    swapEditor(page);
+
+    assert.equal(page.editor.invalid.tomselect.focused, 1);
+    assert.equal(page.editor.invalid.focused, 0);
+});
+
 test("AJAX errors keep the dialog open and focus the invalid control; saves close it and restore the new row's focus", () => {
     const page = createPage();
     page.document.emit("htmx:beforeRequest", { detail: { target: page.editor, elt: page.opener } });

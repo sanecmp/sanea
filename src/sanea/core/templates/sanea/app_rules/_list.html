@@ -36,6 +36,9 @@
                             {% endif %}
                         </td>
                         <td class="small">
+                            {% if item.app_id %}
+                                <div>{% translate "Application identifier" %}: {{ item.app_id }}</div>
+                            {% endif %}
                             {% if item.prc_name %}
                                 <span class="d-block">
                                     {% translate "Process name" %}: {{ item.prc_name }} ({{ item.get_prc_name_match_display }})

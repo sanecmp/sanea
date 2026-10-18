@@ -104,7 +104,8 @@
                         {% for item in activity_report.applications|slice:":10" %}
                             <tr>
                                 <td>
-                                    <div>{{ item.prc_name|default:item.exe }}</div>
+                                    <div>{{ item.name }}</div>
+                                    {% if item.app_id %}<div class="small text-body-secondary">{{ item.app_id }}</div>{% endif %}
                                     {% if item.prc_name and item.exe %}<div class="small text-body-secondary">{{ item.exe }}</div>{% endif %}
                                 </td>
                                 <td class="small text-body-secondary text-end text-nowrap"{% if item.duration is None %} title="{% translate 'No duration yet' %}"{% endif %}>{{ item.duration|activity_duration }}</td>

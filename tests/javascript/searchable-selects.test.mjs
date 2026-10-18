@@ -12,15 +12,27 @@ const createSelect = (count, value = "4") => {
         value: `${index}`, text: `Choice ${index}`, selected: `${index}` === value, defaultSelected: `${index}` === value,
     }));
     return {
-        options, value, isConnected: true,
+        options, value, isConnected: true, dataset: {},
         labels: [{ htmlFor: "timezone" }],
         get childNodes() { return this.options; },
         get selectedOptions() { return this.options.filter((option) => option.selected); },
         replaceChildren(...options) { this.options = options; },
         matches: (selector) => selector === "select",
+        closest: () => null,
         querySelectorAll: () => [],
     };
 };
+
+const createInput = (value = "", suggestions = []) => ({
+    value, isConnected: true, maxLength: 15,
+    dataset: { selectSuggestions: JSON.stringify(suggestions), selectCreateLabel: "Использовать:" },
+    labels: [{ htmlFor: "process" }],
+    attributes: {},
+    setAttribute(name, value) { this.attributes[name] = value; },
+    matches: (selector) => selector === "input[data-select-suggestions]",
+    closest: () => null,
+    querySelectorAll: () => [],
+});
 
 const createPage = (selects = [], { library = true } = {}) => {
     const instances = [];
@@ -93,6 +105,126 @@ test("HTMX initializes new selects and repeated loads do not duplicate controls"
 
     assert.equal(page.instances.length, 2);
     assert.equal(page.instances[1].select, added);
+});
+
+test("opted-in lists always offer search without allowing arbitrary values", () => {
+    const select = createSelect(3);
+    select.dataset.selectSearch = "always";
+    const page = createPage([select]);
+
+    page.document.emit("DOMContentLoaded");
+
+    assert.equal(page.instances.length, 1);
+    assert.equal(select.tomselect.settings.create, false);
+    assert.equal(select.tomselect.settings.plugins.join(), "dropdown_input");
+    assert.equal(select.tomselect.control_input.placeholder, "Поиск");
+});
+
+test("new form rows initialize searchable lists only once", () => {
+    const select = createSelect(3);
+    select.dataset.selectSearch = "always";
+    const page = createPage();
+    const row = { querySelectorAll: () => [select] };
+
+    page.document.emit("sanea:form-added", { target: row });
+    page.document.emit("sanea:form-added", { target: row });
+
+    assert.equal(page.instances.length, 1);
+    assert.equal(select.tomselect.settings.create, false);
+});
+
+test("dialog searches stay inside the focus trap instead of moving to the body", () => {
+    const select = createSelect(3);
+    select.dataset.selectSearch = "always";
+    select.closest = (selector) => selector === "[data-editor-dialog]" ? {} : null;
+    const page = createPage([select]);
+
+    page.document.emit("DOMContentLoaded");
+
+    assert.equal(select.tomselect.settings.dropdownParent, null);
+});
+
+test("text suggestions keep exact names and commit manual input on blur", () => {
+    const input = createInput("custom,process", ["SteamWebHelper", "gjs-console"]);
+    const select = createSelect(10);
+    const page = createPage([input, select]);
+
+    page.document.emit("DOMContentLoaded");
+
+    const settings = input.tomselect.settings;
+    assert.equal(page.instances.length, 2);
+    assert.equal(settings.create, true);
+    assert.equal(settings.createOnBlur, true);
+    assert.equal(settings.plugins.length, 0);
+    assert.equal(settings.allowEmptyOption, false);
+    assert.equal(settings.maxItems, 1);
+    assert.equal(settings.splitOn.test("synthetic,tool"), false);
+    assert.equal(JSON.stringify(settings.items), '["custom,process"]');
+    assert.equal(JSON.stringify(settings.options), JSON.stringify([
+        { value: "SteamWebHelper", text: "SteamWebHelper" },
+        { value: "gjs-console", text: "gjs-console" },
+        { value: "custom,process", text: "custom,process" },
+    ]));
+    assert.equal(input.tomselect.control_input.maxLength, 15);
+    assert.equal(select.tomselect.settings.create, false);
+    const option = settings.render.option_create({ input: 'qa&"<x>' });
+    assert.equal(option.textContent, 'Использовать: qa&"<x>');
+    assert.equal(option.innerHTML, undefined);
+});
+
+test("empty activity still allows typing a process name without inventing an empty selection", () => {
+    const input = createInput();
+    const page = createPage([input]);
+
+    page.document.emit("DOMContentLoaded");
+
+    assert.equal(input.tomselect.settings.options.length, 0);
+    assert.equal(input.tomselect.settings.items.length, 0);
+    assert.equal(input.tomselect.settings.create, true);
+});
+
+test("HTMX initializes individual text inputs once and cleanup restores their labels", () => {
+    const input = createInput("gjs-console", ["gjs-console"]);
+    const page = createPage();
+
+    page.document.emit("htmx:load", { detail: { elt: input } });
+    page.document.emit("htmx:load", { detail: { elt: input } });
+
+    assert.equal(page.instances.length, 1);
+    assert.equal(input.tomselect.settings.options.length, 1);
+
+    page.document.emit("htmx:beforeCleanupElement", { detail: { elt: input } });
+
+    assert.equal(input.tomselect, undefined);
+    assert.equal(input.labels[0].htmlFor, "process");
+});
+
+test("history preserves a text input value and rebuilds its suggestions", async () => {
+    const input = createInput("gjs-console", ["gjs-console"]);
+    const page = createPage([input]);
+    page.document.emit("DOMContentLoaded");
+    input.value = "manual-name";
+
+    page.document.emit("htmx:beforeHistorySave", { detail: { historyElt: page.document } });
+
+    assert.equal(input.tomselect, undefined);
+    assert.equal(input.value, "manual-name");
+    assert.equal(input.attributes.value, "manual-name");
+    assert.equal(input.labels[0].htmlFor, "process");
+    await Promise.resolve();
+
+    assert.equal(page.instances.length, 2);
+    assert.equal(JSON.stringify(input.tomselect.settings.items), '["manual-name"]');
+});
+
+test("without the search library a process name stays a normal editable text value", () => {
+    const input = createInput("custom,process", ["gjs-console"]);
+    const page = createPage([input], { library: false });
+
+    page.document.emit("DOMContentLoaded");
+
+    assert.equal(input.tomselect, undefined);
+    assert.equal(input.value, "custom,process");
 });
 
 test("HTMX cleanup destroys removed controls, including floating dropdowns", () => {

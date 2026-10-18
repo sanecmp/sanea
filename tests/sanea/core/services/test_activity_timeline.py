@@ -8,6 +8,21 @@ from sanea.core.models import Account, Computer, Person
 from sanea.core.services.activity_timeline import build_usage_timeline
 
 
+def test_timeline_uses_identity_even_when_display_name_or_helper_executable_changes(
+    activity_run_create: Callable[..., None],
+) -> None:
+    computer = Computer.objects.create(hostname="synthetic-identities", status="allowed")
+    account = Account.objects.create(computer=computer, uid=1001, collect=True)
+    activity_run_create(account, kind="prc", started=100, finished=160, duration=60, exe="/old/helper",
+                        application={"ident": "desktop:org.example.Editor", "name": "Editor"})
+    activity_run_create(account, kind="prc", started=160, finished=220, duration=60, exe="/new/helper",
+                        application={"ident": "desktop:org.example.Editor", "name": "Renamed editor"})
+
+    timeline = build_usage_timeline(Account.objects.all(), 100, 220)
+
+    assert timeline.applications == {("Renamed editor", "desktop:org.example.Editor"): 120}
+
+
 def test_timeline_combines_accounts_and_clips_completed_runs_to_the_window(activity_run_create: Callable[..., None]) -> None:
     since = 1_790_000_000
     till = since + 48 * 3_600

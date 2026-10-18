@@ -41,6 +41,34 @@ def test_report_aggregates_completed_sessions_and_applications(
     assert [row.kind for row in report.recent] == ["application", "session"]
 
 
+def test_report_groups_semantic_ids_not_shared_interpreters_or_helper_paths(
+    domain_graph: dict[str, Any], activity_run_create: Callable[..., None],
+) -> None:
+    account = domain_graph["account"]
+    started = int(datetime(2026, 10, 1, 12, tzinfo=UTC).timestamp())
+    activity_run_create(account, kind="prc", started=started, finished=started + 60, duration=60,
+                        prc_name="steamwebhelper", exe="/steam/steamwebhelper",
+                        application={"ident": "steam:client", "name": "Steam"})
+    activity_run_create(account, kind="prc", started=started + 60, finished=started + 120, duration=60,
+                        prc_name="steam", exe="/steam/steam", application={"ident": "steam:client", "name": "Steam"})
+    activity_run_create(account, kind="prc", started=started + 120, finished=started + 180, duration=60,
+                        prc_name="gjs-console", exe="/usr/bin/gjs-console",
+                        application={"ident": "gjs:/apps/maps.js", "name": "Maps"})
+    activity_run_create(account, kind="prc", started=started + 180, finished=started + 240, duration=60,
+                        prc_name="gjs-console", exe="/usr/bin/gjs-console",
+                        application={"ident": "gjs:/apps/weather.js", "name": "Weather"})
+
+    report = ActivityEvent.objects.build_report(Account.objects.filter(pk=account.pk), date(2026, 10, 1), date(2026, 10, 2))
+    by_id = {usage.app_id: usage for usage in report.applications}
+
+    assert report.summary.application_count == 3
+    assert by_id["steam:client"].duration == 120
+    assert by_id["steam:client"].launches == 2
+    assert by_id["steam:client"].name == "Steam"
+    assert {item.app_name for item in report.recent} == {"Steam", "Maps", "Weather"}
+    assert account.activity_events.filter(prc_name="steamwebhelper", exe="/steam/steamwebhelper").count() == 1
+
+
 def test_report_rejects_invalid_bounds(domain_graph: dict[str, Any]) -> None:
     accounts = type(domain_graph["account"]).objects.all()
 

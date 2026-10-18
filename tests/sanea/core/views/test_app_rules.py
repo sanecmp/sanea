@@ -113,7 +113,7 @@ def test_app_rules_suggest_scoped_recorded_processes(
     )
     ActivityEvent.objects.create(
         account=other_account, packet=other_packet, seq=1, type="prc_start", timestamp=100,
-        prc_name="other_application", exe="/opt/other_application",
+        prc_name="other_application", exe="/opt/other_application", app_id="desktop:org.example.Other", app_name="Other app",
     )
     staff_user = user_create(attributes={"is_staff": True})
 
@@ -127,6 +127,14 @@ def test_app_rules_suggest_scoped_recorded_processes(
     assert "list=\"id_app_rule-exe-suggestions\"" in content
     assert "<datalist id=\"id_app_rule-prc_name-suggestions\">" in content
     assert "<datalist id=\"id_app_rule-exe-suggestions\">" in content
+    assert "<select name=\"app_rule-app_id\"" in content
+    assert "app_id-suggestions" not in content
+    assert content.count(
+        "<option value=\"desktop:org.example.Reader\">Reader &amp;&quot;&lt;app&gt;</option>"
+    ) == 1
+    assert "<option value=\"desktop:org.example.Browser\">Browser</option>" in content
+    assert "Old reader" not in content
+    assert "desktop:org.example.Other" not in content
     assert content.count("<option value=\"reader&amp;&quot;&lt;app&gt;\"></option>") == 1
     assert content.count("<option value=\"/opt/reader&amp;&quot;/&lt;app&gt;\"></option>") == 1
     assert "<option value=\"browser\"></option>" in content
@@ -157,12 +165,14 @@ def test_app_rules_suggestions_are_bounded_and_newest_first(
             type="prc_start",
             prc_name=f"app-{index}",
             exe=f"/opt/app-{index}",
+            app_id=f"desktop:org.example.App{index}",
+            app_name=f"App {index}",
         )
         for index in range(100, 155)
     )
     ActivityEvent.objects.create(
         account=account, packet=packet, seq=200, timestamp=200, type="prc_start",
-        prc_name="x" * 257, exe="/" + "x" * 4096,
+        prc_name="x" * 257, exe="/" + "x" * 4096, app_id="x" * 4097,
     )
     staff_user = user_create(attributes={"is_staff": True})
 
@@ -172,10 +182,18 @@ def test_app_rules_suggestions_are_bounded_and_newest_first(
     content = response.content.decode()
     process_options = content.partition("<datalist id=\"id_app_rule-prc_name-suggestions\">")[2].partition("</datalist>")[0]
     executable_options = content.partition("<datalist id=\"id_app_rule-exe-suggestions\">")[2].partition("</datalist>")[0]
+    application_options = content.partition("id=\"id_app_rule-app_id\"")[2].partition("</select>")[0]
 
     assert response.status_code == 200
     assert process_options.count("<option") == 50
     assert executable_options.count("<option") == 50
+    assert application_options.count("<option") == 51
+    assert application_options.index("value=\"desktop:org.example.App154\"") < application_options.index(
+        "value=\"desktop:org.example.App153\""
+    )
+    assert "value=\"desktop:org.example.App105\"" in application_options
+    assert "value=\"desktop:org.example.App104\"" not in application_options
+    assert "x" * 4097 not in application_options
     assert process_options.index("value=\"app-154\"") < process_options.index("value=\"app-153\"")
     assert "value=\"app-105\"" in process_options
     assert "value=\"app-104\"" not in process_options
@@ -202,6 +220,28 @@ def test_app_rules_without_scoped_activity_keep_manual_inputs(
     assert "<input type=\"text\"" in content
     assert "-suggestions" not in content
     assert "suggestions from recorded activity" not in content
+    assert "No applications in statistics yet. Use the conditions below." in content
+
+
+def test_app_rules_save_selected_application_identifier(
+    request_client: Callable[..., Client], user_create: Callable[..., User],
+    recorded_applications: Account, limits_record: Limits, session_rule_record: SessionRule,
+) -> None:
+    account = recorded_applications
+    account.limits = limits_record
+    account.save(update_fields=("limits", "updated"))
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+
+    response = client.post(_app_rules_url(limits_record, session_rule_record), {
+        "__submit": "app_rule", "app_rule": "new", "app_rule-name": "Selected reader",
+        "app_rule-apply": "on", "app_rule-max_launches": "3", "app_rule-app_id": "desktop:org.example.Reader",
+    })
+    rule = AppRule.objects.get(name="Selected reader", session_rule=session_rule_record)
+
+    assert response.status_code == 302
+    assert rule.app_id == "desktop:org.example.Reader"
+    assert rule.prc_name is None
+    assert rule.exe is None
 
 
 def test_app_rules_suggestions_allow_manual_values_with_matching_validation(
@@ -314,6 +354,7 @@ def test_app_rules_add_and_edit_in_one_dialog_with_shared_field_rows(
         ["app_rule-apply"],
         ["app_rule-name"],
         ["app_rule-max_launches", "app_rule-max_time"],
+        ["app_rule-app_id"],
         ["app_rule-prc_name", "app_rule-prc_name_match"],
         ["app_rule-exe", "app_rule-exe_match"],
         ["app_rule-wnd_title", "app_rule-wnd_title_match"],

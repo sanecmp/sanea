@@ -23,6 +23,19 @@ def test_requires_limit_and_recognition_condition(domain_graph: dict[str, Any]) 
     assert set(error.value.message_dict) == {"__all__"}
 
 
+def test_recognized_application_id_can_be_the_only_condition(domain_graph: dict[str, Any]) -> None:
+    rule = domain_graph["app_rule"]
+    rule.prc_name = None
+    rule.prc_name_match = None
+    rule.app_id = "steam:game:123"
+
+    rule.full_clean()
+    rule.save()
+    rule.refresh_from_db()
+
+    assert rule.build_client_config().app_id == "steam:game:123"
+
+
 def test_validates_condition_pair_and_regex(domain_graph: dict[str, Any]) -> None:
     rule = domain_graph["app_rule"]
     rule.prc_name = "["

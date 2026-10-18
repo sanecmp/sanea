@@ -85,7 +85,8 @@
                   "exe": null,
                   "exe_match": null,
                   "wnd_title": null,
-                  "wnd_title_match": null
+                  "wnd_title_match": null,
+                  "app_id": null
                 }
               ]
             }

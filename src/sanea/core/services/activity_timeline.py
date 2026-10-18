@@ -39,7 +39,9 @@ def build_usage_timeline(
 
     buckets = tuple(range(since, till, bucket_seconds))
     people: dict[int | None, list[float]] = defaultdict(lambda: [0.0] * len(buckets))
-    applications: dict[tuple[str, str], float] = defaultdict(float)
+
+    application_totals: dict[tuple[str, ...], float] = defaultdict(float)
+    application_labels: dict[tuple[str, ...], tuple[str, str]] = {}
 
     for start, end in _load_completed_runs(accounts, since, till):
         lower = max(start.timestamp, since)
@@ -52,7 +54,9 @@ def build_usage_timeline(
         rate = end.duration / elapsed
 
         if start.type == "prc_start":
-            applications[(start.prc_name or "", start.exe or "")] += rate * (upper - lower)
+            key = start.get_application_key()
+            application_totals[key] += rate * (upper - lower)
+            application_labels[key] = (start.app_name or start.prc_name or "", start.app_id or start.exe or "")
             continue
 
         person_usage = people[end.account.person_id]
@@ -66,7 +70,7 @@ def build_usage_timeline(
     return UsageTimeline(
         buckets=buckets,
         people={person_id: tuple(durations) for person_id, durations in people.items()},
-        applications=dict(applications),
+        applications={application_labels[key]: duration for key, duration in application_totals.items()},
     )
 
 

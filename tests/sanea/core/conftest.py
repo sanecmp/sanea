@@ -24,6 +24,7 @@ def activity_run_create() -> Callable[..., None]:
         kind: str = "session",
         prc_name: str = "synthetic-app",
         exe: str = "/demo/synthetic-app",
+        application: dict[str, str] | None = None,
     ) -> None:
         seq = (account.activity_events.aggregate(latest=Max("seq"))["latest"] or 0) + 1
         start = {
@@ -38,7 +39,7 @@ def activity_run_create() -> Callable[..., None]:
             start["sess_ident"] = f"synthetic-{seq}"
 
         else:
-            start.update(prc_name=prc_name, exe=exe)
+            start.update(prc_name=prc_name, exe=exe, application=application)
 
         events = [start]
 

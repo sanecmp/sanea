@@ -20,7 +20,8 @@
             const field = editor.querySelector(".is-invalid, [aria-invalid='true']")
                 || editor.querySelector("input:not([type='hidden']):not([disabled]), select:not([disabled]), textarea:not([disabled])")
                 || editor.querySelector("[data-dialog-focus]");
-            field?.focus();
+            const focusTarget = field?.tomselect || field;
+            focusTarget?.focus();
         };
 
         const synchronizeDialog = () => {

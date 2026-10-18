@@ -246,3 +246,26 @@ make a different hostname valid. Never copy the private `.key` files.
 In **Computers**, open registration and run the displayed command on the
 child's computer within 30 seconds. Monitoring and limits stay disabled until
 you enable them for the intended local accounts.
+
+## Recognized applications
+
+Statistics prefer the application name supplied by sanex and aggregate by its
+application ID. Technical process names and executable paths remain stored;
+unknown applications use those fields as before. Different GJS scripts and
+recognized Steam games therefore do not become a single interpreter or Steam
+entry. Separate launches still count separately.
+
+Search by name and select an application in the **Application** list when editing a rule.
+The list comes from recorded activity for the selected accounts; the application
+ID is saved automatically, without copying or entering it manually. Applications
+appear after sanex recognizes them and synchronizes with sanea. Leave **Not selected**
+to use only the other recognition conditions. An already selected ID remains in
+the editor even when it is absent from recent activity. Additional recognition
+conditions are combined using AND.
+Past events without application metadata retain their original names.
+
+The **Ignored processes** name field offers up to 50 recent process names from
+recorded activity across all computers. Search the list or enter an exact name
+manually. Already ignored names are omitted; matching remains case-sensitive
+and limited to 15 characters. These are technical process names, not application
+display names. Searching is local and sends no requests while typing.

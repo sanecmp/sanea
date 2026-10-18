@@ -14,7 +14,7 @@
 {{ app_rule_form }}
 {% for datalist_id, values in app_rule_form.suggestions.items %}
     <datalist id="{{ datalist_id }}">
-        {% for value in values %}<option value="{{ value }}"></option>{% endfor %}
+        {% for suggestion in values %}<option value="{{ suggestion.value }}"{% if suggestion.name %} label="{{ suggestion.name }}"{% endif %}>{{ suggestion.name }}</option>{% endfor %}
     </datalist>
 {% endfor %}
 {% endblock %}
