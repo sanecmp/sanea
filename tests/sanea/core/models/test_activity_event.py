@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 from django.utils import timezone
-from sanelib.protocol import parse_event_packet
+from sanelib.protocol import ApplicationIdentity, EmptyMeta, EventType, ProcessUpdateEvent, encode_event, parse_event_packet
 
 from sanea.core.models import Account, ActivityEvent, Computer
 
@@ -78,6 +78,91 @@ def test_report_rejects_invalid_bounds(domain_graph: dict[str, Any]) -> None:
             date(2026, 10, 2),
             date(2026, 10, 2),
         )
+
+
+@pytest.mark.parametrize("updates_first", [False, True])
+def test_late_name_updates_relabel_active_and_completed_runs_without_rewriting_starts(
+    domain_graph: dict[str, Any], updates_first: bool,
+) -> None:
+    account = domain_graph["account"]
+    started = int(datetime(2026, 10, 1, 23, 59, tzinfo=UTC).timestamp())
+    start = {
+        "seq": 1, "type": "prc_start", "timestamp": started, "run_ident": 1,
+        "prc_name": "tf_linux64", "exe": "/synthetic/tf_linux64",
+        "application": {"ident": "steam:game:440", "name": "Steam game 440"},
+        "meta": {"observed_via": "process"},
+    }
+    update = {
+        "seq": 2, "type": "prc_update", "timestamp": started + 120, "run_ident": 1,
+        "application": {"ident": "steam:game:440", "name": "Team Fortress 2"}, "meta": {},
+    }
+    records = (update, start) if updates_first else (start, update)
+
+    for record in records:
+        content = (json.dumps(record) + "\n").encode()
+        packet = parse_event_packet(content, hashlib.sha256(content).hexdigest())
+        account.store_event_packet(packet, len(content), None)
+        assert not account.store_event_packet(packet, len(content), None)[1]
+
+    accounts = Account.objects.filter(pk=account.pk)
+    active = ActivityEvent.objects.build_report(accounts, date(2026, 10, 1), date(2026, 10, 2))
+    assert active.applications[0].name == "Team Fortress 2"
+    assert active.applications[0].launches == 1
+    assert active.applications[0].duration is None
+    assert active.applications[0].last_used == started
+    assert active.recent == ()
+
+    ending = {
+        "seq": 3, "type": "prc_end", "timestamp": started + 180, "run_ident": 1,
+        "duration": 150, "meta": {"actor": "user"},
+    }
+    content = (json.dumps(ending) + "\n").encode()
+    account.store_event_packet(parse_event_packet(content, hashlib.sha256(content).hexdigest()), len(content), None)
+    completed = ActivityEvent.objects.build_report(accounts, date(2026, 10, 1), date(2026, 10, 3))
+    after_midnight = ActivityEvent.objects.build_report(accounts, date(2026, 10, 2), date(2026, 10, 3))
+
+    assert completed.applications[0].name == completed.recent[0].app_name == "Team Fortress 2"
+    assert completed.applications[0].duration == completed.recent[0].duration == 150
+    assert completed.applications[0].launches == completed.recent[0].launches == 1
+    assert after_midnight.applications == ()
+    assert after_midnight.recent[0].app_name == "Team Fortress 2"
+    assert account.activity_events.count() == 3
+    stored_start = account.activity_events.get(seq=1)
+    assert stored_start.app_name == "Steam game 440"
+    assert (stored_start.prc_name, stored_start.exe) == ("tf_linux64", "/synthetic/tf_linux64")
+
+
+@pytest.mark.parametrize(("target_index", "run_ident", "app_id", "expected_name"), [
+    pytest.param(0, 1, "steam:game:440", "Team Fortress 2", id="same-run"),
+    pytest.param(1, 1, "steam:game:440", "Steam game 440", id="other-account"),
+    pytest.param(0, 0, "steam:game:440", "Steam game 440", id="other-run"),
+    pytest.param(0, 1, "steam:game:570", "Steam game 440", id="other-app"),
+])
+def test_name_update_requires_the_same_account_run_and_application(
+    activity_run_create: Callable[..., None], target_index: int, run_ident: int, app_id: str, expected_name: str,
+) -> None:
+    computer = Computer.objects.create(hostname="synthetic-name-updates", status="allowed")
+    accounts = tuple(Account.objects.create(computer=computer, uid=uid, collect=True) for uid in (1001, 1002))
+    started = int(datetime(2026, 10, 1, 12, tzinfo=UTC).timestamp())
+
+    for account in accounts:
+        activity_run_create(
+            account, kind="prc", started=started, finished=None,
+            application={"ident": "steam:game:440", "name": "Steam game 440"},
+        )
+
+    update = ProcessUpdateEvent(
+        seq=2, type=EventType.PRC_UPDATE, timestamp=started + 10, run_ident=run_ident,
+        application=ApplicationIdentity(ident=app_id, name="Team Fortress 2"), meta=EmptyMeta(),
+    )
+    content = encode_event(update)
+    accounts[target_index].store_event_packet(
+        parse_event_packet(content, hashlib.sha256(content).hexdigest()), len(content), None,
+    )
+    report = ActivityEvent.objects.build_report(Account.objects.filter(pk=accounts[0].pk), date(2026, 10, 1), date(2026, 10, 2))
+
+    assert report.applications[0].name == expected_name
+    assert report.applications[0].launches == 1
 
 
 @pytest.mark.parametrize("duration", [0, 3137])

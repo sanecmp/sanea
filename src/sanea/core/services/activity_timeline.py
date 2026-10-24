@@ -61,7 +61,7 @@ def build_usage_timeline(
 
             key = start.get_application_key()
             application_totals[key] += rate * (upper - lower)
-            application_labels[key] = (start.app_name or start.prc_name or "", start.app_id or start.exe or "")
+            application_labels[key] = (start.get_application_name() or start.prc_name or "", start.app_id or start.exe or "")
             continue
 
         person_usage = people[end.account.person_id]
@@ -99,7 +99,7 @@ def _load_completed_runs(accounts: QuerySet[Account], since: int, till: int) -> 
             account__in=accounts,
             seq__in={event.run_ident for event in endings if event.run_ident is not None},
             type__in=_START_TYPES.values(),
-        )
+        ).resolve_application_names()
     }
     return tuple(
         (start, end)

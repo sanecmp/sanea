@@ -14,10 +14,11 @@ from .base import GridModelForm
 
 def get_app_suggestions(events: QuerySet[ActivityEvent]) -> dict[str, tuple[RecognitionSuggestion, ...]]:
     """Offer recent recognition values from an explicitly scoped event set."""
+    events = events.resolve_application_names()
     return {
         field_name: get_activity_suggestions(
             events, field_name, max_length=AppRule._meta.get_field(field_name).max_length,
-            name_field="app_name" if field_name == "app_id" else None,
+            name_field="resolved_app_name" if field_name == "app_id" else None,
         )
         for field_name in ("app_id", "prc_name", "exe")
     }

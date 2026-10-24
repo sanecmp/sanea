@@ -6,7 +6,8 @@ from datetime import date, datetime, time
 from typing import Self, TYPE_CHECKING
 
 from django.db import models
-from django.db.models import QuerySet
+from django.db.models import OuterRef, QuerySet, Subquery
+from django.db.models.functions import Coalesce
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from sanelib.protocol import Event as ClientEvent
@@ -22,6 +23,7 @@ if TYPE_CHECKING:
 _SESSION_START = "session_start"
 _SESSION_END = "session_end"
 _PROCESS_START = "prc_start"
+_PROCESS_UPDATE = "prc_update"
 _PROCESS_END = "prc_end"
 
 
@@ -91,6 +93,17 @@ class ActivityReport:
 
 class ActivityEventQuerySet(models.QuerySet):
     """Query and aggregate received activity events."""
+
+    def resolve_application_names(self) -> Self:
+        """Load the latest name correction for the same account, run and app ID."""
+        updates = self.model.objects.filter(
+            account_id=OuterRef("account_id"),
+            run_ident=OuterRef("seq"),
+            app_id=OuterRef("app_id"),
+            type=_PROCESS_UPDATE,
+            seq__gt=OuterRef("seq"),
+        ).order_by("-seq")
+        return self.annotate(resolved_app_name=Coalesce(Subquery(updates.values("app_name")[:1]), "app_name"))
 
     def build_report(
         self,
@@ -268,6 +281,10 @@ class ActivityEvent(TimestampedModel):
         """Group recognized applications by ID and unknown ones by raw name/path."""
         return (self.app_id,) if self.app_id else (self.prc_name or "", self.exe or "")
 
+    def get_application_name(self) -> str | None:
+        """Prefer a loaded name correction without changing the stored start event."""
+        return getattr(self, "resolved_app_name", self.app_name)
+
     @classmethod
     def build_from_client_event(
         cls,
@@ -371,7 +388,7 @@ class _ActivityReportBuilder:
                         values["launches"],
                         values["last_used"],
                         representatives[key].app_id,
-                        representatives[key].app_name,
+                        representatives[key].get_application_name(),
                     )
                     for key, values in applications.items()
                 ),
@@ -404,7 +421,7 @@ class _ActivityReportBuilder:
                 timestamp__gte=lower,
                 timestamp__lt=upper,
                 type__in=(_SESSION_START, _PROCESS_START),
-            ).select_related("account__computer", "account__person")
+            ).resolve_application_names().select_related("account__computer", "account__person")
         )
 
     def _load_ends(
@@ -456,7 +473,7 @@ class _ActivityReportBuilder:
                 account_id__in=[account.pk for account in self.accounts],
                 seq__in={event.run_ident for event in endings},
                 type__in=(_SESSION_START, _PROCESS_START),
-            ).select_related("account")
+            ).resolve_application_names().select_related("account")
         }
         rows = []
         applications: dict[tuple[str, ...], RecentActivity] = {}
@@ -484,7 +501,7 @@ class _ActivityReportBuilder:
                 duration=end.duration or 0,
                 prc_name=None if is_session else event.prc_name,
                 exe=None if is_session else event.exe,
-                app_name=None if is_session else event.app_name,
+                app_name=None if is_session else event.get_application_name(),
                 app_id=None if is_session else event.app_id,
             )
 

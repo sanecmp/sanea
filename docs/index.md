@@ -279,6 +279,10 @@ windows without accessibility still require usable process metadata. A Steam
 client entry alone does not identify which game was played; old entries cannot
 be retrospectively split into games. Game names use window titles when available,
 otherwise a Steam ID, without reading Steam installation files.
+When sanex later observes a game's window, its name update also applies to an
+already received launch in statistics, recent activity, charts and rule choices.
+The launch count, recorded time and original event remain unchanged. This needs
+both sanea and sanex with support for the shared `prc_update` event.
 
 Search by name and select an application in the **Application** list when editing a rule.
 The list comes from recorded activity for the selected accounts; the application
