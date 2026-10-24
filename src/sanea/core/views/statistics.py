@@ -43,7 +43,8 @@ class _StatisticsPresenter:
     def build_activity_context(self) -> dict[str, object]:
         """Validate activity filters and prepare report presentation data."""
         request = self.request
-        data = request.GET or {"period": ActivityFilterForm.PERIOD_TODAY}
+        data = request.GET.copy()
+        data.setdefault("period", ActivityFilterForm.PERIOD_TODAY)
         form = ActivityFilterForm(data)
         context: dict[str, object] = {
             "activity_filter": form,
@@ -153,7 +154,7 @@ class _StatisticsPresenter:
     @staticmethod
     def build_recent_activity(report: ActivityReport) -> dict[str, list[dict[str, object]]]:
         """Group recent applications and sessions with familiar account labels."""
-        account_ids = {item.account_id for item in report.recent}
+        account_ids = {account_id for item in report.recent for account_id in item.account_ids}
         accounts = {
             account.pk: account
             for account in Account.objects.filter(pk__in=account_ids).select_related(
@@ -168,12 +169,17 @@ class _StatisticsPresenter:
             computer = account.computer
             account_name = account.name or account.login
             is_session = item.kind == "session"
+            details = computer.get_display_name() if is_session else "; ".join(
+                f"{accounts[account_id].name or accounts[account_id].login} · {accounts[account_id].computer.get_display_name()}"
+                for account_id in item.account_ids
+            )
             rows[item.kind].append(
                 {
                     "name": account_name if is_session else item.app_name or item.prc_name or item.exe,
-                    "details": computer.get_display_name() if is_session else f"{account_name} · {computer.get_display_name()}",
+                    "details": details,
                     "started": datetime.fromtimestamp(item.started, zone),
                     "duration": item.duration,
+                    "launches": None if is_session else item.launches,
                 }
             )
 

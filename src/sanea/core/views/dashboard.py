@@ -40,8 +40,7 @@ class _DashboardPresenter:
 
         hour_count = form.get_hour_count()
         bucket_seconds = 3_600 if hour_count <= 48 else 86_400
-        till = int(timezone.now().timestamp())
-        since = till - hour_count * 3_600
+        since, till = form.get_timestamp_range(timezone.now())
         accounts = form.get_accounts()
         timeline = build_usage_timeline(accounts, since, till, bucket_seconds=bucket_seconds)
         all_people = list(Person.objects.values_list("pk", "name"))

@@ -10,8 +10,8 @@ const script = readFileSync(new URL("../../src/sanea/core/static/sanea/js/statis
 test("recent activity keeps the selected kind in subsequent filter submissions, including after a swap", () => {
     let field = {value: "application"};
     const body = createEvents();
-    const document = {body, getElementById: (identifier) => identifier === "recent-activity-kind" ? field : null};
-    runInNewContext(script, {document});
+    const document = {...createEvents(), body, getElementById: (identifier) => identifier === "recent-activity-kind" ? field : null};
+    runInNewContext(script, {document, window: {}});
 
     body.emit("shown.bs.tab", {target: {dataset: {activityKind: "session"}}});
     assert.equal(field.value, "session");

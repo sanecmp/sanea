@@ -61,3 +61,23 @@ def test_activity_filter_identifies_accounts_by_name_and_computer(
     assert f"{name or account.login} · study-pc" in content
     assert "Maya · spare-pc" in content
     assert f"{account.uid}@{account.computer_id}" not in content
+
+
+def test_activity_filter_selects_one_explicit_day() -> None:
+    form = ActivityFilterForm({"period": "day", "day": "2024-02-29"})
+
+    assert form.is_valid(), form.errors.as_json()
+    assert form.get_date_range(date(2026, 10, 24)) == (date(2024, 2, 29), date(2024, 3, 1))
+    assert "data-period-date" in f"{form}"
+    assert "type=\"date\"" in f"{form}"
+
+
+@pytest.mark.parametrize("day", ["", "2026-02-29", "24.10.2026"])
+def test_activity_filter_requires_a_valid_iso_day(day: str) -> None:
+    form = ActivityFilterForm({"period": "day", "day": day})
+
+    assert not form.is_valid()
+    assert "day" in form.errors
+
+    with pytest.raises(ValueError, match="activity filters must be valid"):
+        form.get_date_range(date(2026, 10, 24))

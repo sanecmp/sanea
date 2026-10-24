@@ -34,7 +34,7 @@ class IssuePanel:
 
         for name in tuple(query):
 
-            if name not in {"issues-computer", "issues-period", "log", "access", "connection", "config_delivery"}:
+            if name not in {"issues-computer", "issues-period", "issues-day", "log", "access", "connection", "config_delivery"}:
                 del query[name]
 
         context: dict[str, object] = {
@@ -53,8 +53,8 @@ class IssuePanel:
             return context
 
         computer = form.get_computer()
-        since = form.get_since(timezone.now())
-        logs = tuple(Computer.get_diagnostic_logs(computer, since).order_by("hostname", "pk"))
+        since, till = form.get_timestamp_range(timezone.now())
+        logs = tuple(Computer.get_diagnostic_logs(computer, since, till).order_by("hostname", "pk"))
         selected = request.GET.get("log")
         active_log_id = next((item.pk for item in logs if f"{item.pk}" == selected), logs[0].pk if logs else None)
         context.update({"diagnostic_logs": logs, "log_count": len(logs), "active_log_id": active_log_id})
@@ -65,6 +65,7 @@ class IssuePanel:
         failures = ActivityEvent.objects.get_enforcement_failures(
             computer=computer,
             since=since,
+            till=till,
         )
         issue_count = failures.count()
         context.update(

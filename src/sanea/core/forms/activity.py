@@ -10,15 +10,20 @@ from django.utils.translation import gettext_lazy as _
 from ...utils.periods import ReportingPeriod
 from ..models import Account, Computer, Person
 from .account_choices import AccountChoiceField
-from .base import SaneaForm
+from .period import PeriodFilterForm
 
 
-class ActivityFilterForm(SaneaForm):
+class ActivityFilterForm(PeriodFilterForm):
     """Select the monitored accounts and local-date reporting period."""
 
     PERIOD_TODAY = ReportingPeriod.TODAY
     PERIOD_7_DAYS = ReportingPeriod.DAYS_7
     PERIOD_30_DAYS = ReportingPeriod.DAYS_30
+    PERIOD_INITIAL = PERIOD_TODAY
+    PERIOD_PRESETS = tuple(
+        (period.value, period.label)
+        for period in (ReportingPeriod.TODAY, ReportingPeriod.DAYS_7, ReportingPeriod.DAYS_30)
+    )
 
     person = forms.ModelChoiceField(
         label=_("User"),
@@ -38,18 +43,8 @@ class ActivityFilterForm(SaneaForm):
         required=False,
         empty_label=_("All"),
     )
-    period = forms.ChoiceField(
-        label=_("Period"),
-        choices=tuple(
-            (period.value, period.label)
-            for period in (
-                ReportingPeriod.TODAY,
-                ReportingPeriod.DAYS_7,
-                ReportingPeriod.DAYS_30,
-            )
-        ),
-        initial=PERIOD_TODAY,
-    )
+
+    field_order = ("person", "computer", "account", "period", "day")
 
     def __init__(self, *args: object, **kwargs: object) -> None:
         super().__init__(*args, **kwargs)
@@ -117,6 +112,9 @@ class ActivityFilterForm(SaneaForm):
 
         if not self.is_valid():
             raise ValueError("activity filters must be valid")
+
+        if bounds := self.get_selected_day_range():
+            return bounds
 
         period = ReportingPeriod(self.cleaned_data["period"])
         days = period.get_day_count()

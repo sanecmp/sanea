@@ -78,7 +78,9 @@ def test_dashboard_uses_local_layout_without_duplicate_navigation(
     assert "Manage computers" not in main
     assert "View issues" not in main
     assert "<a " not in main
-    assert '<option value="48-hours" selected>' in main
+    assert 'name="period" value="48-hours"' in main
+    assert 'data-period-date' in main
+    assert "sanea/js/period-picker.js" in content
     assert "Time spent" in main
     assert "Application usage" in main
     assert "No activity collection for this selection." in main
@@ -86,6 +88,7 @@ def test_dashboard_uses_local_layout_without_duplicate_navigation(
     assert 'hx-target="#dashboard-area"' in main
     assert 'hx-push-url="true"' in main
     assert 'hx-include="#dashboard-filter"' in main
+    assert "hx-history-elt" in content
 
 
 @pytest.mark.parametrize(
@@ -263,3 +266,33 @@ def test_dashboard_rejects_invalid_filters_without_showing_unfiltered_charts(
     assert "Check the selected filters." in content
     assert 'data-activity-chart="dashboard-people-data"' not in content
     assert 'data-activity-chart="dashboard-applications-data"' not in content
+
+
+@pytest.mark.parametrize("trigger", [None, "dashboard-filter", "dashboard-usage"])
+def test_dashboard_calendar_uses_a_local_day_instead_of_a_rolling_window(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
+    activity_run_create: Callable[..., None], trigger: str | None,
+) -> None:
+    zone = ZoneInfo("America/New_York")
+    since = int(datetime(2026, 10, 3, tzinfo=zone).timestamp())
+    till = since + 86_400
+    account = computer_record.accounts.get()
+
+    for kind in ("session", "prc"):
+        activity_run_create(account, kind=kind, started=since, finished=since + 3_600, duration=900)
+        activity_run_create(account, kind=kind, started=till, finished=till + 3_600, duration=3_600)
+
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": trigger} if trigger else {}
+
+    with timezone.override(zone):
+        response = client.get(reverse("core:dashboard"), {"period": "day", "day": "2026-10-03"}, **headers)
+
+    content = response.content.decode()
+    people = read_chart(content, "dashboard-people-data")
+    applications = read_chart(content, "dashboard-applications-data")
+    assert response.status_code == 200
+    assert len(people["labels"]) == 24
+    assert sum(people["datasets"][0]["data"]) == 900
+    assert applications["datasets"][0]["data"] == [900]
+    assert people["labels"][0] == ["03.10", "00:00"]

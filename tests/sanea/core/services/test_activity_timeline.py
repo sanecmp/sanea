@@ -1,10 +1,11 @@
 """Tests for rolling-window usage aggregation."""
 
 from collections.abc import Callable
+from datetime import UTC, date, datetime
 
 import pytest
 
-from sanea.core.models import Account, Computer, Person
+from sanea.core.models import Account, ActivityEvent, Computer, Person
 from sanea.core.services.activity_timeline import build_usage_timeline
 
 
@@ -125,3 +126,37 @@ def test_timeline_rejects_nonpositive_chart_intervals(bucket_seconds: int) -> No
 
     with pytest.raises(ValueError, match="bucket_seconds must be positive"):
         build_usage_timeline(Account.objects.none(), 100, 200, bucket_seconds=bucket_seconds)
+
+
+def test_reports_omit_desktop_components_without_deleting_events_or_affecting_screen_time(
+    activity_run_create: Callable[..., None],
+) -> None:
+    computer = Computer.objects.create(hostname="synthetic-desktop-components", status="allowed")
+    account = Account.objects.create(computer=computer, uid=1001, collect=True)
+    started = int(datetime(2026, 10, 1, 12, tzinfo=UTC).timestamp())
+    activity_run_create(account, started=started, finished=started + 3_600, duration=3_600)
+    activity_run_create(
+        account, kind="prc", started=started, finished=started + 3_600,
+        duration=3_600, prc_name="mutter-x11-fram", exe="/usr/libexec/mutter-x11-frames",
+    )
+    activity_run_create(
+        account, kind="prc", started=started, finished=started + 3_600, duration=3_600,
+        prc_name="gjs", exe="/usr/bin/gjs", application={
+            "ident": "gjs:/usr/share/gnome-shell/extensions/ding@rastersoft.com/ding.js", "name": "ding.js",
+        },
+    )
+    activity_run_create(
+        account, kind="prc", started=started, finished=started + 60, duration=60,
+        prc_name="gjs", exe="/usr/bin/gjs", application={"ident": "gjs:/apps/maps.js", "name": "Maps"},
+    )
+
+    report = ActivityEvent.objects.build_report(Account.objects.all(), date(2026, 10, 1), date(2026, 10, 2))
+    timeline = build_usage_timeline(Account.objects.all(), started, started + 3_600)
+
+    assert report.summary.screen_time == 3_600
+    assert report.summary.application_count == 1
+    assert [item.name for item in report.applications] == ["Maps"]
+    assert [item.app_name for item in report.recent if item.kind == "application"] == ["Maps"]
+    assert timeline.applications == {("Maps", "gjs:/apps/maps.js"): 60}
+    assert timeline.people == {None: (3_600,)}
+    assert account.activity_events.count() == 8

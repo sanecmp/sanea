@@ -144,6 +144,12 @@ msgstr "Разрешён"
 msgid "Day"
 msgstr "День"
 
+msgid "Selected day"
+msgstr "Выбранный день"
+
+msgid "Select a day."
+msgstr "Выберите день."
+
 msgid "Start"
 msgstr "Начало"
 

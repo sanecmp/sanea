@@ -335,7 +335,9 @@ class Computer(TimestampedModel):
         return computer
 
     @classmethod
-    def get_diagnostic_logs(cls, computer: Self | None=None, since: int | None = None) -> models.QuerySet[Self]:
+    def get_diagnostic_logs(
+        cls, computer: Self | None = None, since: int | None = None, till: int | None = None,
+    ) -> models.QuerySet[Self]:
         """Return computers with diagnostic logs received in the selected period."""
         computers = cls.objects.exclude(log_tail="").exclude(log_received=None)
 
@@ -346,6 +348,9 @@ class Computer(TimestampedModel):
             computers = computers.filter(
                 log_received__gte=datetime.fromtimestamp(since, UTC)
             )
+
+        if till is not None:
+            computers = computers.filter(log_received__lt=datetime.fromtimestamp(till, UTC))
 
         return computers.order_by("-log_received", "hostname", "pk")
 

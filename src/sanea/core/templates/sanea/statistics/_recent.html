@@ -24,6 +24,7 @@
                                 <div class="min-width-0">
                                     <div class="fw-semibold text-truncate">{{ item.name }}</div>
                                     <div class="small text-body-secondary">{{ item.details }}</div>
+                                    {% if item.launches %}<div class="small text-body-secondary">{% translate "Launches" %}: {{ item.launches }}</div>{% endif %}
                                 </div>
                                 <div class="small text-body-secondary text-nowrap text-end">
                                     <div>{{ item.started|date:"Y-m-d H:i" }}</div>

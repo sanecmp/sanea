@@ -9,6 +9,7 @@
     <link rel="icon" href="{% static 'sanea/favicon.svg' %}" type="image/svg+xml">
     <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
     <link rel="stylesheet" href="{% static 'vendor/tom-select/tom-select.bootstrap5.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/flatpickr/flatpickr.min.css' %}">
     <link rel="stylesheet" href="{% static 'sanea/css/app.css' %}">
     <link rel="stylesheet" href="{% static 'sanea/css/tables.css' %}">
     <link rel="stylesheet" href="{% static 'sanea/css/forms.css' %}">
@@ -117,7 +118,7 @@
             </div>
         </header>
 
-        <main class="container-fluid sanea-main px-3 px-lg-4 py-4 py-lg-5">
+        <main class="container-fluid sanea-main px-3 px-lg-4 py-4 py-lg-5" hx-history-elt>
             {% sitetree_breadcrumbs from "main" template "sanea/_breadcrumbs.html" %}
             {% block content %}{% endblock %}
         </main>
@@ -146,6 +147,9 @@
 <script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
 <script src="{% static 'vendor/tom-select/tom-select.complete.min.js' %}"></script>
 <script src="{% static 'sanea/js/searchable-selects.js' %}"></script>
+<script src="{% static 'vendor/flatpickr/flatpickr.min.js' %}"></script>
+<script src="{% static 'vendor/flatpickr/ru.js' %}"></script>
+<script src="{% static 'sanea/js/period-picker.js' %}"></script>
 <script src="{% static 'sanea/js/editor-dialog.js' %}"></script>
 {% block extra_body %}{% endblock %}
 </body>

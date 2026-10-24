@@ -1,8 +1,7 @@
 """Received sanex activity events and report aggregation."""
 
 from collections import defaultdict
-from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, time
 from typing import Self, TYPE_CHECKING
 
@@ -12,6 +11,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from sanelib.protocol import Event as ClientEvent
 
+from ...utils.applications import is_desktop_component
 from .base import TimestampedModel
 
 if TYPE_CHECKING:
@@ -63,7 +63,7 @@ class ApplicationUsage:
 
 @dataclass(frozen=True, slots=True)
 class RecentActivity:
-    """One completed session or application run for display."""
+    """One completed session or a group of completed application runs."""
 
     kind: str
     account_id: int
@@ -74,6 +74,9 @@ class RecentActivity:
     prc_name: str | None = None
     exe: str | None = None
     app_name: str | None = None
+    app_id: str | None = None
+    launches: int = 1
+    account_ids: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -99,7 +102,8 @@ class ActivityEventQuerySet(models.QuerySet):
     ) -> ActivityReport:
         """Build aggregates for local start dates in ``[since, till)``.
 
-        Include up to ``recent_limit`` completed runs of each kind.
+        Recent activity uses completion dates, with applications grouped by identity.
+        Include up to ``recent_limit`` applications and completed sessions.
         """
 
         if till <= since:
@@ -121,6 +125,7 @@ class ActivityEventQuerySet(models.QuerySet):
         *,
         computer: "Computer | None"=None,
         since: int | None = None,
+        till: int | None = None,
     ) -> QuerySet["ActivityEvent"]:
         """Return enforcement failures for the selected computer and period."""
         failures = self.filter(type="enforcement_failed")
@@ -130,6 +135,9 @@ class ActivityEventQuerySet(models.QuerySet):
 
         if since is not None:
             failures = failures.filter(timestamp__gte=since)
+
+        if till is not None:
+            failures = failures.filter(timestamp__lt=till)
 
         return failures.select_related(
             "account__computer",
@@ -311,7 +319,11 @@ class _ActivityReportBuilder:
         starts = self._load_starts()
         ends = self._load_ends(starts)
         session_starts = [event for event in starts if event.type == _SESSION_START]
-        process_starts = [event for event in starts if event.type == _PROCESS_START]
+        process_starts = [
+            event for event in starts
+            if event.type == _PROCESS_START
+            and not is_desktop_component(event.prc_name, event.exe, event.app_id)
+        ]
         session_ends = ends[_SESSION_END]
         process_ends = ends[_PROCESS_END]
 
@@ -344,7 +356,7 @@ class _ActivityReportBuilder:
                 usage["duration"] += end.duration or 0
                 usage["completed_launches"] += 1
 
-        recent = self._build_recent(starts, session_ends, process_ends)
+        recent = self._build_recent()
         daily_screen_time = tuple(
             DailyScreenTime(day, person_id, duration)
             for (day, person_id), duration in sorted(daily_totals.items())
@@ -423,38 +435,78 @@ class _ActivityReportBuilder:
 
         return result
 
-    def _build_recent(
-        self,
-        starts: Iterable[ActivityEvent],
-        session_ends: dict[tuple[int, int], ActivityEvent],
-        process_ends: dict[tuple[int, int], ActivityEvent],
-    ) -> tuple[RecentActivity, ...]:
+    def _build_recent(self) -> tuple[RecentActivity, ...]:
+
+        if not self.accounts or not self.recent_limit:
+            return ()
+
+        zone = timezone.get_current_timezone()
+        lower = int(datetime.combine(self.since, time.min, zone).timestamp())
+        upper = int(datetime.combine(self.till, time.min, zone).timestamp())
+        endings = tuple(self.events.filter(
+            account_id__in=[account.pk for account in self.accounts],
+            type__in=(_SESSION_END, _PROCESS_END),
+            timestamp__gte=lower,
+            timestamp__lt=upper,
+            duration__isnull=False,
+        ).order_by("timestamp", "seq"))
+        starts = {
+            (event.account_id, event.seq, event.type): event
+            for event in self.events.filter(
+                account_id__in=[account.pk for account in self.accounts],
+                seq__in={event.run_ident for event in endings},
+                type__in=(_SESSION_START, _PROCESS_START),
+            ).select_related("account")
+        }
         rows = []
-        append_row = rows.append
+        applications: dict[tuple[str, ...], RecentActivity] = {}
 
-        for event in starts:
-            is_session = event.type == _SESSION_START
-            endings = session_ends if is_session else process_ends
-            end = endings.get((event.account_id, event.seq))
+        unique_endings = {(event.account_id, event.run_ident, event.type): event for event in endings}
 
-            if end is None:
+        for end in unique_endings.values():
+            is_session = end.type == _SESSION_END
+            start_type = _SESSION_START if is_session else _PROCESS_START
+            event = starts.get((end.account_id, end.run_ident, start_type))
+
+            if event is None:
                 continue
 
-            append_row(
-                RecentActivity(
-                    kind="session" if is_session else "application",
-                    account_id=event.account_id,
-                    computer_id=event.account.computer_id,
-                    started=event.timestamp,
-                    finished=end.timestamp,
-                    duration=end.duration or 0,
-                    prc_name=None if is_session else event.prc_name,
-                    exe=None if is_session else event.exe,
-                    app_name=None if is_session else event.app_name,
-                )
+            if not is_session and is_desktop_component(event.prc_name, event.exe, event.app_id):
+                continue
+
+            row = RecentActivity(
+                kind="session" if is_session else "application",
+                account_id=event.account_id,
+                computer_id=event.account.computer_id,
+                account_ids=(event.account_id,),
+                started=event.timestamp,
+                finished=end.timestamp,
+                duration=end.duration or 0,
+                prc_name=None if is_session else event.prc_name,
+                exe=None if is_session else event.exe,
+                app_name=None if is_session else event.app_name,
+                app_id=None if is_session else event.app_id,
             )
 
-        rows.sort(key=lambda item: (item.started, item.account_id), reverse=True)
+            if is_session:
+                rows.append(row)
+                continue
+
+            key = event.get_application_key()
+            previous = applications.get(key)
+
+            if previous is not None:
+                row = replace(
+                    row,
+                    duration=previous.duration + row.duration,
+                    launches=previous.launches + 1,
+                    account_ids=tuple(sorted({*previous.account_ids, event.account_id})),
+                )
+
+            applications[key] = row
+
+        rows.extend(applications.values())
+        rows.sort(key=lambda item: (item.finished, item.started, item.account_id), reverse=True)
         counts: dict[str, int] = defaultdict(int)
         recent = []
 

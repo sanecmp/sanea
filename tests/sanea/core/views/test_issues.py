@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.utils.formats import date_format
 from sanelib.protocol import parse_event_packet
 
-from sanea.core.models import Computer, User
+from sanea.core.models import ActivityEvent, Computer, EventPacket, User
 
 
 @pytest.mark.parametrize("ajax", [False, True])
@@ -189,3 +189,35 @@ def test_live_computer_refresh_does_not_replace_logs(
     assert response.status_code == 200
     assert "id=\"diagnostic-logs\"" not in response.content.decode()
     assert "synthetic stationary log" not in response.content.decode()
+
+
+@pytest.mark.parametrize("trigger", [None, "issue-filter", "diagnostic-refresh"])
+def test_issue_calendar_bounds_failures_and_latest_log_snapshots_to_one_local_day(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer, trigger: str | None,
+) -> None:
+    zone = ZoneInfo("America/New_York")
+    since = int(datetime(2026, 10, 3, tzinfo=zone).timestamp())
+    account = computer_record.accounts.get()
+    packet = EventPacket.objects.create(account=account, sha256="a" * 64, first_seq=1, last_seq=3, event_count=3, byte_size=1)
+    ActivityEvent.objects.bulk_create([
+        ActivityEvent(account=account, packet=packet, seq=seq, type="enforcement_failed", timestamp=timestamp, reason=reason)
+        for seq, timestamp, reason in ((1, since - 1, "before"), (2, since, "selected"), (3, since + 86_400, "after"))
+    ])
+    computer_record.log_tail = "synthetic-selected-log"
+    computer_record.log_received = datetime.fromtimestamp(since, zone)
+    computer_record.save(update_fields=("log_tail", "log_received"))
+    Computer.objects.create(hostname="synthetic-before", log_tail="synthetic-before-log", log_received=datetime.fromtimestamp(since - 1, zone))
+    Computer.objects.create(hostname="synthetic-after", log_tail="synthetic-after-log", log_received=datetime.fromtimestamp(since + 86_400, zone))
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+    headers = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": trigger} if trigger else {}
+
+    with timezone.override(zone):
+        response = client.get(reverse("core:computers"), {"issues-period": "day", "issues-day": "2026-10-03"}, **headers)
+
+    content = response.content.decode()
+    assert response.status_code == 200
+    assert "synthetic-selected-log" in content
+    assert "synthetic-before-log" not in content
+    assert "synthetic-after-log" not in content
+    assert "issues-day=2026-10-03" in content
+    assert "Selected" in content if trigger != "diagnostic-refresh" else "id=\"issues-content\"" not in content

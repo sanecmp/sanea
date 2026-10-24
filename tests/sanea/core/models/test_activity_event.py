@@ -180,7 +180,10 @@ def test_report_limits_recent_runs_per_kind_without_displacing_older_sessions(
     for index in range(3):
         moment = started + index * 120
         activity_run_create(account, started=moment, finished=moment + 60, duration=60)
-        activity_run_create(account, kind="prc", started=moment + 3_600, finished=moment + 3_660, duration=60)
+        activity_run_create(
+            account, kind="prc", started=moment + 3_600, finished=moment + 3_660,
+            duration=60, prc_name=f"synthetic-app-{index}",
+        )
 
     report = ActivityEvent.objects.build_report(
         Account.objects.all(), date(2026, 10, 1), date(2026, 10, 2), recent_limit=recent_limit,
@@ -189,3 +192,62 @@ def test_report_limits_recent_runs_per_kind_without_displacing_older_sessions(
     assert len(report.recent) == recent_limit * 2
     assert [item.kind for item in report.recent] == ["application"] * recent_limit + ["session"] * recent_limit
     assert all(item.started >= started + 120 for item in report.recent)
+
+
+def test_recent_applications_group_all_runs_before_limiting_and_keep_distinct_ids(
+    activity_run_create: Callable[..., None],
+) -> None:
+    computer = Computer.objects.create(hostname="synthetic-groups", status="allowed")
+    account = Account.objects.create(computer=computer, uid=1001, collect=True)
+    other_account = Account.objects.create(computer=computer, uid=1002, collect=True)
+    started = int(datetime(2026, 10, 1, 12, tzinfo=UTC).timestamp())
+    steam = {"ident": "steam:client", "name": "Steam"}
+    activity_run_create(
+        account, kind="prc", started=started, finished=started + 60, duration=60,
+        application={"ident": "steam:game:440", "name": "Steam"},
+    )
+
+    for index in range(12):
+        moment = started + (index + 1) * 120
+        activity_run_create(
+            account, kind="prc", started=moment, finished=moment + 60,
+            duration=60, prc_name="steamwebhelper", application=steam,
+        )
+
+    activity_run_create(
+        other_account, kind="prc", started=started + 3_600, finished=started + 3_720,
+        duration=120, prc_name="steam", application=steam,
+    )
+
+    report = ActivityEvent.objects.build_report(
+        Account.objects.all(), date(2026, 10, 1), date(2026, 10, 2), recent_limit=2,
+    )
+
+    assert len(report.recent) == 2
+    client, game = report.recent
+    assert client.app_id == "steam:client"
+    assert client.launches == 13
+    assert client.duration == 840
+    assert client.account_ids == (account.pk, other_account.pk)
+    assert client.started == started + 3_600
+    assert game.app_id == "steam:game:440"
+    assert game.launches == 1
+
+
+def test_recent_sessions_use_completion_date_even_when_they_started_before_the_period(
+    activity_run_create: Callable[..., None],
+) -> None:
+    computer = Computer.objects.create(hostname="synthetic-overnight", status="allowed")
+    account = Account.objects.create(computer=computer, uid=1001, collect=True)
+    midnight = int(datetime(2026, 10, 2, 4, tzinfo=UTC).timestamp())
+    activity_run_create(account, started=midnight - 3_600, finished=midnight, duration=600)
+    activity_run_create(account, started=midnight - 7_200, finished=midnight + 60, duration=300)
+    activity_run_create(account, started=midnight, finished=midnight + 86_400, duration=120)
+    activity_run_create(account, started=midnight + 60, finished=None)
+
+    with timezone.override("America/New_York"):
+        report = ActivityEvent.objects.build_report(Account.objects.all(), date(2026, 10, 2), date(2026, 10, 3))
+
+    assert [item.duration for item in report.recent] == [300, 600]
+    assert all(item.kind == "session" for item in report.recent)
+    assert report.recent[0].started < midnight

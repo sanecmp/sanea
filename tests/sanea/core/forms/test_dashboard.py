@@ -15,7 +15,7 @@ def test_dashboard_filter_supports_the_requested_rolling_periods(period: str, ho
     assert form.is_valid(), form.errors.as_json()
     assert form.get_hour_count() == hours
     assert DashboardFilterForm().fields["period"].initial == "48-hours"
-    assert list(dict(form.fields["period"].choices)) == ["24-hours", "48-hours", "7-days", "30-days"]
+    assert list(dict(form.fields["period"].choices)) == ["24-hours", "48-hours", "7-days", "30-days", "day"]
 
 
 def test_dashboard_filter_lists_all_people_by_name_and_scopes_all_their_collecting_accounts(

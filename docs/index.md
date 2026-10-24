@@ -40,7 +40,7 @@ node --test tests/javascript/*.mjs
 
 **Dashboard** shows screen time by person across their computers and the 10 most
 used applications. Both charts share period and person filters: the last 24 hours,
-48 hours (default), 7 days or 30 days, and all people or one person selected by name.
+48 hours (default), 7 days or 30 days, a calendar day, and all people or one person selected by name.
 Short periods use hourly bars; 7 and 30 days use 24-hour bars.
 It refreshes every minute while visible, retaining the selected filters.
 Usage within chart intervals and runs crossing the window boundary are estimated by
@@ -50,11 +50,27 @@ together, not deduplicated.
 
 **Statistics**, the next navigation item, shows activity charts, recent activity
 and the top 10 applications by recorded usage time, with user, computer, account
-and period filters. Recent applications and sessions have separate tabs, with up
-to 10 completed runs in each. Changing filters keeps the selected tab.
+and period filters. Choose today, the last 7 or 30 days, or a specific day in the
+calendar. **Period** opens a single calendar with shortcuts for today, the last
+7 days and the last 30 days; choosing a date selects that day instead.
+The calendar uses the bundled Flatpickr 4.6.13, including Russian labels; no CDN
+is needed. Without JavaScript, the same field selects a day using the browser's
+native date input.
+
+Recent applications and sessions have separate tabs, ordered by completion time.
+Applications group all completed launches in the selected period by application
+ID, or by process name and executable when the ID is unknown. Each of the 10 most
+recent applications shows its total duration, launch count and accounts.
+The sessions tab shows up to 10 completed sessions, including those that started
+before the selected period. Changing filters keeps the selected tab.
 
 Time totals include only completed sessions and application runs. A dash in
 application usage means no final duration has been received yet.
+Usage totals are assigned to the local start date; recent activity uses the local
+completion date. GNOME Shell, Mutter's X11 window frames and the recognized DING
+desktop-icons extension are omitted from application reports and dashboard charts.
+Their original events remain stored, and excluding them does not reduce session
+screen time. Other GJS scripts are not hidden just because they use GJS.
 Dates and times use sanea's timezone, including the days selected in statistics.
 Tables use the `YYYY-MM-DD HH:MM` format and regular-weight values; headings remain bold.
 By default this is the system timezone of the computer running sanea;
@@ -71,7 +87,10 @@ tables stay in place; changed rows keep the table's scroll position. Refreshing
 pauses while computer details or settings are open.
 
 Issues and diagnostic logs appear below the computer list, with their own computer
-and period filters. Logs only refresh when **Refresh** is clicked. Use the copy
+and period filters. The dashboard, statistics and issues reuse the same **Period**
+calendar with report-specific shortcuts and local calendar-day selection. Diagnostic
+logs are the latest snapshots, not a historical archive: a day filters their receipt dates.
+Logs only refresh when **Refresh** is clicked. Use the copy
 icon to copy the displayed log text.
 
 **People** adds and renames people in a dialog. A person's template links to its
@@ -254,6 +273,12 @@ application ID. Technical process names and executable paths remain stored;
 unknown applications use those fields as before. Different GJS scripts and
 recognized Steam games therefore do not become a single interpreter or Steam
 entry. Separate launches still count separately.
+Sanex supplements AT-SPI with EWMH for X11/Xwayland windows and, after detecting
+Steam, process-lifetime observations using its game ID hints. Native Wayland
+windows without accessibility still require usable process metadata. A Steam
+client entry alone does not identify which game was played; old entries cannot
+be retrospectively split into games. Game names use window titles when available,
+otherwise a Steam ID, without reading Steam installation files.
 
 Search by name and select an application in the **Application** list when editing a rule.
 The list comes from recorded activity for the selected accounts; the application

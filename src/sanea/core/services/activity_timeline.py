@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 from django.db.models import QuerySet
 
+from ...utils.applications import is_desktop_component
 from ..models import Account, ActivityEvent
 
 
@@ -54,6 +55,10 @@ def build_usage_timeline(
         rate = end.duration / elapsed
 
         if start.type == "prc_start":
+
+            if is_desktop_component(start.prc_name, start.exe, start.app_id):
+                continue
+
             key = start.get_application_key()
             application_totals[key] += rate * (upper - lower)
             application_labels[key] = (start.app_name or start.prc_name or "", start.app_id or start.exe or "")

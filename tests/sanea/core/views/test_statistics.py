@@ -344,3 +344,43 @@ def test_statistics_has_a_separate_empty_state_for_each_recent_kind(
     assert response.status_code == 200
     assert empty_message in content
     assert f"class=\"nav-link active\" id=\"recent-{missing_kind}-tab\"" in content
+
+
+@pytest.mark.parametrize("fragment", [False, True], ids=["page", "fragment"])
+def test_statistics_calendar_filters_one_local_day_and_groups_recent_applications(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
+    activity_run_create: Callable[..., None], fragment: bool,
+) -> None:
+    account = computer_record.accounts.get()
+    started = int(datetime(2026, 10, 2, 2, tzinfo=UTC).timestamp())
+    activity_run_create(
+        account, kind="prc", started=started, finished=started + 60, duration=60,
+        application={"ident": "steam:game:440", "name": "Team Fortress 2"},
+    )
+    activity_run_create(
+        account, kind="prc", started=started + 120, finished=started + 180, duration=60,
+        application={"ident": "steam:game:440", "name": "Team Fortress 2"},
+    )
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+    request_options = {"HTTP_HX_REQUEST": "true", "HTTP_HX_TRIGGER": "activity-filter"} if fragment else {}
+
+    with timezone.override("America/New_York"):
+        response = client.get(
+            reverse("core:statistics"), {"period": "day", "day": "2026-10-01", "activity_kind": "session"},
+            **request_options,
+        )
+
+    content = response.content.decode()
+    recent = content.split("id=\"recent-application-panel\"", 1)[1].split("id=\"recent-session-panel\"", 1)[0]
+    assert response.status_code == 200
+    assert recent.count("role=\"listitem\"") == 1
+    assert "Team Fortress 2" in recent
+    assert "Launches: 2" in recent
+    assert "<div>2:00</div>" in recent
+    assert "value=\"2026-10-01\"" in content
+    assert "period=day&amp;day=2026-10-01&amp;activity_kind=application" in content
+
+    if not fragment:
+        assert "vendor/flatpickr/flatpickr.min.js" in content
+        assert "vendor/flatpickr/flatpickr.min.css" in content
+        assert "vendor/flatpickr/ru.js" in content
