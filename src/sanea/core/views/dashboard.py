@@ -41,8 +41,12 @@ class _DashboardPresenter:
         hour_count = form.get_hour_count()
         bucket_seconds = 3_600 if hour_count <= 48 else 86_400
         since, till = form.get_timestamp_range(timezone.now())
+        zone = timezone.get_current_timezone()
+        since_moment = datetime.fromtimestamp(since, zone)
+        till_moment = datetime.fromtimestamp(till, zone)
+        bucket_start = int(since_moment.replace(minute=0, second=0, microsecond=0).timestamp()) if hour_count <= 48 else since
         accounts = form.get_accounts()
-        timeline = build_usage_timeline(accounts, since, till, bucket_seconds=bucket_seconds)
+        timeline = build_usage_timeline(accounts, since, till, bucket_seconds=bucket_seconds, bucket_start=bucket_start)
         all_people = list(Person.objects.values_list("pk", "name"))
         selected_person = form.cleaned_data["person"]
         people = {
@@ -74,15 +78,22 @@ class _DashboardPresenter:
 
         applications = sorted(timeline.applications.items(), key=lambda item: (-item[1], item[0]))[:10]
         application_labels = [name or executable for (name, executable), duration in applications]
-        zone = timezone.get_current_timezone()
         moments = [datetime.fromtimestamp(bucket, zone) for bucket in timeline.buckets]
+        tooltip_titles = []
+
+        for bucket in timeline.buckets:
+            lower = datetime.fromtimestamp(max(bucket, since), zone)
+            upper = datetime.fromtimestamp(min(bucket + bucket_seconds, till), zone)
+            moment_format = "%d.%m.%Y %H:%M %z" if lower.utcoffset() != upper.utcoffset() else "%d.%m.%Y %H:%M"
+            tooltip_titles.append(f"{lower:{moment_format}} — {upper:{moment_format}}")
+
         hour_unit = _("h")
         minute_unit = _("min")
         units = {"hour": f"{hour_unit}", "minute": f"{minute_unit}"}
         return {
             **context,
-            "usage_since": datetime.fromtimestamp(since, zone),
-            "usage_till": datetime.fromtimestamp(till, zone),
+            "usage_since": since_moment,
+            "usage_till": till_moment,
             "usage_timezone": timezone.get_current_timezone_name(),
             "usage_has_accounts": accounts.exists(),
             "usage_has_screen_time": bool(timeline.people),
@@ -99,6 +110,7 @@ class _DashboardPresenter:
                 ],
                 "datasets": datasets,
                 "units": units,
+                "tooltipTitles": tooltip_titles,
             },
             "applications_chart": {
                 "labels": application_labels,

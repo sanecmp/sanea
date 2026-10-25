@@ -62,6 +62,9 @@ msgstr "Завершённые сеансы по часам"
 msgid "Completed sessions by day"
 msgstr "Завершённые сеансы по дням"
 
+msgid "A session can span several bars: its time is split between them, not counted twice."
+msgstr "Один сеанс может занимать несколько столбцов: время делится между ними, а не учитывается повторно."
+
 msgid "10 most used applications"
 msgstr "10 самых используемых приложений"
 

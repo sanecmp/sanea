@@ -142,9 +142,79 @@ def test_dashboard_renders_the_rolling_window_by_person_and_application(
     assert applications["indexAxis"] == "y"
     assert "America/New_York" in content
     assert "Asia/Novosibirsk" not in content
+    assert 'aria-describedby="people-usage-explanation people-usage-totals"' in content
+    assert "A session can span several bars: its time is split between them, not counted twice." in content
     assert "estimated proportionally" not in content
     assert "Simultaneous use" not in content
     assert "Manage computers" not in content
+
+
+@pytest.mark.parametrize("zone_name", ["Asia/Novosibirsk", "Asia/Kathmandu"])
+def test_dashboard_aligns_local_hours_and_clips_edge_tooltips_without_changing_totals(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    computer_record: Computer,
+    activity_run_create: Callable[..., None],
+    calendar_time: TimeMachineFixture,
+    zone_name: str,
+) -> None:
+    zone = ZoneInfo(zone_name)
+    calendar_time.move_to(datetime(2026, 10, 25, 17, 25, tzinfo=zone), tick=False)
+    till = int(timezone.now().timestamp())
+    since = till - 48 * 3_600
+    account = computer_record.accounts.get()
+
+    for kind in ("session", "prc"):
+        activity_run_create(account, kind=kind, started=since - 60, finished=since + 1_200, duration=1_260)
+        activity_run_create(account, kind=kind, started=till - 2_400, finished=till, duration=2_400)
+
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+
+    with timezone.override(zone):
+        response = client.get(reverse("core:dashboard"), HTTP_ACCEPT_LANGUAGE="ru")
+
+    content = response.content.decode()
+    people = read_chart(content, "dashboard-people-data")
+    applications = read_chart(content, "dashboard-applications-data")
+
+    assert len(people["labels"]) == 49
+    assert people["labels"][0] == ["23.10", "17:00"]
+    assert people["labels"][-1] == ["25.10", "17:00"]
+    assert all(label[1].endswith(":00") for label in people["labels"])
+    assert people["tooltipTitles"][0] == "23.10.2026 17:25 — 23.10.2026 18:00"
+    assert people["tooltipTitles"][6] == "23.10.2026 23:00 — 24.10.2026 00:00"
+    assert people["tooltipTitles"][-1] == "25.10.2026 17:00 — 25.10.2026 17:25"
+    assert people["datasets"][0]["data"] == [1_200] + [0] * 46 + [900, 1_500]
+    assert sum(people["datasets"][0]["data"]) == 3_600
+    assert applications["datasets"][0]["data"] == [3_600]
+    assert "tooltipTitles" not in applications
+    assert "Один сеанс может занимать несколько столбцов: время делится между ними, а не учитывается повторно." in content
+
+
+def test_dashboard_tooltips_distinguish_the_repeated_hour_at_the_end_of_daylight_saving_time(
+    request_client: Callable[..., Client],
+    user_create: Callable[..., User],
+    computer_record: Computer,
+    activity_run_create: Callable[..., None],
+    calendar_time: TimeMachineFixture,
+) -> None:
+    zone = ZoneInfo("America/New_York")
+    calendar_time.move_to(datetime(2026, 11, 2, 12, tzinfo=zone), tick=False)
+    account = computer_record.accounts.get()
+    started = int(datetime(2026, 11, 1, 1, tzinfo=zone).timestamp())
+    activity_run_create(account, started=started, finished=started + 7_200, duration=7_200)
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+
+    with timezone.override(zone):
+        response = client.get(reverse("core:dashboard"), {"period": "day", "day": "2026-11-01"})
+
+    people = read_chart(response.content.decode(), "dashboard-people-data")
+
+    assert len(people["labels"]) == 25
+    assert people["labels"][1:3] == [["01.11", "01:00"], ["01.11", "01:00"]]
+    assert people["tooltipTitles"][1] == "01.11.2026 01:00 -0400 — 01.11.2026 01:00 -0500"
+    assert people["tooltipTitles"][2] == "01.11.2026 01:00 — 01.11.2026 02:00"
+    assert people["datasets"][0]["data"] == [0, 3_600, 3_600] + [0] * 22
 
 
 def test_dashboard_has_clear_empty_states_and_russian_text(
@@ -244,6 +314,10 @@ def test_dashboard_applies_the_same_period_and_person_to_both_charts(
     assert response.status_code == 200
     assert ('id="dashboard-filter"' in content) is contains_filter
     assert len(people["labels"]) == buckets
+    assert len(people["tooltipTitles"]) == buckets
+    zone = timezone.get_current_timezone()
+    assert people["tooltipTitles"][0].startswith(f"{datetime.fromtimestamp(since, zone):%d.%m.%Y %H:%M} — ")
+    assert people["tooltipTitles"][-1].endswith(f" — {datetime.fromtimestamp(till, zone):%d.%m.%Y %H:%M}")
     assert [dataset["label"] for dataset in people["datasets"]] == [person_record.name]
     assert sum(people["datasets"][0]["data"]) == 1_500
     assert applications["labels"] == ["synthetic-app"]

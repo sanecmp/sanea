@@ -28,6 +28,12 @@
             grid: {display: false},
             ticks: horizontal ? {autoSkip: false} : {maxRotation: 0, maxTicksLimit: 8},
         };
+        const tooltipCallbacks = {
+            label: (context) => `${context.dataset.label}: ${formatDuration(context.raw)}`,
+        };
+        if (payload.tooltipTitles) {
+            tooltipCallbacks.title = (items) => payload.tooltipTitles[items[0].dataIndex];
+        }
         return new window.Chart(canvas, {
             type: "bar",
             data: {
@@ -50,9 +56,7 @@
                         display: !horizontal,
                     },
                     tooltip: {
-                        callbacks: {
-                            label: (context) => `${context.dataset.label}: ${formatDuration(context.raw)}`,
-                        },
+                        callbacks: tooltipCallbacks,
                     },
                 },
                 scales: {

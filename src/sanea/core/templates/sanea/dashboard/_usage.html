@@ -21,9 +21,13 @@
             {% if usage_has_screen_time %}
                 <div class="sanea-chart-container">
                     <canvas id="dashboard-people-chart" data-activity-chart="dashboard-people-data" role="img"
-                            aria-label="{% translate 'Time spent' %}" aria-describedby="people-usage-totals"></canvas>
+                            aria-label="{% translate 'Time spent' %}"
+                            aria-describedby="people-usage-explanation people-usage-totals"></canvas>
                 </div>
                 {{ people_chart|json_script:"dashboard-people-data" }}
+                <p class="small text-body-secondary mt-3 mb-0" id="people-usage-explanation">
+                    {% translate "A session can span several bars: its time is split between them, not counted twice." %}
+                </p>
             {% else %}
                 <div class="sanea-empty-state">
                     <p class="mb-0 text-body-secondary">{% translate "No completed sessions for this period." %}</p>

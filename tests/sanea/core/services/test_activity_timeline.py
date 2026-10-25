@@ -102,6 +102,32 @@ def test_timeline_returns_explicit_hours_without_activity() -> None:
     assert timeline.applications == {}
 
 
+def test_timeline_aligns_buckets_without_extending_the_usage_window(activity_run_create: Callable[..., None]) -> None:
+    since = 1_790_000_000
+    till = since + 7_200
+    computer = Computer.objects.create(hostname="synthetic-aligned-hours", status="allowed")
+    account = Account.objects.create(computer=computer, uid=1001, collect=True)
+
+    for kind in ("session", "prc"):
+        activity_run_create(account, kind=kind, started=since - 3_600, finished=till, duration=5_400)
+        activity_run_create(account, kind=kind, started=since - 1_200, finished=since - 1, duration=1_199)
+        activity_run_create(account, kind=kind, started=till - 600, finished=till + 1, duration=601)
+
+    timeline = build_usage_timeline(Account.objects.all(), since, till, bucket_start=since - 1_500)
+
+    assert timeline.buckets == (since - 1_500, since + 2_100, since + 5_700)
+    assert timeline.people == {None: (1_050, 1_800, 750)}
+    assert sum(timeline.people[None]) == 3_600
+    assert timeline.applications == {("synthetic-app", "/demo/synthetic-app"): 3_600}
+
+
+@pytest.mark.parametrize("bucket_start", [6_399, 6_400, 10_001])
+def test_timeline_rejects_a_first_bucket_without_the_window_start(bucket_start: int) -> None:
+
+    with pytest.raises(ValueError, match="the first bucket must contain since"):
+        build_usage_timeline(Account.objects.none(), 10_000, 20_000, bucket_start=bucket_start)
+
+
 @pytest.mark.parametrize(("since", "till"), [(100, 100), (101, 100), (-1, 100)])
 def test_timeline_rejects_invalid_bounds(since: int, till: int) -> None:
 

@@ -42,6 +42,10 @@ node --test tests/javascript/*.mjs
 used applications. Both charts share period and person filters: the last 24 hours,
 48 hours (default), 7 days or 30 days, a calendar day, and all people or one person selected by name.
 Short periods use hourly bars; 7 and 30 days use 24-hour bars.
+Hourly intervals start on the hour in sanea's timezone; the first and last bars
+include only the portion within the selected period. Hover over a bar to see its
+full date and time range and recorded duration. One session can span several
+bars: its time is split between them without changing the total.
 It refreshes every minute while visible, retaining the selected filters.
 Usage within chart intervals and runs crossing the window boundary are estimated by
 distributing each final duration proportionally over its start-to-end interval.

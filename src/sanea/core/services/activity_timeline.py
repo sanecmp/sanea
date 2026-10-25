@@ -23,6 +23,7 @@ class UsageTimeline:
 
 def build_usage_timeline(
     accounts: QuerySet[Account], since: int, till: int, *, bucket_seconds: int = 3_600,
+    bucket_start: int | None = None,
 ) -> UsageTimeline:
     """Estimate usage in ``[since, till)`` from runs completed by ``till``.
 
@@ -30,6 +31,8 @@ def build_usage_timeline(
     a run. Allocate each duration proportionally across its wall-clock interval,
     including the portion of a run that started before the requested window.
     Concurrent accounts and applications retain their separately recorded time.
+    ``bucket_start`` may align the first bucket before ``since`` without extending
+    the requested usage window; its first interval must contain ``since``.
     """
 
     if since < 0 or till <= since:
@@ -38,7 +41,13 @@ def build_usage_timeline(
     if bucket_seconds <= 0:
         raise ValueError("bucket_seconds must be positive")
 
-    buckets = tuple(range(since, till, bucket_seconds))
+    if bucket_start is None:
+        bucket_start = since
+
+    if not bucket_start <= since < bucket_start + bucket_seconds:
+        raise ValueError("the first bucket must contain since")
+
+    buckets = tuple(range(bucket_start, till, bucket_seconds))
     people: dict[int | None, list[float]] = defaultdict(lambda: [0.0] * len(buckets))
 
     application_totals: dict[tuple[str, ...], float] = defaultdict(float)
@@ -67,7 +76,7 @@ def build_usage_timeline(
         person_usage = people[end.account.person_id]
 
         while lower < upper:
-            index = (lower - since) // bucket_seconds
+            index = (lower - bucket_start) // bucket_seconds
             bucket_end = min(buckets[index] + bucket_seconds, upper)
             person_usage[index] += rate * (bucket_end - lower)
             lower = bucket_end

@@ -47,6 +47,25 @@ test("statistics initializes the chart and formats durations from the report uni
     assert.equal(chart.config.type, "bar");
     assert.equal(chart.config.data.datasets[0].data[0], 3660);
     assert.equal(chart.config.options.scales.y.ticks.callback(3660), "1 h 1 min");
+    assert.equal(chart.config.options.plugins.tooltip.callbacks.title, undefined);
+});
+
+test("dashboard tooltips use the complete interval for the hovered bar without changing its duration", () => {
+    const page = createPage();
+    page.elements.set("activity-chart-data", {textContent: JSON.stringify({
+        labels: [["25.10", "17:00"], ["25.10", "18:00"]],
+        datasets: [{label: "Synthetic person", data: [1560, 2040]}],
+        units: {hour: "ч", minute: "мин"},
+        tooltipTitles: ["25.10.2026 17:00 — 25.10.2026 18:00", "25.10.2026 18:00 — 25.10.2026 19:00"],
+    })});
+
+    page.document.emit("DOMContentLoaded");
+    const callbacks = page.charts[0].config.options.plugins.tooltip.callbacks;
+
+    assert.equal(callbacks.title([{dataIndex: 0}]), "25.10.2026 17:00 — 25.10.2026 18:00");
+    assert.equal(callbacks.title([{dataIndex: 1}]), "25.10.2026 18:00 — 25.10.2026 19:00");
+    assert.equal(callbacks.label({dataset: {label: "Synthetic person"}, raw: 1560}), "Synthetic person: 26 мин");
+    assert.equal(callbacks.label({dataset: {label: "Synthetic person"}, raw: 2040}), "Synthetic person: 34 мин");
 });
 
 test("filter changes recreate the chart only after HTMX has settled canvas attributes", () => {
@@ -98,6 +117,7 @@ test("dashboard renders two independent charts with duration axes and redraws bo
     assert.equal(applications.config.options.scales.y.ticks.autoSkip, false);
     assert.equal(applications.config.options.plugins.legend.display, false);
     assert.equal(applications.config.options.scales.x.stacked, false);
+    assert.equal(applications.config.options.plugins.tooltip.callbacks.title, undefined);
     assert.equal(page.charts[0].config.options.scales.y.stacked, true);
     assert.equal(applications.config.options.plugins.tooltip.callbacks.label({
         dataset: {label: "Время"}, raw: 3660,
