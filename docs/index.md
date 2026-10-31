@@ -236,6 +236,25 @@ service is restarted only if it was already running; `--no-autostart` always
 leaves it stopped and disabled. After a manual installation, run `sudo sanea serve`
 again when needed; there is no need to repeat `--no-autostart` on each update.
 
+### Uninstalling sanea
+
+Stop any foreground `sanea` commands and back up any data you want to keep, then run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sanecmp/sanea/main/uninstall.sh \
+    | sudo sh
+```
+
+From a checkout, run `sudo ./uninstall.sh` instead. The script takes no arguments
+and asks you to type `sanea` in the terminal before making any changes. Any other
+answer, or no terminal, cancels removal.
+
+Removal stops and disables the service, deletes `/opt/sanea`, `/etc/sanea`, the
+systemd unit and the management wrapper, and removes the dedicated `sanea` OS
+user and its unused group. This permanently deletes the database, statistics,
+configuration and private keys. Data moved outside the installation paths must
+be removed manually. Python and uv are not required for removal and are not changed.
+
 ### Home-network access
 
 On first installation, the installer fills `SANEA_ALLOWED_HOSTS` with loopback
