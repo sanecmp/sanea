@@ -150,7 +150,7 @@ def test_dashboard_renders_the_rolling_window_by_person_and_application(
 
 
 @pytest.mark.parametrize("zone_name", ["Asia/Novosibirsk", "Asia/Kathmandu"])
-def test_dashboard_aligns_local_hours_and_clips_edge_tooltips_without_changing_totals(
+def test_dashboard_includes_the_whole_first_local_hour_and_only_the_elapsed_part_of_the_last(
     request_client: Callable[..., Client],
     user_create: Callable[..., User],
     computer_record: Computer,
@@ -161,7 +161,7 @@ def test_dashboard_aligns_local_hours_and_clips_edge_tooltips_without_changing_t
     zone = ZoneInfo(zone_name)
     calendar_time.move_to(datetime(2026, 10, 25, 17, 25, tzinfo=zone), tick=False)
     till = int(timezone.now().timestamp())
-    since = till - 48 * 3_600
+    since = int(datetime(2026, 10, 23, 17, tzinfo=zone).timestamp())
     account = computer_record.accounts.get()
 
     for kind in ("session", "prc"):
@@ -181,7 +181,7 @@ def test_dashboard_aligns_local_hours_and_clips_edge_tooltips_without_changing_t
     assert people["labels"][0] == ["23.10", "17:00"]
     assert people["labels"][-1] == ["25.10", "17:00"]
     assert all(label[1].endswith(":00") for label in people["labels"])
-    assert people["tooltipTitles"][0] == "23.10.2026 17:25 — 23.10.2026 18:00"
+    assert people["tooltipTitles"][0] == "23.10.2026 17:00 — 23.10.2026 18:00"
     assert people["tooltipTitles"][6] == "23.10.2026 23:00 — 24.10.2026 00:00"
     assert people["tooltipTitles"][-1] == "25.10.2026 17:00 — 25.10.2026 17:25"
     assert people["datasets"][0]["data"] == [1_200] + [0] * 46 + [900, 1_500]
@@ -255,7 +255,7 @@ def test_dashboard_refresh_advances_the_window_without_returning_navigation(
 
 @pytest.mark.parametrize(
     ("period", "hours", "buckets"),
-    [("24-hours", 24, 24), ("48-hours", 48, 48), ("7-days", 168, 7), ("30-days", 720, 30), (None, 48, 48)],
+    [("24-hours", 24, 24), ("48-hours", 48, 48), ("7-days", 168, 8), ("30-days", 720, 31), (None, 48, 48)],
 )
 @pytest.mark.parametrize(
     ("request_options", "contains_filter"),
@@ -285,6 +285,9 @@ def test_dashboard_applies_the_same_period_and_person_to_both_charts(
     other = Account.objects.create(computer=computer_record, person=other_person, uid=1002, collect=True)
     till = int(timezone.now().timestamp())
     since = till - hours * 3_600
+
+    if hours > 48:
+        since = int(datetime.fromtimestamp(since, timezone.get_current_timezone()).replace(hour=0).timestamp())
 
     for kind in ("session", "prc"):
         activity_run_create(account, kind=kind, started=since, finished=since + 3_600, duration=600)
@@ -370,3 +373,49 @@ def test_dashboard_calendar_uses_a_local_day_instead_of_a_rolling_window(
     assert sum(people["datasets"][0]["data"]) == 900
     assert applications["datasets"][0]["data"] == [900]
     assert people["labels"][0] == ["03.10", "00:00"]
+
+
+@pytest.mark.parametrize(
+    ("now", "started", "finished", "duration", "expected"),
+    [
+        pytest.param(
+            (2026, 11, 2, 12, 25), (2026, 10, 31, 23, 30), (2026, 11, 1, 2, 30), 14_400,
+            [0] * 5 + [1_800, 12_600, 0], id="25-hour-day",
+        ),
+        pytest.param(
+            (2026, 3, 9, 12, 25), (2026, 3, 7, 23, 30), (2026, 3, 8, 3, 30), 10_800,
+            [0] * 5 + [1_800, 9_000, 0], id="23-hour-day",
+        ),
+    ],
+)
+def test_dashboard_groups_long_periods_by_local_calendar_days_across_clock_changes(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
+    activity_run_create: Callable[..., None], calendar_time: TimeMachineFixture,
+    now: tuple[int, ...], started: tuple[int, ...], finished: tuple[int, ...], duration: int, expected: list[int],
+) -> None:
+    zone = ZoneInfo("America/New_York")
+    calendar_time.move_to(datetime(*now, tzinfo=zone), tick=False)
+    account = computer_record.accounts.get()
+
+    for kind in ("session", "prc"):
+        activity_run_create(
+            account, kind=kind, started=int(datetime(*started, tzinfo=zone).timestamp()),
+            finished=int(datetime(*finished, tzinfo=zone).timestamp()), duration=duration,
+        )
+
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+
+    with timezone.override(zone):
+        response = client.get(reverse("core:dashboard"), {"period": "7-days"})
+
+    content = response.content.decode()
+    people = read_chart(content, "dashboard-people-data")
+    applications = read_chart(content, "dashboard-applications-data")
+
+    assert len(people["labels"]) == 8
+    assert all(isinstance(label, str) for label in people["labels"])
+    assert people["datasets"][0]["data"] == expected
+    assert sum(people["datasets"][0]["data"]) == duration
+    assert applications["datasets"][0]["data"] == [duration]
+    assert all(" 00:00" in title.split(" — ")[0] for title in people["tooltipTitles"])
+    assert people["tooltipTitles"][-1].endswith("12:25")

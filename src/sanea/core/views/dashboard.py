@@ -1,7 +1,7 @@
 """Parent dashboard with recent screen time and application usage."""
 
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, time, timedelta
 
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
@@ -39,14 +39,27 @@ class _DashboardPresenter:
             return context
 
         hour_count = form.get_hour_count()
-        bucket_seconds = 3_600 if hour_count <= 48 else 86_400
+        hourly = hour_count <= 48
         since, till = form.get_timestamp_range(timezone.now())
         zone = timezone.get_current_timezone()
         since_moment = datetime.fromtimestamp(since, zone)
         till_moment = datetime.fromtimestamp(till, zone)
-        bucket_start = int(since_moment.replace(minute=0, second=0, microsecond=0).timestamp()) if hour_count <= 48 else since
+
+        if hourly:
+            bucket_boundaries = (*range(since, till, 3_600), till)
+
+        else:
+            day_count = (till_moment.date() - since_moment.date()).days
+            bucket_boundaries = tuple(
+                int(datetime.combine(since_moment.date() + timedelta(days=offset), time.min, zone).timestamp())
+                for offset in range(day_count + 1)
+            )
+
+            if bucket_boundaries[-1] < till:
+                bucket_boundaries += (till,)
+
         accounts = form.get_accounts()
-        timeline = build_usage_timeline(accounts, since, till, bucket_seconds=bucket_seconds, bucket_start=bucket_start)
+        timeline = build_usage_timeline(accounts, since, till, bucket_boundaries=bucket_boundaries)
         all_people = list(Person.objects.values_list("pk", "name"))
         selected_person = form.cleaned_data["person"]
         people = {
@@ -81,9 +94,9 @@ class _DashboardPresenter:
         moments = [datetime.fromtimestamp(bucket, zone) for bucket in timeline.buckets]
         tooltip_titles = []
 
-        for bucket in timeline.buckets:
+        for bucket, bucket_end in zip(bucket_boundaries, bucket_boundaries[1:]):
             lower = datetime.fromtimestamp(max(bucket, since), zone)
-            upper = datetime.fromtimestamp(min(bucket + bucket_seconds, till), zone)
+            upper = datetime.fromtimestamp(bucket_end, zone)
             moment_format = "%d.%m.%Y %H:%M %z" if lower.utcoffset() != upper.utcoffset() else "%d.%m.%Y %H:%M"
             tooltip_titles.append(f"{lower:{moment_format}} — {upper:{moment_format}}")
 
@@ -97,7 +110,7 @@ class _DashboardPresenter:
             "usage_timezone": timezone.get_current_timezone_name(),
             "usage_has_accounts": accounts.exists(),
             "usage_has_screen_time": bool(timeline.people),
-            "usage_granularity": _("Completed sessions by hour") if hour_count <= 48 else _("Completed sessions by day"),
+            "usage_granularity": _("Completed sessions by hour") if hourly else _("Completed sessions by day"),
             "usage_people": people_totals,
             "usage_applications": [
                 {"name": name or executable, "exe": executable, "duration": round(duration)}
@@ -107,7 +120,7 @@ class _DashboardPresenter:
                 "labels": [
                     [date_format(moment, "d.m"), date_format(moment, "H:i")]
                     for moment in moments
-                ],
+                ] if hourly else [date_format(moment, "d.m") for moment in moments],
                 "datasets": datasets,
                 "units": units,
                 "tooltipTitles": tooltip_titles,

@@ -206,6 +206,12 @@ class ActivityEvent(TimestampedModel):
         blank=True,
         help_text=_("Observed active duration in seconds."),
     )
+    intervals = models.JSONField(
+        verbose_name=_("Usage intervals"),
+        null=True,
+        blank=True,
+        help_text=_("Recorded continuous usage intervals; null when their history is unknown."),
+    )
     prc_name = models.TextField(
         verbose_name=_("Process name"),
         null=True,
@@ -294,6 +300,7 @@ class ActivityEvent(TimestampedModel):
     ) -> Self:
         """Build an unsaved database event from one validated protocol event."""
         application = getattr(event, "application", None)
+        intervals = getattr(event, "intervals", None)
         return cls(
             account=account,
             packet=packet,
@@ -303,6 +310,7 @@ class ActivityEvent(TimestampedModel):
             run_ident=getattr(event, "run_ident", None),
             sess_ident=getattr(event, "sess_ident", None),
             duration=getattr(event, "duration", None),
+            intervals=[interval.model_dump(mode="json") for interval in intervals] if intervals is not None else None,
             prc_name=getattr(event, "prc_name", None),
             exe=getattr(event, "exe", None),
             app_id=application.ident if application else None,

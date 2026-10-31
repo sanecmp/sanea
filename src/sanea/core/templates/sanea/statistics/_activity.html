@@ -63,7 +63,7 @@
                 <section class="card h-100">
                     <div class="card-body p-4">
                         <h2 class="h5 fw-bold mb-3">{% translate "Screen time by day" %}</h2>
-                        {% if activity_report.daily_screen_time %}
+                        {% if activity_has_screen_time %}
                             <div class="sanea-chart-container">
                                 <canvas id="activity-chart" data-activity-chart="activity-chart-data"></canvas>
                             </div>

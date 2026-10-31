@@ -6,9 +6,16 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from django.urls import reverse
 from time_machine import TimeMachineFixture
 
 from sanea.core.models import Account, AppRule, Computer, Limits, LimitsTemplate, Person, PrcExclusion, Range, SessionRule
+
+
+@pytest.fixture
+def url_statistics() -> str:
+    """Return the shared statistics endpoint."""
+    return reverse("core:statistics")
 
 
 @pytest.fixture(autouse=True)

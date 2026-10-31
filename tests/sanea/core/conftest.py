@@ -3,6 +3,7 @@
 import hashlib
 import json
 from collections.abc import Callable
+from typing import Literal
 
 import pytest
 from django.db.models import Max
@@ -25,6 +26,7 @@ def activity_run_create() -> Callable[..., None]:
         prc_name: str = "synthetic-app",
         exe: str = "/demo/synthetic-app",
         application: dict[str, str] | None = None,
+        intervals: list[dict[str, int]] | None | Literal["continuous"] = "continuous",
     ) -> None:
         seq = (account.activity_events.aggregate(latest=Max("seq"))["latest"] or 0) + 1
         start = {
@@ -44,12 +46,18 @@ def activity_run_create() -> Callable[..., None]:
         events = [start]
 
         if finished is not None:
+            recorded_intervals = intervals
+
+            if intervals == "continuous":
+                recorded_intervals = [{"timestamp": finished, "duration": duration}] if duration else []
+
             events.append({
                 "seq": seq + 1,
                 "run_ident": seq,
                 "type": f"{kind}_end",
                 "timestamp": finished,
                 "duration": duration,
+                "intervals": recorded_intervals,
                 "meta": {"actor": "user"},
             })
 

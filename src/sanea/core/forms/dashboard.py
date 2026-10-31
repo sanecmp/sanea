@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 from django import forms
 from django.db.models import QuerySet
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from ..models import Account, Person
@@ -46,7 +47,7 @@ class DashboardFilterForm(PeriodFilterForm):
         return self.PERIOD_HOURS[self.cleaned_data["period"]]
 
     def get_timestamp_range(self, now: datetime) -> tuple[int, int]:
-        """Return a rolling interval or the selected local calendar day's bounds."""
+        """Start presets on a local hour or midnight; keep the current interval partial."""
 
         if not self.is_valid():
             raise ValueError("dashboard filters must be valid")
@@ -54,7 +55,18 @@ class DashboardFilterForm(PeriodFilterForm):
         if bounds := self.get_selected_day_timestamps():
             return bounds
 
-        return int((now - timedelta(hours=self.get_hour_count())).timestamp()), int(now.timestamp())
+        hour_count = self.get_hour_count()
+        zone = timezone.get_current_timezone()
+
+        if hour_count <= 48:
+            since = datetime.fromtimestamp(now.timestamp() - hour_count * 3_600, zone)
+
+        else:
+            since = timezone.localtime(now) - timedelta(days=hour_count // 24)
+            since = since.replace(hour=0)
+
+        since = since.replace(minute=0, second=0, microsecond=0)
+        return int(since.timestamp()), int(now.timestamp())
 
     def get_accounts(self) -> QuerySet[Account]:
         """Return collecting accounts belonging to the selected person."""

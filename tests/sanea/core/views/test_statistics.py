@@ -81,7 +81,7 @@ def test_statistics_filters_and_renders_received_activity(
     assert "sanea/js/statistics.js" in content
     assert "sanea/css/tables.css" in content
     assert "sanea/css/statistics.css" in content
-    assert "id=\"activity-chart\"" in content
+    assert "id=\"activity-chart\"" not in content
     assert "50:17" in content
     assert "yandex_browser" in content
     assert "Launches" in content
@@ -171,6 +171,7 @@ def test_statistics_today_chart_uses_the_sanea_day_instead_of_the_computer_day(
     computer_record: Computer,
     client_events_content: bytes,
     calendar_time: TimeMachineFixture,
+    url_statistics: str,
 ) -> None:
     events = [json.loads(line) for line in client_events_content.splitlines()]
     timestamp = int(datetime(2026, 10, 2, 2, tzinfo=UTC).timestamp())
@@ -179,6 +180,9 @@ def test_statistics_today_chart_uses_the_sanea_day_instead_of_the_computer_day(
     for event in events:
         event["timestamp"] += offset
 
+        if event["type"] in {"session_end", "prc_end"}:
+            event["intervals"] = [{"timestamp": event["timestamp"], "duration": event["duration"]}]
+
     content = ("\n".join(json.dumps(event) for event in events) + "\n").encode()
     packet = parse_event_packet(content, hashlib.sha256(content).hexdigest())
     computer_record.accounts.get().store_event_packet(packet, len(content), None)
@@ -186,7 +190,7 @@ def test_statistics_today_chart_uses_the_sanea_day_instead_of_the_computer_day(
     client = request_client(user=user_create(attributes={"is_staff": True}))
 
     with timezone.override("America/New_York"):
-        response = client.get(reverse("core:statistics"))
+        response = client.get(url_statistics)
 
     rendered = response.content.decode()
     chart_content = rendered.split('<script id="activity-chart-data" type="application/json">', 1)[1].split("</script>", 1)[0]
@@ -197,6 +201,41 @@ def test_statistics_today_chart_uses_the_sanea_day_instead_of_the_computer_day(
     assert chart["labels"] == [date_format(date(2026, 10, 1), "SHORT_DATE_FORMAT")]
     assert chart["datasets"][0]["data"] == [3017]
     assert "yandex_browser" in rendered
+
+
+@pytest.mark.parametrize(
+    ("filters", "expected"),
+    [
+        ({"period": "7-days"}, [0, 600, 600, 1_200, 0, 0, 0]),
+        ({"period": "day", "day": "2026-10-02"}, [600]),
+    ],
+)
+def test_statistics_chart_uses_actual_days_and_leaves_sleep_empty(
+    request_client: Callable[..., Client], user_create: Callable[..., User], computer_record: Computer,
+    activity_run_create: Callable[..., None], filters: dict[str, str], expected: list[int],
+    url_statistics: str,
+) -> None:
+    zone = ZoneInfo("America/New_York")
+    started = int(datetime(2026, 10, 1, 23, 50, tzinfo=zone).timestamp())
+    finished = int(datetime(2026, 10, 3, 12, 20, tzinfo=zone).timestamp())
+    activity_run_create(
+        computer_record.accounts.get(), started=started, finished=finished, duration=2_400,
+        intervals=[
+            {"timestamp": int(datetime(2026, 10, 2, 0, 10, tzinfo=zone).timestamp()), "duration": 1_200},
+            {"timestamp": finished, "duration": 1_200},
+        ],
+    )
+    client = request_client(user=user_create(attributes={"is_staff": True}))
+
+    with timezone.override(zone):
+        response = client.get(url_statistics, filters)
+
+    content = response.content.decode()
+    serialized = content.split('<script id="activity-chart-data" type="application/json">', 1)[1].split("</script>", 1)[0]
+    chart = json.loads(serialized)
+
+    assert response.status_code == 200
+    assert chart["datasets"][0]["data"] == expected
 
 
 def test_statistics_explains_missing_activity_collection(

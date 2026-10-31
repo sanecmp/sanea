@@ -1,7 +1,7 @@
 """Dedicated activity statistics and application-usage view."""
 
 from collections.abc import Callable
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
 from django.db.models import Max, QuerySet
 from django.http import HttpRequest, HttpResponse
@@ -14,6 +14,7 @@ from django.utils.translation import gettext_lazy as _
 from ..forms import ActivityFilterForm
 from ..models import Account, ActivityEvent, EventPacket
 from ..models.activity_event import ActivityReport
+from ..services.activity_timeline import build_usage_timeline
 from .base import ManagedView
 
 
@@ -59,6 +60,7 @@ class _StatisticsPresenter:
         since, till = form.get_date_range(today)
         accounts = form.get_accounts()
         report = ActivityEvent.objects.build_report(accounts, since, till)
+        chart = self.build_chart(accounts, since, till)
         recent = self.build_recent_activity(report)
         selected_kind = request.GET.get("activity_kind", "application")
 
@@ -93,14 +95,15 @@ class _StatisticsPresenter:
                 "activity_since": since,
                 "activity_till": till - timedelta(days=1),
                 "activity_timezone": timezone.get_current_timezone_name(),
-                "activity_chart": self.build_chart(report, accounts, since, till),
+                "activity_chart": chart,
+                "activity_has_screen_time": any(any(dataset["data"]) for dataset in chart["datasets"]),
                 "recent_activity_tabs": tabs,
                 "activity_kind": selected_kind,
             }
         )
         return context
 
-    def build_chart(self, report: ActivityReport, accounts: QuerySet[Account], since: date, till: date) -> dict[str, object]:
+    def build_chart(self, accounts: QuerySet[Account], since: date, till: date) -> dict[str, object]:
         """Build serializable stacked-bar data with explicit empty days."""
         days = []
         current = since
@@ -109,23 +112,19 @@ class _StatisticsPresenter:
             days.append(current)
             current += timedelta(days=1)
 
+        zone = timezone.get_current_timezone()
+        boundaries = tuple(int(datetime.combine(day, time.min, zone).timestamp()) for day in (*days, till))
+        timeline = build_usage_timeline(accounts, boundaries[0], boundaries[-1], bucket_boundaries=boundaries)
         people = {
             account.person_id: account.person.name
             if account.person_id
             else _("No user")
             for account in accounts.select_related("person")
         }
-        people.update(
-            {
-                item.person_id: _("No user")
-                for item in report.daily_screen_time
-                if item.person_id is None
-            }
-        )
-        totals = {
-            (item.day, item.person_id): item.duration
-            for item in report.daily_screen_time
-        }
+
+        if None in timeline.people:
+            people[None] = _("No user")
+
         datasets = []
 
         for index, (person_id, label) in enumerate(
@@ -135,7 +134,7 @@ class _StatisticsPresenter:
             datasets.append(
                 {
                     "label": f"{label}",
-                    "data": [totals.get((day, person_id), 0) for day in days],
+                    "data": timeline.people.get(person_id, (0,) * len(days)),
                     "backgroundColor": color,
                     "borderColor": color,
                     "borderWidth": 1,

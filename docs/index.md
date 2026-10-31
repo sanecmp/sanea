@@ -41,14 +41,12 @@ node --test tests/javascript/*.mjs
 **Dashboard** shows screen time by person across their computers and the 10 most
 used applications. Both charts share period and person filters: the last 24 hours,
 48 hours (default), 7 days or 30 days, a calendar day, and all people or one person selected by name.
-Short periods use hourly bars; 7 and 30 days use 24-hour bars.
-Hourly intervals start on the hour in sanea's timezone; the first and last bars
-include only the portion within the selected period. Hover over a bar to see its
-full date and time range and recorded duration. One session can span several
-bars: its time is split between them without changing the total.
+Short periods use hour-aligned bars; 7 and 30 days use calendar days in sanea's
+timezone. The current hour or day is partial. Hover over a bar to see its
+full date and time range and recorded duration.
 It refreshes every minute while visible, retaining the selected filters.
-Usage within chart intervals and runs crossing the window boundary are estimated by
-distributing each final duration proportionally over its start-to-end interval.
+Charts use recorded usage intervals. Older runs without intervals keep their
+totals but do not appear on charts.
 Simultaneous activity on different accounts or in different applications is added
 together, not deduplicated.
 
@@ -70,8 +68,9 @@ before the selected period. Changing filters keeps the selected tab.
 
 Time totals include only completed sessions and application runs. A dash in
 application usage means no final duration has been received yet.
-Usage totals are assigned to the local start date; recent activity uses the local
-completion date. GNOME Shell, Mutter's X11 window frames and the recognized DING
+Table totals use the local start date; recent activity uses the local completion
+date. Charts use recorded interval dates.
+GNOME Shell, Mutter's X11 window frames and the recognized DING
 desktop-icons extension are omitted from application reports and dashboard charts.
 Their original events remain stored, and excluding them does not reduce session
 screen time. Other GJS scripts are not hidden just because they use GJS.
@@ -155,10 +154,8 @@ ma tests
 uv build
 ```
 
-Do not create additional migrations during current development. After model
-changes, remove the old `0001_initial.py` and regenerate it with
-`PYTHON_ENV=development sanea makemigrations core`. Formatting alone must not
-regenerate the migration.
+Generate new schema migrations with
+`PYTHON_ENV=development sanea makemigrations core`; do not rewrite existing migrations.
 
 Build release wheel and sdist files with `uv build`. Production installation
 continues to use the existing uv-based installer, not makeapp.

@@ -1,6 +1,7 @@
 """Tests for authenticated sanex event-packet uploads."""
 
 import hashlib
+import json
 from collections.abc import Callable
 
 from django.urls import reverse
@@ -115,6 +116,48 @@ def test_events_idempotently_acknowledge_an_existing_packet(
     assert repeated.status_code == 204
     assert EventPacket.objects.count() == 1
     assert ActivityEvent.objects.count() == 5
+
+
+def test_events_preserve_usage_intervals_without_counting_a_repeated_packet_twice(
+    request_client: Callable[..., Client], computer_record: Computer, client_events_content: bytes,
+) -> None:
+    records = [json.loads(line) for line in client_events_content.splitlines()]
+
+    for record in records:
+
+        if record["type"] in {"session_end", "prc_end"}:
+            record["intervals"] = [{"timestamp": record["timestamp"], "duration": record["duration"]}]
+
+    content = ("\n".join(json.dumps(record) for record in records) + "\n").encode()
+    client = request_client()
+
+    first = _post_events(client, computer_record, content)
+    repeated = _post_events(client, computer_record, content)
+
+    assert first.status_code == 201
+    assert repeated.status_code == 204
+    assert EventPacket.objects.count() == 1
+    assert ActivityEvent.objects.count() == 5
+    session_end = ActivityEvent.objects.get(type="session_end")
+    process_end = ActivityEvent.objects.get(type="prc_end")
+    assert session_end.intervals == [{"timestamp": session_end.timestamp, "duration": 3017}]
+    assert process_end.intervals == [{"timestamp": process_end.timestamp, "duration": 3137}]
+    assert ActivityEvent.objects.get(type="session_start").intervals is None
+
+
+def test_events_reject_inconsistent_intervals_before_storing_any_record(
+    request_client: Callable[..., Client], computer_record: Computer, client_events_content: bytes,
+) -> None:
+    records = [json.loads(line) for line in client_events_content.splitlines()]
+    ending = records[2]
+    ending["intervals"] = [{"timestamp": ending["timestamp"], "duration": 1}]
+    content = ("\n".join(json.dumps(record) for record in records) + "\n").encode()
+
+    response = _post_events(request_client(), computer_record, content)
+
+    assert response.status_code == 422
+    assert EventPacket.objects.count() == 0
+    assert ActivityEvent.objects.count() == 0
 
 
 @pytest.mark.parametrize(

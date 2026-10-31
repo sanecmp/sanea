@@ -1,6 +1,10 @@
 """Tests for shared dashboard filters."""
 
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
 import pytest
+from django.utils import timezone
 
 from sanea.core.forms import DashboardFilterForm
 from sanea.core.models import Account, Computer, Person
@@ -16,6 +20,30 @@ def test_dashboard_filter_supports_the_requested_rolling_periods(period: str, ho
     assert form.get_hour_count() == hours
     assert DashboardFilterForm().fields["period"].initial == "48-hours"
     assert list(dict(form.fields["period"].choices)) == ["24-hours", "48-hours", "7-days", "30-days", "day"]
+
+
+@pytest.mark.parametrize("zone_name", ["Asia/Novosibirsk", "Asia/Kathmandu", "America/New_York"])
+@pytest.mark.parametrize(
+    ("period", "expected_start"),
+    [
+        ("24-hours", (2026, 11, 2, 16)),
+        ("48-hours", (2026, 11, 1, 16)),
+        ("7-days", (2026, 10, 27, 0)),
+        ("30-days", (2026, 10, 4, 0)),
+    ],
+)
+def test_dashboard_filter_starts_at_local_hour_or_midnight(
+    period: str, expected_start: tuple[int, ...], zone_name: str,
+) -> None:
+    zone = ZoneInfo(zone_name)
+    now = datetime(2026, 11, 3, 16, 52, 31, tzinfo=zone)
+    form = DashboardFilterForm({"period": period})
+
+    with timezone.override(zone):
+        since, till = form.get_timestamp_range(now)
+
+    assert datetime.fromtimestamp(since, zone) == datetime(*expected_start, tzinfo=zone)
+    assert till == int(now.timestamp())
 
 
 def test_dashboard_filter_lists_all_people_by_name_and_scopes_all_their_collecting_accounts(

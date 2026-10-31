@@ -1,5 +1,6 @@
 """Usage within an exact time window, based on completed activity runs."""
 
+from bisect import bisect_right
 from collections import defaultdict
 from dataclasses import dataclass
 
@@ -17,22 +18,24 @@ class UsageTimeline:
     """Screen time by person and total time by application identity."""
 
     buckets: tuple[int, ...]
-    people: dict[int | None, tuple[float, ...]]
-    applications: dict[tuple[str, str], float]
+    people: dict[int | None, tuple[int, ...]]
+    applications: dict[tuple[str, str], int]
 
 
 def build_usage_timeline(
     accounts: QuerySet[Account], since: int, till: int, *, bucket_seconds: int = 3_600,
-    bucket_start: int | None = None,
+    bucket_boundaries: tuple[int, ...] | None = None,
 ) -> UsageTimeline:
-    """Estimate usage in ``[since, till)`` from runs completed by ``till``.
+    """Sum recorded usage intervals intersecting ``[since, till)``.
 
-    Only final active durations are available, not the position of pauses within
-    a run. Allocate each duration proportionally across its wall-clock interval,
-    including the portion of a run that started before the requested window.
+    Only received completed runs with known intervals contribute to the timeline.
+    A run may end after the requested window; its actual intervals determine
+    which portion belongs to the window. Unknown historical intervals are not
+    reconstructed from the final duration or the login session's start time.
     Concurrent accounts and applications retain their separately recorded time.
-    ``bucket_start`` may align the first bucket before ``since`` without extending
-    the requested usage window; its first interval must contain ``since``.
+    Explicit ``bucket_boundaries`` support local calendar days of varying lengths.
+    Their first interval must contain ``since`` and the last boundary must be
+    ``till``. Otherwise, use uniform intervals of ``bucket_seconds``.
     """
 
     if since < 0 or till <= since:
@@ -41,27 +44,35 @@ def build_usage_timeline(
     if bucket_seconds <= 0:
         raise ValueError("bucket_seconds must be positive")
 
-    if bucket_start is None:
-        bucket_start = since
+    if bucket_boundaries is None:
+        bucket_boundaries = (*range(since, till, bucket_seconds), till)
 
-    if not bucket_start <= since < bucket_start + bucket_seconds:
-        raise ValueError("the first bucket must contain since")
+    if (
+        len(bucket_boundaries) < 2
+        or not (bucket_boundaries[0] <= since < bucket_boundaries[1])
+        or bucket_boundaries[-1] != till
+        or any(lower >= upper for lower, upper in zip(bucket_boundaries, bucket_boundaries[1:]))
+    ):
+        raise ValueError("bucket boundaries must increase, contain since in the first interval and end at till")
 
-    buckets = tuple(range(bucket_start, till, bucket_seconds))
-    people: dict[int | None, list[float]] = defaultdict(lambda: [0.0] * len(buckets))
+    buckets = bucket_boundaries[:-1]
+    people: dict[int | None, list[int]] = defaultdict(lambda: [0] * len(buckets))
 
-    application_totals: dict[tuple[str, ...], float] = defaultdict(float)
+    application_totals: dict[tuple[str, ...], int] = defaultdict(int)
     application_labels: dict[tuple[str, ...], tuple[str, str]] = {}
 
-    for start, end in _load_completed_runs(accounts, since, till):
-        lower = max(start.timestamp, since)
-        upper = end.timestamp
-        elapsed = end.timestamp - start.timestamp
+    for start, end in _load_completed_runs(accounts):
+        segments = []
 
-        if elapsed <= 0 or lower >= upper or not end.duration:
+        for interval in end.intervals:
+            lower = max(interval["timestamp"] - interval["duration"], since)
+            upper = min(interval["timestamp"], till)
+
+            if lower < upper:
+                segments.append((lower, upper))
+
+        if not segments:
             continue
-
-        rate = end.duration / elapsed
 
         if start.type == "prc_start":
 
@@ -69,17 +80,20 @@ def build_usage_timeline(
                 continue
 
             key = start.get_application_key()
-            application_totals[key] += rate * (upper - lower)
+            application_totals[key] += sum(upper - lower for lower, upper in segments)
             application_labels[key] = (start.get_application_name() or start.prc_name or "", start.app_id or start.exe or "")
             continue
 
         person_usage = people[end.account.person_id]
 
-        while lower < upper:
-            index = (lower - bucket_start) // bucket_seconds
-            bucket_end = min(buckets[index] + bucket_seconds, upper)
-            person_usage[index] += rate * (bucket_end - lower)
-            lower = bucket_end
+        for lower, upper in segments:
+            index = bisect_right(bucket_boundaries, lower) - 1
+
+            while lower < upper:
+                bucket_end = min(bucket_boundaries[index + 1], upper)
+                person_usage[index] += bucket_end - lower
+                lower = bucket_end
+                index += 1
 
     return UsageTimeline(
         buckets=buckets,
@@ -88,16 +102,22 @@ def build_usage_timeline(
     )
 
 
-def _load_completed_runs(accounts: QuerySet[Account], since: int, till: int) -> tuple[tuple[ActivityEvent, ActivityEvent], ...]:
-    endings = tuple(
-        ActivityEvent.objects.filter(
-            account__in=accounts,
-            type__in=_START_TYPES,
-            timestamp__gt=since,
-            timestamp__lte=till,
-            duration__isnull=False,
-        ).select_related("account")
-    )
+def _load_completed_runs(accounts: QuerySet[Account]) -> tuple[tuple[ActivityEvent, ActivityEvent], ...]:
+    endings: dict[tuple[int, int | None, str], ActivityEvent] = {}
+
+    for event in ActivityEvent.objects.filter(
+        account__in=accounts,
+        type__in=_START_TYPES,
+        intervals__isnull=False,
+        duration__isnull=False,
+    ).select_related("account"):
+        key = event.account_id, event.run_ident, event.type
+        previous = endings.get(key)
+
+        # A replay after an interrupted state save must not duplicate or replace
+        # a more complete recorded history with a stale, shorter counter.
+        if previous is None or (event.duration, event.seq) > (previous.duration, previous.seq):
+            endings[key] = event
 
     if not endings:
         return ()
@@ -106,12 +126,12 @@ def _load_completed_runs(accounts: QuerySet[Account], since: int, till: int) -> 
         (event.account_id, event.seq, event.type): event
         for event in ActivityEvent.objects.filter(
             account__in=accounts,
-            seq__in={event.run_ident for event in endings if event.run_ident is not None},
+            seq__in={event.run_ident for event in endings.values() if event.run_ident is not None},
             type__in=_START_TYPES.values(),
         ).resolve_application_names()
     }
     return tuple(
         (start, end)
-        for end in endings
+        for end in endings.values()
         if (start := starts.get((end.account_id, end.run_ident, _START_TYPES[end.type]))) is not None
     )
